@@ -1,0 +1,545 @@
+// backend/prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ================================
+// USER & AUTHENTICATION
+// ================================
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique // Clerk user ID
+  email     String   @unique
+  firstName String?
+  lastName  String?
+  full_name String?  // ✅ ADDED: For compatibility with existing queries
+  imageUrl  String?
+  phone     String?
+  
+  // User type and permissions
+  role      UserRole @default(USER)
+  isActive  Boolean  @default(true)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  properties         Property[]
+  campaigns          Campaign[]
+  bookings           Booking[]
+  messages           Message[]
+  chatMessages       ChatMessage[]
+  invoices           Invoice[]
+  paymentReminders   PaymentReminder[]
+  paymentSettings    PaymentSettings?
+  propertyApprovals  PropertyApproval[]
+  
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  PROPERTY_OWNER
+  ADVERTISER
+  ADMIN
+  SUPER_ADMIN
+}
+
+// ================================
+// ADVERTISING SPACE MANAGEMENT (Enhanced Properties)
+// ================================
+
+model Property {
+  id          String   @id @default(cuid())
+  name        String?  // ✅ ADDED: For compatibility with Space.name
+  title       String
+  description String?
+  address     String
+  city        String
+  state       String?
+  country     String
+  zipCode     String?
+  zipcode     String?  // ✅ ADDED: Alternative field name for compatibility
+  
+  // Geographic data
+  latitude    Float?
+  longitude   Float?
+  location    Json?    @default("{}")  // ✅ ADDED: For nested location objects
+  
+  // ✅ LEGACY: Real estate fields (keep for backward compatibility)
+  propertyType PropertyType?
+  size         Float?        // in square meters/feet
+  bedrooms     Int?
+  bathrooms    Int?
+  
+  // ✅ NEW: Advertising space specific fields
+  type         String?       // Generic type field for backward compatibility
+  spaceType    SpaceType?    // Specific advertising space types
+  dimensions   Json?    @default("{}")  // { width, height, depth, units }
+  features     String[] @default([])    // ['high-traffic', 'digital', 'illuminated']
+  specifications Json?  @default("{}")  // { visibility, traffic_count, demographics, lighting, digital }
+  
+  // Media
+  images       String[]      @default([])  // Array of image URLs
+  photos       String[]      @default([])  // ✅ ADDED: Alternative field name
+  videos       String[]      @default([])  // Array of video URLs
+  documents    String[]      @default([])  // Array of document URLs
+  primary_image String?      // ✅ ADDED: For featured image
+  
+  // ✅ ENHANCED: Pricing for advertising spaces
+  basePrice    Float?        // Made optional
+  pricing      Json?    @default("{}")  // { daily, weekly, monthly, currency }
+  currency     String        @default("USD")
+  
+  // Status and availability
+  status       PropertyStatus @default(DRAFT)  // ✅ UPDATED: Default to DRAFT
+  isActive     Boolean       @default(true)
+  isApproved   Boolean       @default(false)
+  
+  // ✅ ADDED: Space ownership and metadata
+  owner_id     String?       // Alternative field name for compatibility
+  ownerId      String
+  
+  // Timestamps
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  // Relations
+  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  campaigns           Campaign[]
+  bookings            Booking[]
+  advertisingAreas    AdvertisingArea[]  // Areas within this space
+  advertising_areas   AdvertisingArea[] @relation("PropertyAreas")  // ✅ ADDED: Alternative relation name
+  propertyApprovals   PropertyApproval[]
+  
+  @@map("properties")
+}
+
+// ✅ ENHANCED: Property types to include advertising spaces
+enum PropertyType {
+  // Legacy real estate types
+  HOUSE
+  APARTMENT
+  CONDO
+  COMMERCIAL
+  LAND
+  WAREHOUSE
+  OFFICE
+  RETAIL
+  OTHER
+  
+  // ✅ NEW: Advertising space types
+  BUILDING
+  VEHICLE_FLEET
+  EVENT_VENUE
+  TRANSIT_STATION
+  BILLBOARD
+  DIGITAL_DISPLAY
+}
+
+// ✅ NEW: Specific advertising space types
+enum SpaceType {
+  building
+  vehicle_fleet
+  event_venue
+  transit_station
+  retail
+  billboard
+  digital_display
+  other
+}
+
+// ✅ ENHANCED: Property status for advertising workflow
+enum PropertyStatus {
+  DRAFT          // ✅ NEW: Initial state for new spaces
+  PENDING
+  APPROVED
+  REJECTED
+  ACTIVE         // ✅ Live and bookable
+  INACTIVE
+  ARCHIVED
+}
+
+// ================================
+// ADVERTISING & CAMPAIGNS
+// ================================
+
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String?  // ✅ ADDED: For compatibility
+  title       String
+  description String?
+  
+  // Campaign details
+  budget       Float
+  dailyBudget  Float?
+  currency     String   @default("USD")
+  
+  // Targeting
+  targetAudience Json?   // Store targeting criteria as JSON
+  keywords       String[]
+  
+  // Campaign settings
+  startDate    DateTime
+  endDate      DateTime?
+  isActive     Boolean  @default(false)
+  
+  // Performance metrics
+  impressions  Int      @default(0)
+  clicks       Int      @default(0)
+  conversions  Int      @default(0)
+  totalSpent   Float    @default(0)
+  
+  // Status
+  status       CampaignStatus @default(DRAFT)
+  
+  // Timestamps
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  advertiserId String
+  advertiser   User     @relation(fields: [advertiserId], references: [id], onDelete: Cascade)
+  
+  propertyId   String?
+  property     Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  
+  bookings     Booking[]
+  invoices     Invoice[]
+  
+  @@map("campaigns")
+}
+
+enum CampaignStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
+
+model AdvertisingArea {
+  id          String   @id @default(cuid())
+  name        String
+  title       String?  // ✅ ADDED: For compatibility
+  description String?
+  
+  // ✅ ENHANCED: Area details for advertising
+  type        String?  // Area type (billboard, digital, etc.)
+  dimensions  Json?    @default("{}")  // Physical dimensions
+  features    String[] @default([])    // Area-specific features
+  
+  // Geographic boundaries
+  coordinates Json     // GeoJSON polygon for the area
+  city        String
+  state       String?
+  country     String
+  
+  // ✅ ENHANCED: Pricing for advertising areas
+  baseRate    Float?    // Made optional
+  pricing     Json?    @default("{}")  // Flexible pricing structure
+  rateType    RateType @default(DAILY)
+  currency    String   @default("USD")
+  
+  // Availability
+  status      String   @default("active")  // ✅ ADDED: Area status
+  isActive    Boolean  @default(true)
+  maxBookings Int?     // Maximum concurrent bookings
+  
+  // ✅ ADDED: Media for areas
+  images      String[] @default([])
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  propertyId  String?
+  property    Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  propertyArea Property? @relation("PropertyAreas", fields: [propertyId], references: [id], onDelete: SetNull)  // ✅ ADDED: Alternative relation
+  
+  bookings    Booking[]
+  
+  @@map("advertising_areas")
+}
+
+enum RateType {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+// ================================
+// BOOKING MANAGEMENT
+// ================================
+
+model Booking {
+  id          String   @id @default(cuid())
+  
+  // Booking details
+  startDate   DateTime
+  endDate     DateTime
+  totalAmount Float
+  currency    String   @default("USD")
+  
+  // Status and payment
+  status      BookingStatus @default(PENDING)
+  isPaid      Boolean       @default(false)
+  
+  // Additional details
+  notes       String?
+  metadata    Json?         // Store additional booking data
+  
+  // ✅ ADDED: Booking type and compatibility fields
+  bookingType String?       // 'space', 'area', 'campaign'
+  booker_id   String?       // Alternative field name for compatibility
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  bookerId    String
+  booker      User     @relation(fields: [bookerId], references: [id], onDelete: Cascade)
+  
+  propertyId  String?
+  property    Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  
+  campaignId  String?
+  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  
+  advertisingAreaId String?
+  advertisingArea   AdvertisingArea? @relation(fields: [advertisingAreaId], references: [id], onDelete: SetNull)
+  
+  invoices         Invoice[]
+  paymentReminders PaymentReminder[]
+  
+  @@map("bookings")
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+// ================================
+// MESSAGING SYSTEM
+// ================================
+
+model Message {
+  id        String   @id @default(cuid())
+  subject   String?
+  content   String
+  isRead    Boolean  @default(false)
+  
+  // Message type and priority
+  type      MessageType @default(GENERAL)
+  priority  Priority    @default(NORMAL)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  senderId    String?
+  sender      User?   @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  
+  recipientId String  // Who receives the message
+  
+  @@map("messages")
+}
+
+enum MessageType {
+  GENERAL
+  BOOKING_UPDATE
+  PAYMENT_REMINDER
+  SYSTEM_NOTIFICATION
+  SUPPORT_TICKET
+  SPACE_INQUIRY     // ✅ ADDED: For advertising space inquiries
+  CAMPAIGN_UPDATE   // ✅ ADDED: For campaign notifications
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  content   String
+  chatRoom  String   // Room identifier for grouping messages
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  // Relations
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  
+  @@map("chat_messages")
+}
+
+// ================================
+// PAYMENTS & INVOICING
+// ================================
+
+model Invoice {
+  id          String   @id @default(cuid())
+  invoiceNumber String @unique
+  
+  // Invoice details
+  amount      Float
+  currency    String   @default("USD")
+  description String?
+  dueDate     DateTime
+  
+  // Status and payment
+  status      InvoiceStatus @default(PENDING)
+  isPaid      Boolean       @default(false)
+  paidAt      DateTime?
+  paymentMethod String?
+  
+  // Stripe integration
+  stripeInvoiceId String?
+  stripePaymentIntentId String?
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  bookingId   String?
+  booking     Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  
+  campaignId  String?
+  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  
+  paymentReminders PaymentReminder[]
+  
+  @@map("invoices")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+model PaymentReminder {
+  id        String   @id @default(cuid())
+  message   String
+  sentAt    DateTime @default(now())
+  method    ReminderMethod @default(EMAIL)
+  
+  // Relations
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  
+  @@map("payment_reminders")
+}
+
+enum ReminderMethod {
+  EMAIL
+  SMS
+  PUSH_NOTIFICATION
+  IN_APP
+}
+
+model PaymentSettings {
+  id          String   @id @default(cuid())
+  
+  // Stripe settings
+  stripeCustomerId     String?
+  stripeAccountId      String?
+  defaultPaymentMethod String?
+  
+  // Banking details
+  bankAccountNumber    String?
+  routingNumber        String?
+  accountHolderName    String?
+  
+  // Settings
+  autoPayEnabled       Boolean @default(false)
+  reminderEnabled      Boolean @default(true)
+  reminderDaysBefore   Int     @default(3)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("payment_settings")
+}
+
+// ================================
+// ADMIN & APPROVALS
+// ================================
+
+model PropertyApproval {
+  id          String   @id @default(cuid())
+  status      ApprovalStatus @default(PENDING)
+  notes       String?
+  reviewedAt  DateTime?
+  
+  // ✅ ADDED: Approval type and metadata
+  approvalType String? @default("space_listing")  // 'space_listing', 'campaign_approval', etc.
+  metadata     Json?   @default("{}")             // Additional approval data
+  
+  // Relations
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  reviewerId  String?
+  reviewer    User?    @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+  
+  // ✅ ADDED: Alternative field names for compatibility
+  property_id String?  // Alternative field name
+  reviewer_id String?  // Alternative field name
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("property_approvals")
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REQUIRES_CHANGES
+}

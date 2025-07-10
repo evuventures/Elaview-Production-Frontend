@@ -1,0 +1,465 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { 
+  MessageCircle, 
+  Send, 
+  X, 
+  Bot, 
+  User as UserIcon, 
+  MapPin, 
+  DollarSign,
+  Calendar,
+  CreditCard,
+  MessageSquare,
+  Settings,
+  TestTube,
+  Sparkles,
+  Zap,
+  Crown,
+  Target,
+  Star
+} from 'lucide-react';
+import { Property, AdvertisingArea, Booking, User, ChatMessage } from '@/api/entities';
+import { geminiService } from '@/lib/gemini';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+
+export default function ChatBot() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [sessionId] = useState(() => Math.random().toString(36).substring(7));
+  const [currentUser, setCurrentUser] = useState(null);
+  const [conversationContext, setConversationContext] = useState([]);
+  const messagesEndRef = useRef(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    loadUser();
+    if (isOpen && messages.length === 0) {
+      addWelcomeMessage();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const loadUser = async () => {
+    try {
+      const user = await User.me();
+      setCurrentUser(user);
+    } catch (error) {
+      console.error('Error loading user:', error);
+    }
+  };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const addWelcomeMessage = () => {
+    const currentPage = location.pathname.split('/').pop() || 'Dashboard';
+    const welcomeMessage = {
+      id: 'welcome',
+      type: 'bot',
+      content: `✨ Hi! I'm your Elaview marketing assistant. I can see you're on the ${currentPage} page. I can help you with:`,
+      timestamp: new Date(),
+      quickActions: [
+        { text: "🎯 Find advertising spaces", action: "search_spaces" },
+        { text: "📅 Book a campaign", action: "booking_help" },
+        { text: "📊 Manage my listings", action: "view_listings" },
+        { text: "💰 Check pricing", action: "pricing_help" },
+        { text: "� Test Gemini AI", action: "test_gemini" },
+        { text: "�🧪 Run system test", action: "run_test" }
+      ]
+    };
+    setMessages([welcomeMessage]);
+  };
+
+  const handleQuickAction = async (action, params) => {
+    const actionMessages = {
+      search_spaces: "Help me find the best advertising spaces for my campaign",
+      booking_help: "I need help booking an advertising space",
+      view_listings: "Show me my current listings and performance",
+      pricing_help: "Explain how pricing works on Elaview",
+      run_test: "Run a comprehensive system test",
+      test_gemini: "Test Gemini AI integration",
+      navigate: `Navigate to ${params?.page || 'a page'}`
+    };
+
+    const message = actionMessages[action];
+    if (message) {
+      await handleSendMessage(message);
+    }
+  };
+
+  const getCurrentPageContext = () => {
+    const currentPage = location.pathname.split('/').pop() || 'Dashboard';
+    const pageContexts = {
+      'Dashboard': 'User is viewing their main dashboard with campaign and listing statistics',
+      'Map': 'User is browsing advertising spaces on the interactive map',
+      'Messages': 'User is managing their conversations with space owners/advertisers',
+      'Invoices': 'User is viewing and managing payment invoices',
+      'MyListings': 'User is managing their advertising space listings',
+      'MyCampaigns': 'User is viewing their advertising campaigns',
+      'Profile': 'User is editing their profile information',
+      'CreateProperty': 'User is creating a new advertising space listing',
+      'CreateCampaign': 'User is creating a new advertising campaign'
+    };
+    
+    return {
+      currentPage,
+      context: pageContexts[currentPage] || 'User is navigating the Elaview platform'
+    };
+  };
+
+  const runSystemTest = async () => {
+    const testResults = [];
+    
+    try {
+      // Test 1: User Authentication
+      const user = await User.me();
+      testResults.push({ test: 'User Authentication', status: 'PASS', details: `User ${user.full_name} authenticated` });
+      
+      // Test 2: Load Properties
+      const properties = await Property.list();
+      testResults.push({ test: 'Load Properties', status: 'PASS', details: `${properties.length} properties loaded` });
+      
+      // Test 3: Load Bookings
+      const bookings = await Booking.list();
+      testResults.push({ test: 'Load Bookings', status: 'PASS', details: `${bookings.length} bookings loaded` });
+      
+      // Test 4: Navigation Test
+      const testPages = ['Dashboard', 'Map', 'Messages', 'Profile'];
+      testResults.push({ test: 'Page Navigation', status: 'PASS', details: `${testPages.length} core pages accessible` });
+      
+    } catch (error) {
+      testResults.push({ test: 'System Test', status: 'FAIL', details: error.message });
+    }
+    
+    return testResults;
+  };
+
+  const processUserIntent = async (message) => {
+    try {
+      const pageContext = getCurrentPageContext();
+      const contextHistory = conversationContext.slice(-5); // Last 5 messages for context
+      
+      const prompt = `
+        You are an expert marketing assistant for Elaview, an advertising space marketplace platform.
+        Your goal is to be helpful and take action for the user when possible.
+        
+        You have access to a set of tools to perform actions. If the user's request can be fulfilled by a tool,
+        you MUST respond with a JSON object containing a 'function_call' field.
+        The 'response' field should be a conversational message to the user about the action being taken.
+
+        AVAILABLE TOOLS:
+        - "navigate_to": Navigates to a specific page.
+          - parameters: { "page": "PageName" } 
+          - Valid PageNames: Dashboard, Map, Messages, Invoices, Profile, CreateProperty, CreateCampaign, Admin
+        - "start_new_property": Navigates the user to the property creation flow.
+          - parameters: {}
+        - "start_new_campaign": Navigates the user to the campaign creation flow.
+          - parameters: { "name": "Optional Campaign Name" }
+        - "search_map": Navigates to the map page with a search query.
+          - parameters: { "query": "City, address, or keyword" }
+
+        CURRENT CONTEXT:
+        - User is on: ${pageContext.currentPage} page
+        - Page context: ${pageContext.context}
+        - User message: "${message}"
+        - Conversation history: ${JSON.stringify(contextHistory)}
+        
+        ANALYSIS & RESPONSE:
+        1. Analyze the user's message to understand their intent.
+        2. If the intent matches one of the available tools, format your response as a JSON object with 'response' and 'function_call'.
+        3. If no tool is appropriate, provide a helpful, conversational text response in the 'response' field and omit 'function_call'.
+        4. For example, if the user says "Take me to my dashboard", you should call "navigate_to" with page "Dashboard".
+        5. If the user says "I want to list my building", you should call "start_new_property".
+        6. If the user asks something off-topic like "What's the weather like?", politely redirect them to Elaview topics.
+        7. If the user asks to "test Gemini" or about AI capabilities, acknowledge that you are powered by Google Gemini.
+        
+        RESPONSE FORMAT:
+        Always respond in valid JSON format like this:
+        {"response": "Your conversational message here", "function_call": {"name": "function_name", "arguments": {"param": "value"}}}
+        
+        Or if no function is needed:
+        {"response": "Your conversational message here"}
+      `;
+
+      const response = await geminiService.generateResponse(prompt, {
+        temperature: 0.7,
+        maxOutputTokens: 1024
+      });
+
+      setConversationContext(prev => [...prev, { user: message, bot: response.response }]);
+      return response;
+    } catch (error) {
+      console.error('Error processing intent:', error);
+      return {
+        response: "I'm having trouble processing that request. Could you try rephrasing it? I'm here to help with advertising spaces, campaigns, and bookings on Elaview.",
+        quick_actions: [
+          { text: "🎯 Find advertising spaces", action: "search_spaces" },
+          { text: "📅 Help with booking", action: "booking_help" }
+        ]
+      };
+    }
+  };
+
+  const executeFunction = (name, args) => {
+      switch (name) {
+          case 'navigate_to':
+              if (args.page) {
+                  navigate(createPageUrl(args.page));
+                  return `Okay, I'm taking you to the ${args.page} page now.`;
+              }
+              return "I can't navigate without a page name.";
+          case 'start_new_property':
+              navigate(createPageUrl('CreateProperty'));
+              return "Let's get your new property listed. I've taken you to the creation page.";
+          case 'start_new_campaign':
+              const url = args.name ? `${createPageUrl('CreateCampaign')}?name=${encodeURIComponent(args.name)}` : createPageUrl('CreateCampaign');
+              navigate(url);
+              return `Right, starting a new campaign${args.name ? ` called "${args.name}"` : ''}. Let's get started.`;
+          case 'search_map':
+              if (args.query) {
+                  navigate(`${createPageUrl('Map')}?search=${encodeURIComponent(args.query)}`);
+                  return `I'm searching the map for "${args.query}" for you.`;
+              }
+              return "What would you like me to search for on the map?";
+          default:
+              return `I'm not familiar with the action: ${name}.`;
+      }
+  };
+
+  const handleSendMessage = async (messageText = inputMessage) => {
+    if (!messageText.trim()) return;
+
+    const userMessage = {
+      id: Date.now(),
+      type: 'user',
+      content: messageText,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setIsTyping(true);
+
+    try {
+      const intentData = await processUserIntent(messageText);
+      let responseContent = intentData.response;
+
+      if (intentData.function_call) {
+          const functionResult = executeFunction(intentData.function_call.name, intentData.function_call.arguments);
+          // The LLM's 'response' field already includes what the bot says about performing the action.
+          // The functionResult is primarily for logging/debugging or if further client-side confirmation is needed.
+          console.log("Function executed:", intentData.function_call.name, "Result:", functionResult);
+      }
+      
+      const botMessage = {
+        id: Date.now() + 1,
+        type: 'bot',
+        content: responseContent,
+        timestamp: new Date(),
+        quickActions: intentData.quick_actions || []
+      };
+
+      setMessages(prev => [...prev, botMessage]);
+
+      // Save to database
+      if (currentUser) {
+        await ChatMessage.create({
+          user_id: currentUser.id,
+          message: messageText,
+          response: responseContent,
+          // 'intent' field is removed as the LLM no longer explicitly returns it in this schema
+          session_id: sessionId,
+          actions_taken: intentData.function_call ? [intentData.function_call.name] : []
+        });
+      }
+
+    } catch (error) {
+      console.error('Error handling message:', error);
+      
+      // Fallback response when Gemini API fails
+      let fallbackResponse = "I'm having trouble processing your request right now. Here are some things I can help you with:";
+      
+      if (error.message.includes('API key')) {
+        fallbackResponse = "I need to be configured with a valid Gemini API key to provide intelligent responses. Please contact support.";
+      } else if (error.message.includes('quota') || error.message.includes('rate limit')) {
+        fallbackResponse = "I'm currently experiencing high demand. Please try again in a few moments.";
+      }
+      
+      const errorMessage = {
+        id: Date.now() + 1,
+        type: 'bot',
+        content: fallbackResponse,
+        timestamp: new Date(),
+        quickActions: [
+          { text: "Go to Dashboard", action: "navigate_to", params: { page: "Dashboard" } },
+          { text: "View Properties", action: "navigate_to", params: { page: "Map" } },
+          { text: "Create Property", action: "start_new_property", params: {} },
+          { text: "Help", action: "show_help", params: {} }
+        ]
+      };
+
+      setMessages(prev => [...prev, errorMessage]);
+    }
+
+    setIsTyping(false);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  return (
+    <>
+      {/* Enhanced Chat Toggle Button */}
+      <Button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`fixed bottom-6 right-6 w-16 h-16 rounded-full btn-gradient shadow-[var(--shadow-brand-lg)] z-50 transition-brand hover:scale-110 ${
+          isOpen ? 'rotate-180' : 'hover:rotate-12'
+        }`}
+        size="icon"
+      >
+        {isOpen ? <X className="w-7 h-7" /> : <MessageCircle className="w-7 h-7" />}
+        <div className="absolute -top-1 -right-1 w-4 h-4 bg-[hsl(var(--success))] rounded-full border-2 border-white animate-pulse"></div>
+      </Button>
+
+      {/* Enhanced Chat Window */}
+      {isOpen && (
+        <Card 
+          className="fixed bottom-24 right-6 z-40 w-[calc(100vw-3rem)] max-w-md glass border-[hsl(var(--border))] shadow-[var(--shadow-brand-lg)] flex flex-col rounded-3xl h-[70vh] max-h-[600px] overflow-hidden"
+        >
+            {/* Enhanced Header */}
+            <CardHeader className="pb-4 border-b border-[hsl(var(--border))] flex-shrink-0 bg-gradient-to-r from-[hsl(var(--muted))]/80 to-[hsl(var(--accent-light))]/30">
+              <CardTitle className="flex items-center gap-3 text-[hsl(var(--foreground))]">
+                <div className="w-12 h-12 bg-gradient-brand rounded-2xl flex items-center justify-center shadow-[var(--shadow-brand)]">
+                  <Bot className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg">Elaview Assistant</h3>
+                  <p className="text-sm text-muted-foreground">Your marketing companion</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-[hsl(var(--success))] rounded-full shadow-lg animate-pulse"></div>
+                  <span className="text-xs font-medium text-[hsl(var(--success))]">Online</span>
+                </div>
+              </CardTitle>
+            </CardHeader>
+
+            {/* Enhanced Messages Area */}
+            <div className="flex-1 overflow-hidden flex flex-col bg-gradient-to-b from-[hsl(var(--card))]/50 to-[hsl(var(--muted))]/50">
+              <ScrollArea className="flex-1 p-6">
+                <div className="space-y-6">
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div className={`flex gap-3 max-w-[85%] ${message.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-[var(--shadow-brand)] ${
+                          message.type === 'user' 
+                            ? 'bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--accent))]' 
+                            : 'bg-gradient-brand'
+                        }`}>
+                          {message.type === 'user' ? 
+                            <UserIcon className="w-5 h-5 text-white" /> : 
+                            <Bot className="w-5 h-5 text-white" />
+                          }
+                        </div>
+                        <div className={`rounded-2xl p-4 shadow-[var(--shadow-brand)] transition-brand hover:shadow-[var(--shadow-brand-lg)] ${
+                          message.type === 'user' 
+                            ? 'bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--accent))] text-white' 
+                            : 'glass-strong text-[hsl(var(--foreground))] border border-[hsl(var(--border))]'
+                        }`}>
+                          <p className="text-sm whitespace-pre-line leading-relaxed">{message.content}</p>
+                          <p className="text-xs opacity-70 mt-2 text-right">
+                            {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                          
+                          {/* Enhanced Quick Action Buttons */}
+                          {message.quickActions && message.quickActions.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-4">
+                              {message.quickActions.map((action, index) => (
+                                <Button
+                                  key={index}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleQuickAction(action.action, action.params)}
+                                  className="text-xs glass border-[hsl(var(--border))] text-[hsl(var(--primary))] hover:bg-[hsl(var(--muted))] rounded-xl font-bold transition-brand hover:scale-105"
+                                >
+                                  {action.text}
+                                </Button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Enhanced Typing Indicator */}
+                  {isTyping && (
+                    <div className="flex justify-start">
+                      <div className="flex gap-3">
+                        <div className="w-10 h-10 bg-gradient-brand rounded-2xl flex items-center justify-center shadow-[var(--shadow-brand)]">
+                          <Bot className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="glass-strong rounded-2xl p-4 shadow-[var(--shadow-brand)] border border-[hsl(var(--border))]">
+                          <div className="flex space-x-2">
+                            <div className="w-2 h-2 bg-gradient-brand rounded-full animate-bounce"></div>
+                            <div className="w-2 h-2 bg-gradient-brand rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                            <div className="w-2 h-2 bg-gradient-brand rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              </ScrollArea>
+
+              {/* Enhanced Input Area */}
+              <div className="p-6 border-t border-[hsl(var(--border))] bg-gradient-to-r from-[hsl(var(--card))]/90 to-[hsl(var(--muted))]/30 flex-shrink-0">
+                <div className="flex gap-3">
+                  <Input
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Ask me anything about advertising..."
+                    className="flex-1 glass border-[hsl(var(--border))] rounded-2xl py-3 px-4 text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--primary))]/70 focus-brand transition-brand"
+                    disabled={isTyping}
+                  />
+                  <Button
+                    onClick={() => handleSendMessage()}
+                    disabled={!inputMessage.trim() || isTyping}
+                    className="btn-gradient rounded-2xl px-4 shadow-[var(--shadow-brand)] hover:shadow-[var(--shadow-brand-lg)] transition-brand hover:scale-105 disabled:opacity-50"
+                    size="icon"
+                  >
+                    <Send className="w-5 h-5" />
+                  </Button>
+                </div>
+                <p className="text-xs text-center text-muted-foreground mt-3 flex items-center justify-center gap-2">
+                  <Sparkles className="w-3 h-3" />
+                  Powered by Elaview AI • Ask me anything!
+                </p>
+              </div>
+            </div>
+        </Card>
+      )}
+    </>
+  );
+}

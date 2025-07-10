@@ -1,0 +1,378 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model advertising_areas {
+  id          String      @id
+  name        String
+  title       String?
+  description String?
+  type        String?
+  dimensions  Json?
+  coordinates Json
+  city        String
+  state       String?
+  country     String
+  baseRate    Float?
+  pricing     Json?
+  rateType    RateType    @default(DAILY)
+  currency    String      @default("USD")
+  status      String      @default("active")
+  isActive    Boolean     @default(true)
+  maxBookings Int?
+  images      String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime
+  propertyId  String?
+  features    Json?
+  properties  properties? @relation(fields: [propertyId], references: [id])
+  bookings    bookings[]
+}
+
+model bookings {
+  id                String              @id
+  startDate         DateTime
+  endDate           DateTime
+  totalAmount       Float
+  currency          String              @default("USD")
+  status            BookingStatus       @default(PENDING)
+  isPaid            Boolean             @default(false)
+  notes             String?
+  metadata          String?
+  bookingType       String?
+  booker_id         String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  bookerId          String
+  propertyId        String?
+  campaignId        String?
+  advertisingAreaId String?
+  advertising_areas advertising_areas?  @relation(fields: [advertisingAreaId], references: [id])
+  users             users               @relation(fields: [bookerId], references: [id], onDelete: Cascade)
+  campaigns         campaigns?          @relation(fields: [campaignId], references: [id])
+  properties        properties?         @relation(fields: [propertyId], references: [id])
+  invoices          invoices[]
+  payment_reminders payment_reminders[]
+}
+
+model campaigns {
+  id                  String         @id
+  name                String
+  title               String?
+  description         String?
+  budget              Float?
+  dailyBudget         Float?
+  currency            String         @default("USD")
+  targetAudience      Json?
+  startDate           DateTime?
+  endDate             DateTime?
+  isActive            Boolean        @default(false)
+  impressions         Int            @default(0)
+  clicks              Int            @default(0)
+  conversions         Int            @default(0)
+  totalSpent          Float          @default(0)
+  status              CampaignStatus @default(DRAFT)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime
+  advertiserId        String
+  propertyId          String?
+  advertiser_id       String?
+  brand_name          String
+  content_description String?
+  content_type        Json?
+  end_date            DateTime?
+  media_dimensions    String?
+  media_files         Json?
+  media_type          String?
+  notes               String?
+  start_date          DateTime
+  total_budget        Float?
+  keywords            Json?
+  bookings            bookings[]
+  users               users          @relation(fields: [advertiserId], references: [id], onDelete: Cascade)
+  properties          properties?    @relation(fields: [propertyId], references: [id])
+  invoices            invoices[]
+}
+
+model chat_messages {
+  id        String   @id
+  content   String
+  chatRoom  String
+  createdAt DateTime @default(now())
+  senderId  String
+  users     users    @relation(fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model invoices {
+  id                    String              @id
+  invoiceNumber         String              @unique
+  amount                Float
+  currency              String              @default("USD")
+  description           String?
+  dueDate               DateTime
+  status                InvoiceStatus       @default(PENDING)
+  isPaid                Boolean             @default(false)
+  paidAt                DateTime?
+  paymentMethod         String?
+  stripeInvoiceId       String?
+  stripePaymentIntentId String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime
+  userId                String
+  bookingId             String?
+  campaignId            String?
+  bookings              bookings?           @relation(fields: [bookingId], references: [id])
+  campaigns             campaigns?          @relation(fields: [campaignId], references: [id])
+  users                 users               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment_reminders     payment_reminders[]
+}
+
+model messages {
+  id          String      @id
+  subject     String?
+  content     String
+  isRead      Boolean     @default(false)
+  type        MessageType @default(GENERAL)
+  priority    Priority    @default(NORMAL)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime
+  senderId    String?
+  recipientId String
+  users       users?      @relation(fields: [senderId], references: [id])
+}
+
+model payment_reminders {
+  id        String         @id
+  message   String
+  sentAt    DateTime       @default(now())
+  method    ReminderMethod @default(EMAIL)
+  userId    String
+  invoiceId String?
+  bookingId String?
+  bookings  bookings?      @relation(fields: [bookingId], references: [id])
+  invoices  invoices?      @relation(fields: [invoiceId], references: [id])
+  users     users          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model payment_settings {
+  id                   String   @id
+  stripeCustomerId     String?
+  stripeAccountId      String?
+  defaultPaymentMethod String?
+  bankAccountNumber    String?
+  routingNumber        String?
+  accountHolderName    String?
+  autoPayEnabled       Boolean  @default(false)
+  reminderEnabled      Boolean  @default(true)
+  reminderDaysBefore   Int      @default(3)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime
+  userId               String   @unique
+  users                users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model properties {
+  id                 String               @id
+  name               String?
+  title              String
+  description        String?
+  address            String
+  city               String
+  state              String?
+  country            String
+  zipCode            String?
+  latitude           Float?
+  longitude          Float?
+  location           Json?
+  propertyType       PropertyType?
+  size               Float?
+  bedrooms           Int?
+  bathrooms          Int?
+  type               String?
+  spaceType          SpaceType?
+  dimensions         Json?
+  specifications     Json?
+  primary_image      String?
+  basePrice          Float?
+  pricing            Json?
+  currency           String               @default("USD")
+  status             PropertyStatus       @default(DRAFT)
+  isActive           Boolean              @default(true)
+  isApproved         Boolean              @default(false)
+  owner_id           String?
+  ownerId            String
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  features           Json?
+  images             Json?
+  photos             Json?
+  videos             Json?
+  documents          Json?
+  advertising_areas  advertising_areas[]
+  bookings           bookings[]
+  campaigns          campaigns[]
+  users              users                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  property_approvals property_approvals[]
+}
+
+model property_approvals {
+  id           String         @id
+  status       ApprovalStatus @default(PENDING)
+  notes        String?
+  reviewedAt   DateTime?
+  approvalType String?        @default("space_listing")
+  metadata     String?
+  propertyId   String
+  reviewerId   String?
+  property_id  String?
+  reviewer_id  String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  properties   properties     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  users        users?         @relation(fields: [reviewerId], references: [id])
+}
+
+model users {
+  id                 String               @id
+  clerkId            String               @unique
+  email              String               @unique
+  firstName          String?
+  lastName           String?
+  full_name          String?
+  imageUrl           String?
+  phone              String?
+  role               UserRole             @default(USER)
+  isActive           Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  bookings           bookings[]
+  campaigns          campaigns[]
+  chat_messages      chat_messages[]
+  invoices           invoices[]
+  messages           messages[]
+  payment_reminders  payment_reminders[]
+  payment_settings   payment_settings?
+  properties         properties[]
+  property_approvals property_approvals[]
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REQUIRES_CHANGES
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum CampaignStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+  REJECTED
+  PLANNING
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+enum MessageType {
+  GENERAL
+  BOOKING_UPDATE
+  PAYMENT_REMINDER
+  SYSTEM_NOTIFICATION
+  SUPPORT_TICKET
+  SPACE_INQUIRY
+  CAMPAIGN_UPDATE
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum PropertyStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum PropertyType {
+  HOUSE
+  APARTMENT
+  CONDO
+  COMMERCIAL
+  LAND
+  WAREHOUSE
+  OFFICE
+  RETAIL
+  OTHER
+  BUILDING
+  VEHICLE_FLEET
+  EVENT_VENUE
+  TRANSIT_STATION
+  BILLBOARD
+  DIGITAL_DISPLAY
+}
+
+enum RateType {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum ReminderMethod {
+  EMAIL
+  SMS
+  PUSH_NOTIFICATION
+  IN_APP
+}
+
+enum SpaceType {
+  building
+  vehicle_fleet
+  event_venue
+  transit_station
+  retail
+  billboard
+  digital_display
+  other
+}
+
+enum UserRole {
+  USER
+  PROPERTY_OWNER
+  ADVERTISER
+  ADMIN
+  SUPER_ADMIN
+}
