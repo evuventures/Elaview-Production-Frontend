@@ -17,6 +17,7 @@ import messageRoutes from './routes/messages.js';
 import invoiceRoutes from './routes/invoices.js';
 import uploadRoutes from './routes/upload.js';
 import advertisingAreaRoutes from './routes/advertising-areas.js';
+import debugRoutes from './routes/debug.js'; // 🔍 Add debug route
 
 // Import middleware
 import { clerkMiddleware } from './middleware/clerk.js';
@@ -27,14 +28,14 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS configuration - support multiple development ports
+// CORS configuration
 const allowedOrigins = [
-  'http://localhost:3000',      // Current frontend port
-  'http://localhost:5173',      // Vite default port
-  'http://127.0.0.1:3000',      // Alternative localhost
-  'http://127.0.0.1:5173',      // Alternative localhost
-  process.env.CORS_ORIGIN       // Environment variable override
-].filter(Boolean); // Remove any undefined values
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
+  process.env.CORS_ORIGIN
+].filter(Boolean);
 
 console.log('🔗 CORS enabled for origins:', allowedOrigins);
 
@@ -42,9 +43,7 @@ console.log('🔗 CORS enabled for origins:', allowedOrigins);
 app.use(helmet());
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -57,13 +56,12 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// Handle preflight requests
 app.options('*', cors());
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: 'Too many requests from this IP, please try again later.'
 });
 app.use(limiter);
@@ -77,7 +75,7 @@ if (process.env.NODE_ENV === 'development') {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ✅ PUBLIC HEALTH CHECKS - No authentication required
+// ✅ PUBLIC HEALTH CHECKS
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
@@ -102,28 +100,32 @@ app.get('/api/health', (req, res) => {
       campaigns: '/api/campaigns (protected)',
       bookings: '/api/bookings (protected)',
       messages: '/api/messages (protected)',
-      invoices: '/api/invoices (protected)'
+      invoices: '/api/invoices (protected)',
+      debug: '/api/debug (development only)' // 🔍 Add debug info
     }
   });
 });
 
-// ✅ PUBLIC ROUTES - Apply BEFORE any authentication middleware
+// 🔍 DEBUG ROUTES - DEVELOPMENT ONLY
+if (process.env.NODE_ENV === 'development') {
+  app.use('/api/debug', debugRoutes);
+  console.log('🔍 Debug routes enabled for development');
+}
+
+// ✅ PUBLIC ROUTES
 console.log('🌍 Setting up PUBLIC routes (no auth required)...');
 
-// Public spaces route
 app.use('/api/spaces', spacesRoutes);
-console.log('   ✅ /api/spaces - Public advertising spaces');
-
-// Public areas routes (both aliases)
 app.use('/api/areas', advertisingAreaRoutes);
 app.use('/api/advertising-areas', advertisingAreaRoutes);
+
+console.log('   ✅ /api/spaces - Public advertising spaces');
 console.log('   ✅ /api/areas - Public advertising areas (short)');
 console.log('   ✅ /api/advertising-areas - Public advertising areas (full)');
 
-// ✅ PROTECTED ROUTES - Apply Clerk middleware only to these
+// ✅ PROTECTED ROUTES
 console.log('🔒 Setting up PROTECTED routes (auth required)...');
 
-// Apply Clerk middleware only to protected routes
 app.use('/api/auth', clerkMiddleware, authRoutes);
 app.use('/api/users', clerkMiddleware, userRoutes);
 app.use('/api/properties', clerkMiddleware, propertyRoutes);
@@ -135,24 +137,12 @@ app.use('/api/upload', clerkMiddleware, uploadRoutes);
 
 console.log('   🔒 /api/auth - Authentication');
 console.log('   🔒 /api/users - User management');
-console.log('   🔒 /api/properties - Legacy properties (protected)');
+console.log('   🔒 /api/properties - Properties management');
 console.log('   🔒 /api/campaigns - Campaign management');
 console.log('   🔒 /api/bookings - Booking management');
 console.log('   🔒 /api/messages - Messaging');
 console.log('   🔒 /api/invoices - Invoicing');
 console.log('   🔒 /api/upload - File uploads');
-
-// ✅ REDIRECT MIDDLEWARE - Handle legacy property endpoints
-app.use('/api/properties/*', (req, res, next) => {
-  console.log(`🔄 Redirecting legacy property route: ${req.originalUrl}`);
-  
-  // Rewrite the URL to use spaces instead
-  const newUrl = req.originalUrl.replace('/api/properties', '/api/spaces');
-  console.log(`🔄 Redirecting to: ${newUrl}`);
-  
-  // Redirect to the new spaces endpoint
-  res.redirect(301, newUrl);
-});
 
 // Error handling middleware
 app.use(errorHandler);
@@ -167,9 +157,11 @@ app.use('*', (req, res) => {
         spaces: '/api/spaces (advertising spaces)',
         areas: '/api/areas (advertising areas)',
         'advertising-areas': '/api/advertising-areas (advertising areas full name)',
-        health: '/api/health (system health)'
+        health: '/api/health (system health)',
+        debug: '/api/debug (development only)'
       },
       protected: {
+        properties: '/api/properties (requires auth)',
         campaigns: '/api/campaigns (requires auth)',
         bookings: '/api/bookings (requires auth)',
         messages: '/api/messages (requires auth)',
@@ -193,9 +185,13 @@ app.listen(PORT, () => {
   console.log('     GET  /api/spaces');
   console.log('     GET  /api/areas');
   console.log('     GET  /api/advertising-areas');
+  if (process.env.NODE_ENV === 'development') {
+    console.log('     GET  /api/debug/schema (🔍 inspect database)');
+    console.log('     POST /api/debug/test-property (🧪 test creation)');
+  }
   console.log('');
   console.log('   🔒 PROTECTED ROUTES (authentication required):');
-  console.log('     POST,PUT,DELETE  /api/spaces');
+  console.log('     ALL  /api/properties');
   console.log('     ALL  /api/campaigns');
   console.log('     ALL  /api/bookings');
   console.log('     ALL  /api/messages');
@@ -204,9 +200,12 @@ app.listen(PORT, () => {
   console.log('     ALL  /api/users');
   console.log('     ALL  /api/auth');
   console.log('');
-  console.log('   🔄 LEGACY REDIRECTS:');
-  console.log('     /api/properties/* → /api/spaces/*');
-  console.log('');
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🔍 DEBUG ENDPOINTS:`);
+    console.log(`   curl http://localhost:${PORT}/api/debug/schema`);
+    console.log(`   curl -X POST http://localhost:${PORT}/api/debug/test-property`);
+    console.log('');
+  }
   console.log(`✅ Test public endpoints:`);
   console.log(`   curl http://localhost:${PORT}/api/spaces`);
   console.log(`   curl http://localhost:${PORT}/api/areas`);

@@ -1,3 +1,4 @@
+// src/types/property.ts
 // Core location interface
 export interface LocationData {
   address: string;
@@ -22,7 +23,8 @@ export interface PhotoUpload {
 export interface AdvertisingArea {
   id: string;
   name: string;
-  type: 'billboard' | 'digital_display' | 'wall_graphic' | 'floor_graphic' | 'window_display' | 'other';
+  type: 'billboard' | 'digital_display' | 'wall_graphic' | 'floor_graphic' | 'window_display' | 
+        'super_side_ads' | 'tail_light_ads' | 'wrap_around_ads' | 'digital_display_side' | 'digital_wraps' | 'other';
   dimensions: {
     width: number;
     height: number;
@@ -38,7 +40,7 @@ export interface AdvertisingArea {
   photos: PhotoUpload[];
 }
 
-// Main property form data interface
+// Main property form data interface - REMOVED CONTACT FIELDS
 export interface PropertyFormData {
   // Basic Info - Required fields for form
   property_name: string;
@@ -48,11 +50,6 @@ export interface PropertyFormData {
   
   // Location - Required
   location: LocationData;
-  
-  // Contact Info - Required
-  contact_name: string;
-  contact_email: string;
-  contact_phone: string;
   
   // Photos - Arrays (can be empty)
   main_photos: PhotoUpload[];
@@ -67,25 +64,7 @@ export interface PropertyFormData {
   status?: 'draft' | 'review' | 'published' | 'archived';
 }
 
-// Google Maps related interfaces for better type safety
-export interface GoogleMapsLibraries {
-  places: typeof google.maps.places;
-  geometry: typeof google.maps.geometry;
-  drawing: typeof google.maps.drawing;
-  visualization: typeof google.maps.visualization;
-}
-
-export interface AutocompletePrediction {
-  description: string;
-  matched_substrings: google.maps.places.PredictionSubstring[];
-  place_id: string;
-  reference: string;
-  structured_formatting: google.maps.places.StructuredFormatting;
-  terms: google.maps.places.PredictionTerm[];
-  types: string[];
-}
-
-// Form validation interfaces  
+// Form validation interfaces - REMOVED CONTACT FIELDS
 export interface FormErrors {
   // Basic property fields
   property_name?: string | null;
@@ -104,11 +83,6 @@ export interface FormErrors {
   latitude?: string | null;
   longitude?: string | null;
   
-  // Contact fields
-  contact_name?: string | null;
-  contact_email?: string | null;
-  contact_phone?: string | null;
-  
   // Photos and areas
   main_photos?: string | null;
   advertising_areas?: string | null;
@@ -117,74 +91,13 @@ export interface FormErrors {
   [key: string]: string | null | undefined;
 }
 
-// Form step management
-export interface FormStep {
-  id: number;
-  title: string;
-  description: string;
-  isComplete: boolean;
-  isActive: boolean;
-}
-
-// Saved form data for persistence
-export interface SavedFormData {
-  data: PropertyFormData;
-  timestamp: string;
-  step: number;
-  version: string;
-}
-
-// API response interfaces
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-}
-
-export interface PropertySubmissionResponse {
-  property_id: string;
-  status: string;
-  message: string;
-  next_steps?: string[];
-}
-
-// Component prop interfaces
-export interface LocationPickerProps {
-  location: LocationData;
-  onLocationChange: (field: keyof LocationData, value: string | number | null) => void;
-  onLocationSelect?: (location: LocationData) => void;
-  error?: string | null;
-  required?: boolean;
-  className?: string;
-}
-
-export interface PhotoUploaderProps {
-  photos: PhotoUpload[];
-  onPhotosChange: (photos: PhotoUpload[]) => void;
-  maxPhotos?: number;
-  acceptedFormats?: string[];
-  maxFileSize?: number; // in bytes
-  error?: string | null;
-  required?: boolean;
-}
-
-export interface AdvertisingAreaProps {
-  areas: AdvertisingArea[];
-  onAreasChange: (areas: AdvertisingArea[]) => void;
-  error?: string | null;
-}
-
-// Utility types
+// Updated property types to match database enums
 export type PropertyType = 
-  | 'office'
-  | 'retail'
-  | 'industrial'
-  | 'mixed_use'
-  | 'medical'
-  | 'hospitality'
-  | 'residential'
-  | 'other';
+  | 'OFFICE'
+  | 'RETAIL'
+  | 'COMMERCIAL'
+  | 'WAREHOUSE'
+  | 'OTHER';
 
 export type AdvertisingAreaType = 
   | 'billboard'
@@ -192,22 +105,24 @@ export type AdvertisingAreaType =
   | 'wall_graphic'
   | 'floor_graphic'
   | 'window_display'
+  | 'super_side_ads'
+  | 'tail_light_ads'
+  | 'wrap_around_ads'
+  | 'digital_display_side'
+  | 'digital_wraps'
   | 'other';
 
 export type DimensionUnit = 'ft' | 'in' | 'm' | 'cm';
 
 export type PropertyStatus = 'draft' | 'review' | 'published' | 'archived';
 
-// Constants
+// Updated constants
 export const PROPERTY_TYPES: { value: PropertyType; label: string }[] = [
-  { value: 'office', label: 'Office Building' },
-  { value: 'retail', label: 'Retail Space' },
-  { value: 'industrial', label: 'Industrial' },
-  { value: 'mixed_use', label: 'Mixed Use' },
-  { value: 'medical', label: 'Medical Building' },
-  { value: 'hospitality', label: 'Hospitality' },
-  { value: 'residential', label: 'Residential' },
-  { value: 'other', label: 'Other' },
+  { value: 'OFFICE', label: 'Office Building' },
+  { value: 'RETAIL', label: 'Retail Space' },
+  { value: 'COMMERCIAL', label: 'Commercial' },
+  { value: 'WAREHOUSE', label: 'Warehouse' },
+  { value: 'OTHER', label: 'Other' },
 ];
 
 export const ADVERTISING_AREA_TYPES: { value: AdvertisingAreaType; label: string }[] = [
@@ -216,14 +131,12 @@ export const ADVERTISING_AREA_TYPES: { value: AdvertisingAreaType; label: string
   { value: 'wall_graphic', label: 'Wall Graphic' },
   { value: 'floor_graphic', label: 'Floor Graphic' },
   { value: 'window_display', label: 'Window Display' },
+  { value: 'super_side_ads', label: 'Super Side Ads' },
+  { value: 'tail_light_ads', label: 'Tail Light Ads' },
+  { value: 'wrap_around_ads', label: 'Wrap Around Ads' },
+  { value: 'digital_display_side', label: 'Digital Display (Side)' },
+  { value: 'digital_wraps', label: 'Digital Wraps' },
   { value: 'other', label: 'Other' },
-];
-
-export const DIMENSION_UNITS: { value: DimensionUnit; label: string }[] = [
-  { value: 'ft', label: 'Feet' },
-  { value: 'in', label: 'Inches' },
-  { value: 'm', label: 'Meters' },
-  { value: 'cm', label: 'Centimeters' },
 ];
 
 // Form validation helpers
@@ -242,7 +155,7 @@ export const validateZipCode = (zipcode: string): boolean => {
   return zipRegex.test(zipcode);
 };
 
-// Default form data
+// Updated default form data - REMOVED CONTACT FIELDS
 export const getDefaultFormData = (): PropertyFormData => ({
   // Basic info with empty strings (not undefined)
   property_name: '',
@@ -258,11 +171,6 @@ export const getDefaultFormData = (): PropertyFormData => ({
     latitude: null,
     longitude: null,
   },
-  
-  // Contact info with empty strings
-  contact_name: '',
-  contact_email: '',
-  contact_phone: '',
   
   // Arrays start empty
   main_photos: [],
@@ -292,32 +200,6 @@ export const defaultArea = (): AdvertisingArea => ({
   restrictions: '',
   photos: []
 });
-
-// Legacy default area for backward compatibility
-export const defaultAreaData = (): AreaData => ({
-  id: Date.now(),
-  title: '',
-  type: '',
-  pricing: {
-    daily_rate: ''
-  },
-  images: []
-});
-
-// Legacy types for backward compatibility with existing components
-export interface AreaData {
-  id: string | number;
-  title: string;
-  type: string;
-  pricing: {
-    daily_rate: string;
-  };
-  images: string[];
-}
-
-export interface Errors {
-  [key: string]: string | null;
-}
 
 // Local storage keys
 export const STORAGE_KEYS = {

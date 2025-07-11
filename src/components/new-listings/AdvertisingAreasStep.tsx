@@ -1,3 +1,4 @@
+// src/components/new-listings/AdvertisingAreasStep.tsx
 import React from 'react';
 import { PropertyFormData, AdvertisingArea, defaultArea } from '@/types/property';
 
@@ -38,24 +39,76 @@ const AdvertisingAreasStep: React.FC<AdvertisingAreasStepProps> = ({
     }));
   };
 
+  // Dynamic options based on property type
+  const getAdvertisingOptions = () => {
+    const isSemiTruck = formData.property_type === 'VEHICLE_FLEET';
+    
+    if (isSemiTruck) {
+      return [
+        { value: 'super_side_ads', label: 'Super Side Ads' },
+        { value: 'tail_light_ads', label: 'Tail Light Ads' },
+        { value: 'wrap_around_ads', label: 'Wrap Around Ads' },
+        { value: 'digital_display_side', label: 'Digital Display (Side)' },
+        { value: 'digital_wraps', label: 'Digital Wraps' },
+        { value: 'other', label: 'Other' }
+      ];
+    } else {
+      return [
+        { value: 'billboard', label: 'Billboard' },
+        { value: 'digital_display', label: 'Digital Display' },
+        { value: 'wall_graphic', label: 'Wall Graphic' },
+        { value: 'floor_graphic', label: 'Floor Graphic' },
+        { value: 'window_display', label: 'Window Display' },
+        { value: 'other', label: 'Other' }
+      ];
+    }
+  };
+
+  const advertisingOptions = getAdvertisingOptions();
+  const isSemiTruck = formData.property_type === 'VEHICLE_FLEET';
+
   return (
     <div className="space-y-8">
       {/* Step Header */}
       <div>
         <h2 className="text-2xl font-bold text-foreground mb-2">
-          Advertising Areas
+          {isSemiTruck ? 'Vehicle Advertising Spaces' : 'Advertising Areas'}
         </h2>
         <p className="text-muted-foreground">
-          Define the advertising spaces available at your property.
+          {isSemiTruck 
+            ? 'Define the advertising spaces available on your vehicle fleet.'
+            : 'Define the advertising spaces available at your property.'
+          }
         </p>
       </div>
+
+      {/* Property Type Notice */}
+      {isSemiTruck && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-green-800">Semi-Truck Advertising</h3>
+              <p className="mt-1 text-sm text-green-700">
+                You're setting up advertising spaces for a semi-truck fleet. Each vehicle can have multiple advertising areas.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Areas List */}
       <div className="space-y-6">
         {formData.advertising_areas.map((area, index) => (
           <div key={area.id} className="border border-border rounded-lg p-6">
             <div className="flex justify-between items-start mb-4">
-              <h3 className="text-lg font-semibold">Area {index + 1}</h3>
+              <h3 className="text-lg font-semibold">
+                {isSemiTruck ? `Vehicle Space ${index + 1}` : `Area ${index + 1}`}
+              </h3>
               {formData.advertising_areas.length > 1 && (
                 <button
                   type="button"
@@ -71,18 +124,22 @@ const AdvertisingAreasStep: React.FC<AdvertisingAreasStepProps> = ({
               {/* Area Name */}
               <div>
                 <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                  Area Name <span className="text-red-500">*</span>
+                  {isSemiTruck ? 'Space Name' : 'Area Name'} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={area.name}
                   onChange={(e) => updateArea(area.id, { name: e.target.value })}
-                  placeholder="e.g., Lobby Billboard"
+                  placeholder={
+                    isSemiTruck 
+                      ? "e.g., Driver Side Panel, Rear Door"
+                      : "e.g., Lobby Billboard, Main Entrance"
+                  }
                   className="w-full h-10 px-3 text-sm border border-border rounded-md bg-background"
                 />
               </div>
 
-              {/* Area Type */}
+              {/* Area Type - DYNAMIC OPTIONS */}
               <div>
                 <label className="text-sm font-medium text-muted-foreground mb-2 block">
                   Type <span className="text-red-500">*</span>
@@ -92,12 +149,12 @@ const AdvertisingAreasStep: React.FC<AdvertisingAreasStepProps> = ({
                   onChange={(e) => updateArea(area.id, { type: e.target.value as any })}
                   className="w-full h-10 px-3 text-sm border border-border rounded-md bg-background"
                 >
-                  <option value="billboard">Billboard</option>
-                  <option value="digital_display">Digital Display</option>
-                  <option value="wall_graphic">Wall Graphic</option>
-                  <option value="floor_graphic">Floor Graphic</option>
-                  <option value="window_display">Window Display</option>
-                  <option value="other">Other</option>
+                  <option value="">Select Type</option>
+                  {advertisingOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -154,17 +211,31 @@ const AdvertisingAreasStep: React.FC<AdvertisingAreasStepProps> = ({
               {/* Location Description */}
               <div className="md:col-span-2">
                 <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                  Location Description <span className="text-red-500">*</span>
+                  {isSemiTruck ? 'Location on Vehicle' : 'Location Description'} <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={area.location_description}
                   onChange={(e) => updateArea(area.id, { location_description: e.target.value })}
-                  placeholder="Describe where this advertising area is located within your property..."
+                  placeholder={
+                    isSemiTruck
+                      ? "Describe where this advertising space is located on the vehicle (e.g., 'Driver side panel, visible from highway traffic')"
+                      : "Describe where this advertising area is located within your property..."
+                  }
                   rows={3}
                   className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background resize-none"
                 />
               </div>
             </div>
+
+            {/* Semi-Truck Specific Help */}
+            {isSemiTruck && (
+              <div className="mt-4 bg-blue-50 border border-blue-200 rounded-md p-3">
+                <p className="text-xs text-blue-700">
+                  <strong>Tip:</strong> Consider visibility, traffic exposure, and viewing angles when describing the location. 
+                  Mention highway routes, urban areas, or specific traffic patterns where applicable.
+                </p>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -176,7 +247,7 @@ const AdvertisingAreasStep: React.FC<AdvertisingAreasStepProps> = ({
           onClick={addArea}
           className="bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
         >
-          + Add Another Area
+          + Add Another {isSemiTruck ? 'Vehicle Space' : 'Area'}
         </button>
       </div>
 
@@ -188,8 +259,8 @@ const AdvertisingAreasStep: React.FC<AdvertisingAreasStepProps> = ({
       {/* Progress */}
       <div className="bg-muted/30 rounded-lg p-4">
         <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>Step 2 of 3 - Advertising Areas</span>
-          <span>{formData.advertising_areas.length} area(s) defined</span>
+          <span>Step 2 of 3 - {isSemiTruck ? 'Vehicle Advertising Spaces' : 'Advertising Areas'}</span>
+          <span>{formData.advertising_areas.length} {isSemiTruck ? 'space(s)' : 'area(s)'} defined</span>
         </div>
         <div className="w-full bg-muted rounded-full h-2 mt-2">
           <div className="bg-primary h-2 rounded-full w-2/3"></div>

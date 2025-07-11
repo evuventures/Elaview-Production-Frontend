@@ -306,61 +306,56 @@ export default function CreatePropertyPage(): JSX.Element {
     }
   }, [formData, currentStep, isLoading]);
 
-  // Validation functions (keeping existing validation logic)
-  const validateStep1 = (): boolean => {
-    const newErrors: Record<string, string | null> = {};
+  // Validation functions
+  // Replace your validateStep1 function in src/pages/properties/CreateProperty.tsx
 
-    if (!formData.property_name.trim()) {
-      newErrors.property_name = 'Property name is required';
-    }
+const validateStep1 = (): boolean => {
+  const newErrors: Record<string, string | null> = {};
 
-    if (!formData.property_type) {
-      newErrors.property_type = 'Property type is required';
-    }
+  if (!formData.property_name.trim()) {
+    newErrors.property_name = 'Property name is required';
+  }
 
-    if (!formData.description.trim()) {
-      newErrors.description = 'Property description is required';
-    } else if (formData.description.length < 50) {
-      newErrors.description = 'Description must be at least 50 characters';
-    }
+  if (!formData.property_type) {
+    newErrors.property_type = 'Property type is required';
+  }
 
-    if (!formData.total_sqft || formData.total_sqft <= 0) {
-      newErrors.total_sqft = 'Total square footage must be greater than 0';
-    }
+  if (!formData.description.trim()) {
+    newErrors.description = 'Property description is required';
+  } else if (formData.description.length < 50) {
+    newErrors.description = 'Description must be at least 50 characters';
+  }
 
+  if (!formData.total_sqft || formData.total_sqft <= 0) {
+    newErrors.total_sqft = formData.property_type === 'VEHICLE_FLEET' 
+      ? 'Number of vehicles must be greater than 0'
+      : 'Total square footage must be greater than 0';
+  }
+
+  // Conditional address validation based on property type
+  const isSemiTruck = formData.property_type === 'VEHICLE_FLEET';
+  
+  if (!isSemiTruck) {
+    // Regular properties need full address
     if (!formData.location.address.trim()) {
       newErrors.location_address = 'Property address is required';
     }
+  }
+  
+  // Both property types need city and zipcode
+  if (!formData.location.city.trim()) {
+    newErrors.city = 'City is required';
+  }
 
-    if (!formData.location.city.trim()) {
-      newErrors.city = 'City is required';
-    }
+  if (!formData.location.zipcode.trim()) {
+    newErrors.zipcode = 'ZIP code is required';
+  } else if (!validateZipCode(formData.location.zipcode)) {
+    newErrors.zipcode = 'Invalid ZIP code format';
+  }
 
-    if (!formData.location.zipcode.trim()) {
-      newErrors.zipcode = 'ZIP code is required';
-    } else if (!validateZipCode(formData.location.zipcode)) {
-      newErrors.zipcode = 'Invalid ZIP code format';
-    }
-
-    if (!formData.contact_name.trim()) {
-      newErrors.contact_name = 'Contact name is required';
-    }
-
-    if (!formData.contact_email.trim()) {
-      newErrors.contact_email = 'Contact email is required';
-    } else if (!validateEmail(formData.contact_email)) {
-      newErrors.contact_email = 'Invalid email format';
-    }
-
-    if (!formData.contact_phone.trim()) {
-      newErrors.contact_phone = 'Contact phone is required';
-    } else if (!validatePhone(formData.contact_phone)) {
-      newErrors.contact_phone = 'Invalid phone number format';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
 
   const validateStep2 = (): boolean => {
     const newErrors: Record<string, string | null> = {};

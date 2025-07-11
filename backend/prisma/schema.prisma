@@ -360,12 +360,16 @@ enum ReminderMethod {
 
 enum SpaceType {
   building
-  vehicle_fleet
   event_venue
   transit_station
   retail
   billboard
   digital_display
+  super_side_ads
+  tail_light_ads
+  wrap_around_ads
+  digital_display_side
+  digital_wraps
   other
 }
 
