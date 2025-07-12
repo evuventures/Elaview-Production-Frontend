@@ -203,6 +203,14 @@ export const defaultArea = (): AdvertisingArea => ({
   photos: []
 });
 
+// Saved form data interface for localStorage
+export interface SavedFormData {
+  data: PropertyFormData;
+  timestamp: string;
+  step: number;
+  version: string;
+}
+
 // Local storage keys
 export const STORAGE_KEYS = {
   FORM_DATA: 'property_form_data',

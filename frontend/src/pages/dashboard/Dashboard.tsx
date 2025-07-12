@@ -377,7 +377,7 @@ export default function DashboardPage() {
       
       // Don't show error alert in production - just log it
       if (process.env.NODE_ENV === 'development') {
-        console.warn(`Failed to load dashboard data: ${error.message}`);
+        console.warn(`Failed to load dashboard data: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     } finally {
       setIsLoading(false);

@@ -77,10 +77,7 @@ const getClerkToken = async () => {
       }
     }
 
-    // Method 2: Try direct session access
-    if (typeof window !== 'undefined' && window.Clerk?.client?.sessions?.[0]) {
-      return await window.Clerk.client.sessions[0].getToken();
-    }
+
 
     throw new Error('No valid Clerk session found');
   } catch (error) {
