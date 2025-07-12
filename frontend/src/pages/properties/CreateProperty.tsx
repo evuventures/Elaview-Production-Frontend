@@ -144,12 +144,14 @@ const apiCall = async (url: string, options: RequestInit = {}) => {
   } catch (error) {
     clearTimeout(timeoutId);
     
-    if (error.name === 'AbortError') {
-      throw new Error('Request timeout - please try again');
-    }
-    
-    if (error.message.includes('Failed to fetch')) {
-      throw new Error('Cannot connect to server. Please check if the backend is running.');
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout - please try again');
+      }
+      
+      if (error.message.includes('Failed to fetch')) {
+        throw new Error('Cannot connect to server. Please check if the backend is running.');
+      }
     }
     
     throw error;
@@ -235,7 +237,7 @@ export default function CreatePropertyPage(): JSX.Element {
         setBackendStatus('disconnected');
         console.error('❌ Backend connection failed:', error);
         setErrors({
-          backend: `Backend connection failed: ${error.message}`
+          backend: `Backend connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
         });
       }
     };
@@ -306,61 +308,77 @@ export default function CreatePropertyPage(): JSX.Element {
     }
   }, [formData, currentStep, isLoading]);
 
-  // Validation functions
-  // Replace your validateStep1 function in src/pages/properties/CreateProperty.tsx
-
+  // ✅ UPDATED: Enhanced validation for address picker integration
   const validateStep1 = (): boolean => {
     const newErrors: Record<string, string | null> = {};
-  
+
     if (!formData.property_name.trim()) {
       newErrors.property_name = 'Property name is required';
     }
-  
+
     if (!formData.property_type) {
       newErrors.property_type = 'Property type is required';
     }
-  
+
     if (!formData.description.trim()) {
       newErrors.description = 'Property description is required';
     } else if (formData.description.length < 50) {
       newErrors.description = 'Description must be at least 50 characters';
     }
 
-  // Conditional address validation based on property type
-  const isSemiTruck = formData.property_type === 'VEHICLE_FLEET';
-  
-  if (!isSemiTruck) {
-    // Regular properties need user-input for square footage
-    if (!formData.total_sqft || formData.total_sqft <= 0) {
-      newErrors.total_sqft = 'Total square footage must be greater than 0';
-    }
-    
-    // Regular properties need full address
-    if (!formData.location.address.trim()) {
-      newErrors.location_address = 'Property address is required';
-    }
-  } else {
-    // Vehicle fleet: total_sqft is auto-set to 1, just verify it exists
-    if (!formData.total_sqft || formData.total_sqft !== 1) {
-      // This should auto-correct, but just in case
-      setFormData(prev => ({ ...prev, total_sqft: 1 }));
-    }
-  }
-  
-  // Both property types need city and zipcode
-  if (!formData.location.city.trim()) {
-    newErrors.city = 'City is required';
-  }
+    // ✅ UPDATED: Property type specific validation
+    const isVehicleFleet = formData.property_type === 'VEHICLE_FLEET';
 
-  if (!formData.location.zipcode.trim()) {
-    newErrors.zipcode = 'ZIP code is required';
-  } else if (!validateZipCode(formData.location.zipcode)) {
-    newErrors.zipcode = 'Invalid ZIP code format';
-  }
+    if (isVehicleFleet) {
+      // Vehicle fleet: total_sqft should be 1
+      if (!formData.total_sqft || formData.total_sqft !== 1) {
+        setFormData(prev => ({ ...prev, total_sqft: 1 }));
+      }
+      
+      // Vehicle fleet: address is optional, but city/zip required
+      if (!formData.location.city.trim()) {
+        newErrors.city = 'Operating city is required for vehicle fleet';
+      }
 
-  setErrors(newErrors);
-  return Object.keys(newErrors).length === 0;
-};
+      if (!formData.location.zipcode.trim()) {
+        newErrors.zipcode = 'ZIP code is required for operating area';
+      } else if (!validateZipCode(formData.location.zipcode)) {
+        newErrors.zipcode = 'Invalid ZIP code format';
+      }
+
+      // For vehicle fleet, coordinates are optional (will be defaulted)
+      console.log('📍 Vehicle fleet validation: coordinates optional');
+      
+    } else {
+      // Fixed properties: need user input for square footage
+      if (!formData.total_sqft || formData.total_sqft <= 0) {
+        newErrors.total_sqft = 'Total square footage must be greater than 0';
+      }
+
+      // Fixed properties: address is required
+      if (!formData.location.address.trim()) {
+        newErrors.location_address = 'Property address is required for fixed properties';
+      }
+
+      if (!formData.location.city.trim()) {
+        newErrors.city = 'City is required';
+      }
+
+      if (!formData.location.zipcode.trim()) {
+        newErrors.zipcode = 'ZIP code is required';
+      } else if (!validateZipCode(formData.location.zipcode)) {
+        newErrors.zipcode = 'Invalid ZIP code format';
+      }
+
+      // ✅ CRITICAL: Fixed properties must have coordinates
+      if (!formData.location.latitude || !formData.location.longitude) {
+        newErrors.coordinates = 'Please select your exact property location on the map or use the address search to get coordinates.';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const validateStep2 = (): boolean => {
     const newErrors: Record<string, string | null> = {};
@@ -368,6 +386,21 @@ export default function CreatePropertyPage(): JSX.Element {
     if (formData.advertising_areas.length === 0) {
       newErrors.advertising_areas = 'At least one advertising area is required';
     }
+
+    // Validate each advertising area
+    formData.advertising_areas.forEach((area, index) => {
+      if (!area.name?.trim()) {
+        newErrors[`area_${index}_name`] = `Area ${index + 1}: Name is required`;
+      }
+      
+      if (!area.type) {
+        newErrors[`area_${index}_type`] = `Area ${index + 1}: Type is required`;
+      }
+      
+      if (!area.monthly_rate || area.monthly_rate <= 0) {
+        newErrors[`area_${index}_rate`] = `Area ${index + 1}: Monthly rate must be greater than 0`;
+      }
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -393,6 +426,22 @@ export default function CreatePropertyPage(): JSX.Element {
   const handlePrevious = () => {
     if (currentStep > 1) {
       setCurrentStep(prev => prev - 1);
+    }
+  };
+
+  // ✅ UPDATED: Form change handler for PropertyBasicsStep compatibility
+  const handleFormChange = (field: keyof PropertyFormData, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Clear related errors when user makes changes
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: null
+      }));
     }
   };
 
@@ -449,9 +498,9 @@ export default function CreatePropertyPage(): JSX.Element {
       clearSavedData();
       
       // Navigate to success page
-      if (result.property_id || result.id) {
-        const propertyId = result.property_id || result.id;
-        navigate(`/properties/${propertyId}?created=true`);
+      if (result.data?.property_id || result.data?.property?.id) {
+        const propertyId = result.data.property_id || result.data.property.id;
+        navigate(`/dashboard?property_created=true&property_id=${propertyId}`);
       } else {
         navigate('/dashboard?property_created=true');
       }
@@ -461,17 +510,18 @@ export default function CreatePropertyPage(): JSX.Element {
       
       let errorMessage = 'Failed to create property. Please try again.';
       
-      if (error.message.includes('Authentication failed')) {
-        errorMessage = 'Authentication expired. Please sign in again.';
-        // Optionally trigger re-authentication
-      } else if (error.message.includes('Permission denied')) {
-        errorMessage = 'You do not have permission to create properties. Please contact support.';
-      } else if (error.message.includes('Invalid data')) {
-        errorMessage = 'Invalid property data. Please check your inputs and try again.';
-      } else if (error.message.includes('Server error')) {
-        errorMessage = 'Server error. Please try again later or contact support.';
-      } else if (error.message) {
-        errorMessage = error.message;
+      if (error instanceof Error) {
+        if (error.message.includes('Authentication failed')) {
+          errorMessage = 'Authentication expired. Please sign in again.';
+        } else if (error.message.includes('Permission denied')) {
+          errorMessage = 'You do not have permission to create properties. Please contact support.';
+        } else if (error.message.includes('Invalid data')) {
+          errorMessage = 'Invalid property data. Please check your inputs and try again.';
+        } else if (error.message.includes('Server error')) {
+          errorMessage = 'Server error. Please try again later or contact support.';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
       }
 
       setErrors({ submit: errorMessage });
@@ -488,20 +538,20 @@ export default function CreatePropertyPage(): JSX.Element {
       alert('Authentication working! Check console for token details.');
     } catch (error) {
       console.error('🔑 Auth test failed:', error);
-      alert(`Authentication failed: ${error.message}`);
+      alert(`Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
-  // Render step content
+  // ✅ UPDATED: Render step content with proper props
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
         return (
           <PropertyBasicsStep
             formData={formData}
-            setFormData={setFormData}
+            onFormChange={handleFormChange}
             errors={errors}
-            setErrors={setErrors}
+            onNext={handleNext}
           />
         );
       case 2:
@@ -637,10 +687,10 @@ export default function CreatePropertyPage(): JSX.Element {
               </Alert>
             )}
 
-            {/* Navigation Buttons */}
-            <div className="flex justify-between items-center pt-6 border-t border-border">
-              <div>
-                {currentStep > 1 && (
+            {/* ✅ UPDATED: Navigation - only show for step 2 and 3 since step 1 has its own Next button */}
+            {currentStep > 1 && (
+              <div className="flex justify-between items-center pt-6 border-t border-border">
+                <div>
                   <Button
                     variant="outline"
                     onClick={handlePrevious}
@@ -648,35 +698,35 @@ export default function CreatePropertyPage(): JSX.Element {
                   >
                     Previous
                   </Button>
-                )}
-              </div>
+                </div>
 
-              <div className="flex space-x-3">
-                {currentStep < 3 ? (
-                  <Button
-                    onClick={handleNext}
-                    disabled={isSubmitting}
-                  >
-                    Next Step
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={isSubmitting || backendStatus === 'disconnected' || !isSignedIn}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    {isSubmitting ? (
-                      <div className="flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Saving to Database...
-                      </div>
-                    ) : (
-                      'Create Property'
-                    )}
-                  </Button>
-                )}
+                <div className="flex space-x-3">
+                  {currentStep < 3 ? (
+                    <Button
+                      onClick={handleNext}
+                      disabled={isSubmitting}
+                    >
+                      Next Step
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={isSubmitting || backendStatus === 'disconnected' || !isSignedIn}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {isSubmitting ? (
+                        <div className="flex items-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Saving to Database...
+                        </div>
+                      ) : (
+                        'Create Property'
+                      )}
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

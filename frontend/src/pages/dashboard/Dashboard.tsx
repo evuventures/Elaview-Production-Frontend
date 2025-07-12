@@ -49,7 +49,7 @@ const BadgeComponent = Badge as React.ComponentType<any>;
 type Campaign = {
   id: string;
   name: string;
-  status: 'active' | 'paused' | string;
+  status: 'active' | 'paused' | 'draft' | string;
   budget: number;
   spent: number;
   impressions: number;
@@ -64,7 +64,7 @@ type Property = {
   id: string;
   name: string;
   address: string;
-  status: 'active' | string;
+  status: 'active' | 'draft' | string;
   owner_id: string;
   created_date: string;
 };
@@ -110,105 +110,6 @@ type ModalData =
 type AreasMap = Record<string, AdvertisingArea>;
 type PropertiesMap = Record<string, Property>;
 type UsersMap = Record<string, User>;
-
-// --- Mock data for fallback ---
-const mockData: {
-  campaigns: Campaign[];
-  properties: Property[];
-  bookings: Booking[];
-  invoices: Invoice[];
-  advertisingAreas: AdvertisingArea[];
-  users: User[];
-} = {
-  campaigns: [
-    {
-      id: 'camp1',
-      name: 'Downtown Billboard Campaign',
-      status: 'active',
-      budget: 5000,
-      spent: 3200,
-      impressions: 45000,
-      clicks: 1200,
-      ctr: 2.7,
-      conversions: 48,
-      lastUpdated: '2 hours ago',
-      advertiser_id: 'user1'
-    },
-    {
-      id: 'camp2',
-      name: 'Coffee Shop Promotion',
-      status: 'paused',
-      budget: 2500,
-      spent: 1800,
-      impressions: 18000,
-      clicks: 540,
-      ctr: 3.0,
-      conversions: 22,
-      lastUpdated: '1 day ago',
-      advertiser_id: 'user1'
-    }
-  ],
-  properties: [
-    {
-      id: 'prop1',
-      name: 'Main Street Digital Display',
-      address: '123 Main St, Downtown',
-      status: 'active',
-      owner_id: 'user1',
-      created_date: '2024-01-15'
-    },
-    {
-      id: 'prop2',
-      name: 'Highway Billboard',
-      address: 'Highway 101, Exit 42',
-      status: 'active',
-      owner_id: 'user1',
-      created_date: '2024-02-20'
-    }
-  ],
-  bookings: [
-    {
-      id: 'book1',
-      advertiser_id: 'user2',
-      owner_id: 'user1',
-      property_id: 'prop1',
-      area_id: 'area1',
-      status: 'active',
-      payment_status: 'paid',
-      total_amount: 3200,
-      created_date: '2024-03-01'
-    }
-  ],
-  invoices: [
-    {
-      id: 'inv1',
-      advertiser_id: 'user1',
-      owner_id: 'user2',
-      booking_id: 'book1',
-      status: 'paid',
-      amount: 3200
-    }
-  ],
-  advertisingAreas: [
-    {
-      id: 'area1',
-      property_id: 'prop1',
-      name: 'Main Display Area'
-    }
-  ],
-  users: [
-    {
-      id: 'user1',
-      full_name: 'John Doe',
-      email: 'john@example.com'
-    },
-    {
-      id: 'user2',
-      full_name: 'Jane Smith',
-      email: 'jane@example.com'
-    }
-  ]
-};
 
 // ✅ Helper function for time formatting
 const formatTimeAgo = (dateString: string): string => {
@@ -345,12 +246,12 @@ export default function DashboardPage() {
         const propertiesResponse = await apiCall('/properties');
         
         if (propertiesResponse.success && propertiesResponse.data) {
-          // Transform database properties to dashboard format
+          // ✅ FIXED: Transform database properties to dashboard format with real status
           const transformedProperties = propertiesResponse.data.map((property: any) => ({
             id: property.id,
             name: property.title || property.name || 'Unnamed Property',
             address: property.address || `${property.city}, ${property.zipCode}`,
-            status: property.status?.toLowerCase() || 'active',
+            status: property.status?.toLowerCase() || 'draft', // ✅ FIXED: Show real status, default to 'draft'
             owner_id: property.ownerId,
             created_date: property.createdAt
           }));
@@ -914,7 +815,10 @@ export default function DashboardPage() {
                                     <h3 className="font-semibold text-foreground">{property.name}</h3>
                                     <p className="text-sm text-muted-foreground">{property.address}</p>
                                   </div>
-                                  <BadgeComponent variant={property.status === 'active' ? 'default' : 'secondary'} className="">
+                                  <BadgeComponent 
+                                    variant={property.status === 'active' ? 'default' : 'secondary'} 
+                                    className={property.status === 'draft' ? 'bg-amber-100 text-amber-800' : ''}
+                                  >
                                     {property.status}
                                   </BadgeComponent>
                                 </div>

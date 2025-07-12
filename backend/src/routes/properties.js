@@ -6,24 +6,100 @@ import { randomUUID } from 'crypto';
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Transform frontend form data to database schema
+// ✅ Default coordinates for major cities (fallback for vehicles)
+const getCityDefaultCoordinates = (city, state = 'CA') => {
+  const cityDefaults = {
+    'los angeles': { lat: 34.0522, lng: -118.2437 },
+    'san francisco': { lat: 37.7749, lng: -122.4194 },
+    'san diego': { lat: 32.7157, lng: -117.1611 },
+    'sacramento': { lat: 38.5816, lng: -121.4944 },
+    'fresno': { lat: 36.7378, lng: -119.7871 },
+    'oakland': { lat: 37.8044, lng: -122.2712 },
+    'irvine': { lat: 33.6846, lng: -117.8265 },
+    'anaheim': { lat: 33.8366, lng: -117.9143 },
+    'santa ana': { lat: 33.7455, lng: -117.8677 },
+    'riverside': { lat: 33.9533, lng: -117.3962 },
+    'orange': { lat: 33.7879, lng: -117.8531 },
+    'fullerton': { lat: 33.8704, lng: -117.9242 },
+    'huntington beach': { lat: 33.6595, lng: -117.9988 },
+    'costa mesa': { lat: 33.6412, lng: -117.9187 },
+    'newport beach': { lat: 33.6189, lng: -117.9298 },
+    'long beach': { lat: 33.7701, lng: -118.1937 },
+    'pasadena': { lat: 34.1478, lng: -118.1445 },
+    'glendale': { lat: 34.1425, lng: -118.2551 },
+    'santa clarita': { lat: 34.3917, lng: -118.5426 },
+    'pomona': { lat: 34.0552, lng: -117.7499 },
+    'torrance': { lat: 33.8358, lng: -118.3406 },
+    'sunnyvale': { lat: 37.3688, lng: -122.0363 },
+    'fremont': { lat: 37.5485, lng: -121.9886 },
+    'hayward': { lat: 37.6688, lng: -122.0808 },
+    'concord': { lat: 37.9780, lng: -122.0311 },
+    'visalia': { lat: 36.3302, lng: -119.2921 },
+    'thousand oaks': { lat: 34.1706, lng: -118.8376 },
+    'simi valley': { lat: 34.2694, lng: -118.7815 },
+    'santa monica': { lat: 34.0195, lng: -118.4912 },
+    'beverly hills': { lat: 34.0736, lng: -118.4004 },
+    'west hollywood': { lat: 34.0900, lng: -118.3617 },
+    'manhattan beach': { lat: 33.8847, lng: -118.4109 },
+    'redondo beach': { lat: 33.8492, lng: -118.3887 },
+    'hermosa beach': { lat: 33.8622, lng: -118.3994 },
+    'el segundo': { lat: 33.9164, lng: -118.4015 },
+    'culver city': { lat: 34.0211, lng: -118.3965 }
+    // Add more cities as needed
+  };
+  
+  const cityKey = city.toLowerCase().trim();
+  const coords = cityDefaults[cityKey];
+  
+  if (coords) {
+    console.log(`📍 Found coordinates for ${city}: ${coords.lat}, ${coords.lng}`);
+    return coords;
+  } else {
+    console.log(`⚠️ No specific coordinates for ${city}, using Los Angeles default`);
+    return { lat: 34.0522, lng: -118.2437 }; // Default to LA
+  }
+};
+
+// ✅ UPDATED: Transform function with better coordinate handling
 const transformFormToDatabase = (formData, databaseUserId) => {
+  let latitude = formData.location.latitude;
+  let longitude = formData.location.longitude;
+  
+  // ✅ Handle missing coordinates intelligently
+  if (!latitude || !longitude) {
+    const isVehicleFleet = formData.property_type === 'VEHICLE_FLEET';
+    
+    if (isVehicleFleet) {
+      // For vehicles, use city defaults
+      const cityDefaults = getCityDefaultCoordinates(formData.location.city);
+      latitude = cityDefaults.lat;
+      longitude = cityDefaults.lng;
+      console.log(`🚛 Vehicle fleet: Using default coordinates for ${formData.location.city}`);
+    } else {
+      // For fixed properties, this should not happen due to validation
+      console.error('❌ Fixed property missing coordinates - this should have been caught by validation');
+      throw new Error('Coordinates are required for fixed properties');
+    }
+  } else {
+    console.log(`📍 Using provided coordinates: ${latitude}, ${longitude}`);
+  }
+
   return {
     id: randomUUID(),
     title: formData.property_name,
     description: formData.description || '',
-    address: formData.location.address || '', // ✅ FIXED: Allow empty for VEHICLE_FLEET
+    address: formData.location.address || '', // Empty for VEHICLE_FLEET is OK
     city: formData.location.city,
     zipCode: formData.location.zipcode,
-    latitude: formData.location.latitude,
-    longitude: formData.location.longitude,
-    country: 'USA', // Default for now
+    latitude: latitude ? parseFloat(latitude) : null,
+    longitude: longitude ? parseFloat(longitude) : null,
+    country: 'USA',
     size: formData.total_sqft,
     propertyType: formData.property_type,
-    ownerId: databaseUserId, // ✅ FIXED: Use database user ID, not Clerk ID
-    status: 'DRAFT',
+    ownerId: databaseUserId,
+    status: 'ACTIVE', // ✅ Auto-activate for immediate visibility
     isActive: true,
-    isApproved: false,
+    isApproved: true, // ✅ Auto-approve for immediate visibility
     currency: 'USD',
     createdAt: new Date(),
     updatedAt: new Date()
@@ -67,7 +143,7 @@ const transformAdvertisingAreas = (areas, propertyId) => {
   }));
 };
 
-// ✅ FIXED: Updated validation for VEHICLE_FLEET
+// ✅ UPDATED: More flexible validation that works with address picker
 const validatePropertyData = (formData) => {
   const errors = {};
   
@@ -87,7 +163,7 @@ const validatePropertyData = (formData) => {
     errors.total_sqft = 'Total square footage must be greater than 0';
   }
   
-  // ✅ FIXED: Conditional address validation for VEHICLE_FLEET
+  // ✅ Property type specific validation
   const isVehicleFleet = formData.property_type === 'VEHICLE_FLEET';
   
   if (!isVehicleFleet && !formData.location?.address?.trim()) {
@@ -101,6 +177,14 @@ const validatePropertyData = (formData) => {
   if (!formData.location?.zipcode?.trim()) {
     errors.zipcode = 'ZIP code is required';
   }
+  
+  // ✅ UPDATED: Coordinate validation - required for fixed properties, optional for vehicles
+  if (!isVehicleFleet) {
+    if (!formData.location?.latitude || !formData.location?.longitude) {
+      errors.coordinates = 'Location coordinates are required for fixed properties. Please select your exact location on the map.';
+    }
+  }
+  // For vehicles, coordinates are optional and will be defaulted if missing
   
   if (!formData.advertising_areas || formData.advertising_areas.length === 0) {
     errors.advertising_areas = 'At least one advertising area is required';
@@ -132,6 +216,7 @@ router.post('/', async (req, res) => {
     // Validate form data
     const { isValid, errors } = validatePropertyData(req.body);
     if (!isValid) {
+      console.log('❌ Validation failed:', errors);
       return res.status(422).json({
         success: false,
         message: 'Validation failed',
@@ -197,7 +282,9 @@ router.post('/', async (req, res) => {
           title: result.property.title,
           address: result.property.address,
           city: result.property.city,
-          status: result.property.status
+          status: result.property.status,
+          latitude: result.property.latitude,
+          longitude: result.property.longitude
         },
         advertising_areas: result.advertisingAreas.map(area => ({
           id: area.id,
@@ -205,9 +292,9 @@ router.post('/', async (req, res) => {
           type: area.type
         })),
         next_steps: [
-          'Your property has been submitted for review',
-          'You will receive an email notification once approved',
-          'You can view and edit your property in the dashboard'
+          'Your property is now live and visible to advertisers',
+          'You can view and manage your property in the dashboard',
+          'Advertisers can now discover and book your advertising spaces'
         ]
       }
     });
