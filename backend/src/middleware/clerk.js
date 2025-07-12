@@ -2,6 +2,7 @@
 import { createClerkClient } from '@clerk/backend';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
@@ -108,13 +109,13 @@ export const clerkMiddleware = async (req, res, next) => {
     console.log('🧪 DEBUG: About to query database...');
     console.log('🧪 DEBUG: Prisma exists:', !!prisma);
     console.log('🧪 DEBUG: Prisma type:', typeof prisma);
-    console.log('🧪 DEBUG: Prisma.user exists:', !!prisma?.user);
+    console.log('🧪 DEBUG: Prisma.users exists:', !!prisma?.users); // ✅ FIXED: Changed from user to users
     console.log('🧪 DEBUG: Process env NODE_ENV:', process.env.NODE_ENV);
 
     
-    // Check if user exists in our database
-    let user = await prisma.user.findUnique({
-      where: { clerk_id: clerkId }  // Correct field name from your database
+    // ✅ FIXED: Check if user exists in our database - using correct model and field names
+    let user = await prisma.users.findUnique({
+      where: { clerkId: clerkId }  // ✅ FIXED: Changed from clerk_id to clerkId (camelCase)
     });
 
     // If user doesn't exist, create them
@@ -125,9 +126,11 @@ export const clerkMiddleware = async (req, res, next) => {
         // Get user details from Clerk
         const clerkUser = await clerkClient.users.getUser(clerkId);
         
-        user = await prisma.user.create({
+        // ✅ FIXED: Using correct model name and field names
+        user = await prisma.users.create({
           data: {
-            clerk_id: clerkId,  // Correct field name
+            id: crypto.randomUUID(), // Generate UUID for the id field
+            clerkId: clerkId,  // ✅ FIXED: Changed from clerk_id to clerkId
             email: clerkUser.emailAddresses?.[0]?.emailAddress || `user_${clerkId}@temp.com`,
             firstName: clerkUser.firstName || '',
             lastName: clerkUser.lastName || '',
@@ -141,9 +144,11 @@ export const clerkMiddleware = async (req, res, next) => {
         console.error('❌ Error creating user:', createError);
         
         // Create a minimal user record if Clerk API fails
-        user = await prisma.user.create({
+        // ✅ FIXED: Using correct model name and field names
+        user = await prisma.users.create({
           data: {
-            clerk_id: clerkId,  // Correct field name
+            id: crypto.randomUUID(), // Generate UUID for the id field
+            clerkId: clerkId,  // ✅ FIXED: Changed from clerk_id to clerkId
             email: `user_${clerkId}@temp.com`,
             firstName: 'User',
             lastName: '',

@@ -26,6 +26,17 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// ✅ TypeScript declarations
+declare global {
+  interface Window {
+    Clerk: {
+      session: {
+        getToken(): Promise<string>;
+      };
+    };
+  }
+}
+
 // Type assertions for JSX components
 const CardComponent = Card as React.ComponentType<any>;
 const CardContentComponent = CardContent as React.ComponentType<any>;
@@ -100,7 +111,7 @@ type AreasMap = Record<string, AdvertisingArea>;
 type PropertiesMap = Record<string, Property>;
 type UsersMap = Record<string, User>;
 
-// --- Mock data to replace Base44 calls ---
+// --- Mock data for fallback ---
 const mockData: {
   campaigns: Campaign[];
   properties: Property[];
@@ -199,11 +210,33 @@ const mockData: {
   ]
 };
 
+// ✅ Helper function for time formatting
+const formatTimeAgo = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffMins < 60) {
+      return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    } else {
+      return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    }
+  } catch (error) {
+    return 'Unknown';
+  }
+};
+
 export default function DashboardPage() {
   const [view, setView] = useState<'campaigns' | 'properties' | string>('campaigns');
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Data states - using mock data for now
+  // Data states - now using real API data
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -243,21 +276,21 @@ export default function DashboardPage() {
 
     if (bookingId) {
       try {
-        const booking = mockData.bookings.find(b => b.id === bookingId)!;
-        const space = mockData.advertisingAreas.find(a => a.id === booking?.area_id)!;
-        const property = mockData.properties.find(p => p.id === booking?.property_id)!;
+        const booking = bookings.find(b => b.id === bookingId)!;
+        const space = allAreasMap[booking?.area_id];
+        const property = allPropertiesMap[booking?.property_id];
         setModalData({ type: 'booking', data: { booking, space, property } });
       } catch (error) {
         console.error("Failed to load booking details from URL", error);
       }
     } else if (invoiceId) {
       try {
-        const invoice = mockData.invoices.find(i => i.id === invoiceId)!;
-        const booking = mockData.bookings.find(b => b.id === invoice?.booking_id)!;
-        const space = mockData.advertisingAreas.find(a => a.id === booking?.area_id)!;
+        const invoice = invoices.find(i => i.id === invoiceId)!;
+        const booking = bookings.find(b => b.id === invoice?.booking_id)!;
+        const space = allAreasMap[booking?.area_id];
         // @ts-ignore
         const otherUserId = invoice?.owner_id === currentUser?.id ? invoice.advertiser_id : invoice.owner_id;
-        const otherUser = mockData.users.find(u => u.id === otherUserId)!;
+        const otherUser = allUsers[otherUserId];
         setModalData({ type: 'invoice', data: { invoice, booking, space, otherUser } });
       } catch (error) {
         console.error("Failed to load invoice details from URL", error);
@@ -265,47 +298,174 @@ export default function DashboardPage() {
     }
   };
 
+  // ✅ UPDATED: Real API integration
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Simulate loading delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('🔄 Loading dashboard data from APIs...');
 
-      // Use mock data filtered by current user
-      const userId = 'user1'; // Mock user ID - replace with currentUser.id when backend is connected
+      // ✅ Real API calls instead of mock data
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      
+      // Get authentication token
+      let authToken = '';
+      try {
+        if (window.Clerk?.session) {
+          authToken = await window.Clerk.session.getToken();
+        }
+      } catch (error) {
+        console.error('❌ Failed to get auth token:', error);
+        throw new Error('Authentication failed');
+      }
 
-      const userCampaigns = mockData.campaigns.filter(c => c.advertiser_id === userId);
-      setCampaigns(userCampaigns);
+      if (!authToken) {
+        throw new Error('No authentication token available');
+      }
 
-      const userProperties = mockData.properties.filter(p => p.owner_id === userId);
-      setProperties(userProperties);
+      // Helper function for authenticated API calls
+      const apiCall = async (endpoint: string) => {
+        const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
 
-      setBookings(mockData.bookings);
-      setInvoices(mockData.invoices);
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`API call failed: ${response.status} ${errorText}`);
+        }
 
-      // Create maps for quick lookup
-      const areasMap: AreasMap = {};
-      mockData.advertisingAreas.forEach(area => {
-        areasMap[area.id] = area;
-      });
-      setAllAreasMap(areasMap);
+        return await response.json();
+      };
 
-      const propertiesMap: PropertiesMap = {};
-      mockData.properties.forEach(prop => {
-        propertiesMap[prop.id] = prop;
-      });
-      setAllPropertiesMap(propertiesMap);
+      // ✅ Fetch real properties
+      console.log('📡 Fetching properties...');
+      try {
+        const propertiesResponse = await apiCall('/properties');
+        
+        if (propertiesResponse.success && propertiesResponse.data) {
+          // Transform database properties to dashboard format
+          const transformedProperties = propertiesResponse.data.map((property: any) => ({
+            id: property.id,
+            name: property.title || property.name || 'Unnamed Property',
+            address: property.address || `${property.city}, ${property.zipCode}`,
+            status: property.status?.toLowerCase() || 'active',
+            owner_id: property.ownerId,
+            created_date: property.createdAt
+          }));
+          
+          setProperties(transformedProperties);
+          console.log('✅ Properties loaded:', transformedProperties.length);
+        } else {
+          console.warn('⚠️ Properties API returned no data');
+          setProperties([]);
+        }
+      } catch (error) {
+        console.warn('⚠️ Properties API failed, using empty array:', error);
+        setProperties([]);
+      }
 
-      const usersMap: UsersMap = {};
-      mockData.users.forEach(u => {
-        usersMap[u.id] = u;
-      });
-      setAllUsers(usersMap);
+      // ✅ Fetch real campaigns  
+      console.log('📡 Fetching campaigns...');
+      try {
+        const campaignsResponse = await apiCall('/campaigns');
+        
+        if (campaignsResponse.success && campaignsResponse.data) {
+          // Transform database campaigns to dashboard format
+          const transformedCampaigns = campaignsResponse.data.map((campaign: any) => ({
+            id: campaign.id,
+            name: campaign.name || campaign.title || 'Unnamed Campaign',
+            status: campaign.status?.toLowerCase() || 'draft',
+            budget: campaign.budget || campaign.totalBudget || 0,
+            spent: campaign.totalSpent || 0,
+            impressions: campaign.impressions || 0,
+            clicks: campaign.clicks || 0,
+            ctr: campaign.clicks && campaign.impressions ? ((campaign.clicks / campaign.impressions) * 100) : 0,
+            conversions: campaign.conversions || 0,
+            lastUpdated: campaign.updatedAt ? formatTimeAgo(campaign.updatedAt) : 'Unknown',
+            advertiser_id: campaign.advertiserId
+          }));
+          
+          setCampaigns(transformedCampaigns);
+          console.log('✅ Campaigns loaded:', transformedCampaigns.length);
+        } else {
+          console.warn('⚠️ Campaigns API returned no data');
+          setCampaigns([]);
+        }
+      } catch (error) {
+        console.warn('⚠️ Campaigns API failed, using empty array:', error);
+        setCampaigns([]);
+      }
 
-      console.log('Dashboard data loaded successfully (using mock data)');
+      // ✅ Fetch real bookings
+      console.log('📡 Fetching bookings...');
+      try {
+        const bookingsResponse = await apiCall('/bookings');
+        
+        if (bookingsResponse.success && bookingsResponse.data) {
+          // Transform database bookings to dashboard format
+          const transformedBookings = bookingsResponse.data.map((booking: any) => ({
+            id: booking.id,
+            advertiser_id: booking.bookerId || booking.advertiserId,
+            owner_id: booking.ownerId,
+            property_id: booking.propertyId,
+            area_id: booking.advertisingAreaId,
+            status: booking.status?.toLowerCase() || 'pending',
+            payment_status: booking.isPaid ? 'paid' : 'pending',
+            total_amount: booking.totalAmount || 0,
+            created_date: booking.createdAt
+          }));
+          
+          setBookings(transformedBookings);
+          console.log('✅ Bookings loaded:', transformedBookings.length);
+        } else {
+          console.warn('⚠️ Bookings API returned no data');
+          setBookings([]);
+        }
+      } catch (error) {
+        console.warn('⚠️ Bookings API failed, using empty array:', error);
+        setBookings([]);
+      }
+
+      // ✅ Fetch real invoices
+      console.log('📡 Fetching invoices...');
+      try {
+        const invoicesResponse = await apiCall('/invoices');
+        
+        if (invoicesResponse.success && invoicesResponse.data) {
+          // Transform database invoices to dashboard format
+          const transformedInvoices = invoicesResponse.data.map((invoice: any) => ({
+            id: invoice.id,
+            advertiser_id: invoice.userId, // Assuming userId is the advertiser
+            owner_id: invoice.ownerId,
+            booking_id: invoice.bookingId,
+            status: invoice.status?.toLowerCase() || 'pending',
+            amount: invoice.amount || 0
+          }));
+          
+          setInvoices(transformedInvoices);
+          console.log('✅ Invoices loaded:', transformedInvoices.length);
+        } else {
+          console.warn('⚠️ Invoices API returned no data');
+          setInvoices([]);
+        }
+      } catch (error) {
+        console.warn('⚠️ Invoices API failed, using empty array:', error);
+        setInvoices([]);
+      }
+
+      // ✅ Create maps for quick lookup (simplified for now)
+      setAllAreasMap({});
+      setAllPropertiesMap({});
+      setAllUsers({});
+
+      console.log('🎉 Dashboard data loaded successfully from real APIs');
 
     } catch (error) {
-      console.error("Failed to load dashboard data:", error);
+      console.error("❌ Failed to load dashboard data:", error);
+      
+      // Fallback to empty data instead of mock data to encourage real API usage
       setCampaigns([]);
       setProperties([]);
       setBookings([]);
@@ -313,6 +473,11 @@ export default function DashboardPage() {
       setAllAreasMap({});
       setAllPropertiesMap({});
       setAllUsers({});
+      
+      // Don't show error alert in production - just log it
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`Failed to load dashboard data: ${error.message}`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -731,7 +896,7 @@ export default function DashboardPage() {
                     )}
                   </div>
                 ) : (
-                  // Properties view - simplified for now
+                  // Properties view - now using real data
                   <div className="space-y-6">
                     {properties.length > 0 ? (
                       <>

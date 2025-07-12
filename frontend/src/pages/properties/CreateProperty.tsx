@@ -309,36 +309,41 @@ export default function CreatePropertyPage(): JSX.Element {
   // Validation functions
   // Replace your validateStep1 function in src/pages/properties/CreateProperty.tsx
 
-const validateStep1 = (): boolean => {
-  const newErrors: Record<string, string | null> = {};
-
-  if (!formData.property_name.trim()) {
-    newErrors.property_name = 'Property name is required';
-  }
-
-  if (!formData.property_type) {
-    newErrors.property_type = 'Property type is required';
-  }
-
-  if (!formData.description.trim()) {
-    newErrors.description = 'Property description is required';
-  } else if (formData.description.length < 50) {
-    newErrors.description = 'Description must be at least 50 characters';
-  }
-
-  if (!formData.total_sqft || formData.total_sqft <= 0) {
-    newErrors.total_sqft = formData.property_type === 'VEHICLE_FLEET' 
-      ? 'Number of vehicles must be greater than 0'
-      : 'Total square footage must be greater than 0';
-  }
+  const validateStep1 = (): boolean => {
+    const newErrors: Record<string, string | null> = {};
+  
+    if (!formData.property_name.trim()) {
+      newErrors.property_name = 'Property name is required';
+    }
+  
+    if (!formData.property_type) {
+      newErrors.property_type = 'Property type is required';
+    }
+  
+    if (!formData.description.trim()) {
+      newErrors.description = 'Property description is required';
+    } else if (formData.description.length < 50) {
+      newErrors.description = 'Description must be at least 50 characters';
+    }
 
   // Conditional address validation based on property type
   const isSemiTruck = formData.property_type === 'VEHICLE_FLEET';
   
   if (!isSemiTruck) {
+    // Regular properties need user-input for square footage
+    if (!formData.total_sqft || formData.total_sqft <= 0) {
+      newErrors.total_sqft = 'Total square footage must be greater than 0';
+    }
+    
     // Regular properties need full address
     if (!formData.location.address.trim()) {
       newErrors.location_address = 'Property address is required';
+    }
+  } else {
+    // Vehicle fleet: total_sqft is auto-set to 1, just verify it exists
+    if (!formData.total_sqft || formData.total_sqft !== 1) {
+      // This should auto-correct, but just in case
+      setFormData(prev => ({ ...prev, total_sqft: 1 }));
     }
   }
   

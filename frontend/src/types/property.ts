@@ -97,6 +97,7 @@ export type PropertyType =
   | 'RETAIL'
   | 'COMMERCIAL'
   | 'WAREHOUSE'
+  | 'VEHICLE_FLEET'  // ← ADD THIS
   | 'OTHER';
 
 export type AdvertisingAreaType = 
@@ -122,6 +123,7 @@ export const PROPERTY_TYPES: { value: PropertyType; label: string }[] = [
   { value: 'RETAIL', label: 'Retail Space' },
   { value: 'COMMERCIAL', label: 'Commercial' },
   { value: 'WAREHOUSE', label: 'Warehouse' },
+  { value: 'VEHICLE_FLEET', label: 'Semi-Truck' },  // ← ADD THIS
   { value: 'OTHER', label: 'Other' },
 ];
 

@@ -1,5 +1,5 @@
 // src/components/new-listings/PropertyBasicsStep.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { PropertyFormData, LocationData } from '@/types/property';
 import ModernLocationPicker from '../browse/maps/ModernLocationPicker';
 
@@ -37,6 +37,13 @@ const PropertyBasicsStep: React.FC<PropertyBasicsStepProps> = ({
     console.log('Location selected:', location);
   };
 
+  // ✅ Auto-set total_sqft = 1 for vehicle fleet (represents 1 vehicle)
+  useEffect(() => {
+    if (formData.property_type === 'VEHICLE_FLEET') {
+      setFormData(prev => ({ ...prev, total_sqft: 1 }));
+    }
+  }, [formData.property_type, setFormData]);
+
   return (
     <div className="space-y-8">
       {/* Step Header */}
@@ -58,7 +65,11 @@ const PropertyBasicsStep: React.FC<PropertyBasicsStepProps> = ({
           type="text"
           value={formData.property_name}
           onChange={(e) => handleChange('property_name', e.target.value)}
-          placeholder="Enter property name (e.g., 'Downtown Office Building' or 'Semi-Truck Fleet #1')"
+          placeholder={
+            formData.property_type === 'VEHICLE_FLEET' 
+              ? "Enter vehicle name (e.g., 'Highway Express Truck #1' or 'Blue Diamond Freight')"
+              : "Enter property name (e.g., 'Downtown Office Building')"
+          }
           className={`w-full h-12 px-4 text-base border-2 rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all ${
             errors.property_name ? 'border-red-500' : 'border-border'
           }`}
@@ -68,7 +79,7 @@ const PropertyBasicsStep: React.FC<PropertyBasicsStepProps> = ({
         )}
       </div>
 
-      {/* Property Type - FIXED: Using correct enum values */}
+      {/* Property Type */}
       <div>
         <label className="text-base font-semibold text-muted-foreground mb-2 block">
           Property Type <span className="text-red-500">*</span>
@@ -96,14 +107,14 @@ const PropertyBasicsStep: React.FC<PropertyBasicsStepProps> = ({
       {/* Property Description */}
       <div>
         <label className="text-base font-semibold text-muted-foreground mb-2 block">
-          Property Description <span className="text-red-500">*</span>
+          {formData.property_type === 'VEHICLE_FLEET' ? 'Vehicle Description' : 'Property Description'} <span className="text-red-500">*</span>
         </label>
         <textarea
           value={formData.description}
           onChange={(e) => handleChange('description', e.target.value)}
           placeholder={
             formData.property_type === 'VEHICLE_FLEET' 
-              ? "Describe your semi-truck fleet, routes, and advertising visibility opportunities..."
+              ? "Describe your semi-truck, typical routes, and advertising visibility opportunities. Include details about highways, cities, and traffic exposure..."
               : "Describe your property, its features, and what makes it unique..."
           }
           rows={4}
@@ -169,68 +180,85 @@ const PropertyBasicsStep: React.FC<PropertyBasicsStepProps> = ({
               )}
             </div>
           </div>
+
+          {/* Property Size - Only for Fixed Properties */}
+          <div>
+            <label className="text-base font-semibold text-muted-foreground mb-2 block">
+              Total Property Size (sq ft) <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              value={formData.total_sqft || ''}
+              onChange={(e) => handleChange('total_sqft', parseInt(e.target.value) || 0)}
+              placeholder="Enter total square footage"
+              min="0"
+              className={`w-full h-12 px-4 text-base border-2 rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all ${
+                errors.total_sqft ? 'border-red-500' : 'border-border'
+              }`}
+            />
+            {errors.total_sqft && (
+              <p className="text-red-500 text-sm mt-2">{errors.total_sqft}</p>
+            )}
+          </div>
         </>
       ) : (
-        /* Base Location for Vehicle Fleet */
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-medium text-blue-800 mb-2">Mobile Advertising Fleet</h3>
-          <p className="text-sm text-blue-700 mb-4">
-            Since this is a mobile vehicle fleet, please provide your primary base location for reference.
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-blue-800 mb-2 block">
-                Base City <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.location.city}
-                onChange={(e) => handleLocationChange('city', e.target.value)}
-                placeholder="Primary operating city"
-                className="w-full h-10 px-3 text-sm border border-blue-300 rounded-md bg-white"
-              />
-            </div>
+        <>
+          {/* Base Location for Vehicle Fleet */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="font-medium text-blue-800 mb-2">Mobile Advertising Vehicle</h3>
+            <p className="text-sm text-blue-700 mb-4">
+              Since this is a mobile vehicle, please provide your primary base location for reference. 
+              We'll list one vehicle at a time to keep things simple.
+            </p>
             
-            <div>
-              <label className="text-sm font-medium text-blue-800 mb-2 block">
-                Base ZIP Code <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.location.zipcode}
-                onChange={(e) => handleLocationChange('zipcode', e.target.value)}
-                placeholder="Base ZIP code"
-                className="w-full h-10 px-3 text-sm border border-blue-300 rounded-md bg-white"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-blue-800 mb-2 block">
+                  Base City <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.location.city}
+                  onChange={(e) => handleLocationChange('city', e.target.value)}
+                  placeholder="Primary operating city"
+                  className="w-full h-10 px-3 text-sm border border-blue-300 rounded-md bg-white"
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-blue-800 mb-2 block">
+                  Base ZIP Code <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.location.zipcode}
+                  onChange={(e) => handleLocationChange('zipcode', e.target.value)}
+                  placeholder="Base ZIP code"
+                  className="w-full h-10 px-3 text-sm border border-blue-300 rounded-md bg-white"
+                />
+              </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Property Size */}
-      <div>
-        <label className="text-base font-semibold text-muted-foreground mb-2 block">
-          {formData.property_type === 'VEHICLE_FLEET' ? 'How many vehicles do you want to list ads on?' : 'Total Property Size (sq ft)'} <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="number"
-          value={formData.total_sqft || ''}
-          onChange={(e) => handleChange('total_sqft', parseInt(e.target.value) || 0)}
-          placeholder={
-            formData.property_type === 'VEHICLE_FLEET' 
-              ? "Enter number of vehicles"
-              : "Enter total square footage"
-          }
-          min="0"
-          className={`w-full h-12 px-4 text-base border-2 rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all ${
-            errors.total_sqft ? 'border-red-500' : 'border-border'
-          }`}
-        />
-        {errors.total_sqft && (
-          <p className="text-red-500 text-sm mt-2">{errors.total_sqft}</p>
-        )}
-      </div>
+          {/* Single Vehicle Notice */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-green-800">Single Vehicle Listing</h3>
+                <p className="mt-1 text-sm text-green-700">
+                  You're creating a listing for one vehicle. To list additional vehicles, simply create separate listings for each one. 
+                  This keeps your advertising spaces organized and easier to manage.
+                </p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* In-App Communication Notice */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

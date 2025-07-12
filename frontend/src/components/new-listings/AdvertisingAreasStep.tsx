@@ -75,31 +75,31 @@ const AdvertisingAreasStep: React.FC<AdvertisingAreasStepProps> = ({
           {isSemiTruck ? 'Vehicle Advertising Spaces' : 'Advertising Areas'}
         </h2>
         <p className="text-muted-foreground">
-          {isSemiTruck 
-            ? 'Define the advertising spaces available on your vehicle fleet.'
-            : 'Define the advertising spaces available at your property.'
-          }
-        </p>
+  {isSemiTruck 
+    ? 'Define the advertising spaces available on this vehicle.'
+    : 'Define the advertising spaces available at your property.'
+  }
+</p>
       </div>
 
       {/* Property Type Notice */}
       {isSemiTruck && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-green-800">Semi-Truck Advertising</h3>
-              <p className="mt-1 text-sm text-green-700">
-                You're setting up advertising spaces for a semi-truck fleet. Each vehicle can have multiple advertising areas.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+    <div className="flex items-start">
+      <div className="flex-shrink-0">
+        <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+        </svg>
+      </div>
+      <div className="ml-3">
+        <h3 className="text-sm font-medium text-green-800">Single Vehicle Advertising</h3>
+        <p className="mt-1 text-sm text-green-700">
+          You're setting up advertising spaces for one vehicle. This vehicle can have multiple advertising areas (side panels, rear, wraps, etc.).
+        </p>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Areas List */}
       <div className="space-y-6">
@@ -229,26 +229,26 @@ const AdvertisingAreasStep: React.FC<AdvertisingAreasStepProps> = ({
 
             {/* Semi-Truck Specific Help */}
             {isSemiTruck && (
-              <div className="mt-4 bg-blue-50 border border-blue-200 rounded-md p-3">
-                <p className="text-xs text-blue-700">
-                  <strong>Tip:</strong> Consider visibility, traffic exposure, and viewing angles when describing the location. 
-                  Mention highway routes, urban areas, or specific traffic patterns where applicable.
-                </p>
-              </div>
-            )}
+  <div className="mt-4 bg-blue-50 border border-blue-200 rounded-md p-3">
+    <p className="text-xs text-blue-700">
+      <strong>Tip:</strong> Consider visibility, traffic exposure, and viewing angles when describing the location. 
+      Think about highway routes, urban areas, parking locations, or specific traffic patterns where this vehicle travels.
+    </p>
+  </div>
+)}
           </div>
         ))}
       </div>
 
       {/* Add Area Button */}
       <div className="text-center">
-        <button
-          type="button"
-          onClick={addArea}
-          className="bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
-        >
-          + Add Another {isSemiTruck ? 'Vehicle Space' : 'Area'}
-        </button>
+      <button
+  type="button"
+  onClick={addArea}
+  className="bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
+>
+  + Add Another {isSemiTruck ? 'Advertising Space' : 'Area'}
+</button>
       </div>
 
       {/* Errors */}
@@ -258,14 +258,14 @@ const AdvertisingAreasStep: React.FC<AdvertisingAreasStepProps> = ({
 
       {/* Progress */}
       <div className="bg-muted/30 rounded-lg p-4">
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>Step 2 of 3 - {isSemiTruck ? 'Vehicle Advertising Spaces' : 'Advertising Areas'}</span>
-          <span>{formData.advertising_areas.length} {isSemiTruck ? 'space(s)' : 'area(s)'} defined</span>
-        </div>
-        <div className="w-full bg-muted rounded-full h-2 mt-2">
-          <div className="bg-primary h-2 rounded-full w-2/3"></div>
-        </div>
-      </div>
+  <div className="flex items-center justify-between text-sm text-muted-foreground">
+    <span>Step 2 of 3 - {isSemiTruck ? 'Vehicle Advertising Spaces' : 'Advertising Areas'}</span>
+    <span>{formData.advertising_areas.length} {isSemiTruck ? 'advertising space(s)' : 'area(s)'} defined</span>
+  </div>
+  <div className="w-full bg-muted rounded-full h-2 mt-2">
+    <div className="bg-primary h-2 rounded-full w-2/3"></div>
+  </div>
+</div>
     </div>
   );
 };

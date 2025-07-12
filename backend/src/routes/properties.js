@@ -7,12 +7,12 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // Transform frontend form data to database schema
-const transformFormToDatabase = (formData, clerkUserId) => {
+const transformFormToDatabase = (formData, databaseUserId) => {
   return {
     id: randomUUID(),
     title: formData.property_name,
     description: formData.description || '',
-    address: formData.location.address,
+    address: formData.location.address || '', // ✅ FIXED: Allow empty for VEHICLE_FLEET
     city: formData.location.city,
     zipCode: formData.location.zipcode,
     latitude: formData.location.latitude,
@@ -20,7 +20,7 @@ const transformFormToDatabase = (formData, clerkUserId) => {
     country: 'USA', // Default for now
     size: formData.total_sqft,
     propertyType: formData.property_type,
-    ownerId: clerkUserId,
+    ownerId: databaseUserId, // ✅ FIXED: Use database user ID, not Clerk ID
     status: 'DRAFT',
     isActive: true,
     isApproved: false,
@@ -67,7 +67,7 @@ const transformAdvertisingAreas = (areas, propertyId) => {
   }));
 };
 
-// Validation helper
+// ✅ FIXED: Updated validation for VEHICLE_FLEET
 const validatePropertyData = (formData) => {
   const errors = {};
   
@@ -87,8 +87,11 @@ const validatePropertyData = (formData) => {
     errors.total_sqft = 'Total square footage must be greater than 0';
   }
   
-  if (!formData.location?.address?.trim()) {
-    errors.address = 'Address is required';
+  // ✅ FIXED: Conditional address validation for VEHICLE_FLEET
+  const isVehicleFleet = formData.property_type === 'VEHICLE_FLEET';
+  
+  if (!isVehicleFleet && !formData.location?.address?.trim()) {
+    errors.address = 'Address is required for fixed properties';
   }
   
   if (!formData.location?.city?.trim()) {
@@ -112,30 +115,19 @@ router.post('/', async (req, res) => {
     console.log('🏠 Creating new property...');
     console.log('Form data received:', JSON.stringify(req.body, null, 2));
     
-    // Get Clerk user info
-    const clerkUserId = req.auth?.userId;
-    if (!clerkUserId) {
+    // ✅ FIXED: Use req.user and req.clerkId set by middleware
+    if (!req.user || !req.clerkId) {
       return res.status(401).json({
         success: false,
-        message: 'Authentication required - no Clerk user ID found'
+        message: 'Authentication required - middleware did not provide user info'
       });
     }
     
-    console.log('🔑 Clerk User ID:', clerkUserId);
+    console.log('🔑 Clerk User ID:', req.clerkId);
+    console.log('👤 Database User ID:', req.user.id);
     
-    // Check if user exists in our database
-    const user = await prisma.users.findFirst({
-      where: { clerkId: clerkUserId }
-    });
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found in database. Please complete your profile first.'
-      });
-    }
-    
-    console.log('👤 Database user found:', user.id);
+    // ✅ SIMPLIFIED: User already validated by middleware, no need to re-fetch
+    const user = req.user;
     
     // Validate form data
     const { isValid, errors } = validatePropertyData(req.body);
@@ -250,25 +242,16 @@ router.post('/', async (req, res) => {
 // 🏠 GET ALL PROPERTIES (for the property owner)
 router.get('/', async (req, res) => {
   try {
-    const clerkUserId = req.auth?.userId;
-    if (!clerkUserId) {
+    // ✅ FIXED: Use middleware-provided user info
+    if (!req.user || !req.clerkId) {
       return res.status(401).json({
         success: false,
         message: 'Authentication required'
       });
     }
     
-    // Get user from database
-    const user = await prisma.users.findFirst({
-      where: { clerkId: clerkUserId }
-    });
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
+    // ✅ SIMPLIFIED: Use middleware-provided user
+    const user = req.user;
     
     // Get user's properties with advertising areas
     const properties = await prisma.properties.findMany({
@@ -306,26 +289,17 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const clerkUserId = req.auth?.userId;
     
-    if (!clerkUserId) {
+    // ✅ FIXED: Use middleware-provided user info
+    if (!req.user || !req.clerkId) {
       return res.status(401).json({
         success: false,
         message: 'Authentication required'
       });
     }
     
-    // Get user from database
-    const user = await prisma.users.findFirst({
-      where: { clerkId: clerkUserId }
-    });
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
+    // ✅ SIMPLIFIED: Use middleware-provided user
+    const user = req.user;
     
     // Get property with advertising areas
     const property = await prisma.properties.findFirst({
