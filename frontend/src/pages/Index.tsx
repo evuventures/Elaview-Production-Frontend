@@ -1,4 +1,5 @@
 import Layout from "../components/layout/Layout.jsx";
+import Bookings from "./bookings/Bookings.jsx";
 import Map from "./map/Map.jsx";
 import Messages from "./messages/Messages.tsx";
 import Profile from "./user/Profile.jsx";
@@ -32,6 +33,7 @@ import { useEffect } from 'react';
 const PAGES = {
     Browse: Map, // ✅ Map.jsx is your browse page
     Messages: Messages,
+    Bookings: Bookings,
     Profile: Profile,
     Help: Help,
     Dashboard: Dashboard,
@@ -147,6 +149,13 @@ function PagesContent() {
                     </Layout>
                 </ProtectedRoute>
             } />
+            <Route path="/booking/:propertyId/:spaceId" element={
+    <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="booking-protected">
+        <Layout currentPageName="Bookings" key="booking-page">
+            <Bookings key="booking-component" />
+        </Layout>
+    </ProtectedRoute>
+} />
             <Route path="/booking-management" element={
                 <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="booking-protected">
                     <Layout currentPageName="BookingManagement" key="booking-page">

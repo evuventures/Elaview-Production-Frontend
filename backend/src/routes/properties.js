@@ -2,6 +2,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { syncUser } from '../middleware/clerk.js'; // ✅ ADD THIS IMPORT
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -193,8 +194,128 @@ const validatePropertyData = (formData) => {
   return { isValid: Object.keys(errors).length === 0, errors };
 };
 
+// ✅ NEW: PUBLIC ENDPOINTS FOR BOOKING (ADD THESE BEFORE EXISTING ROUTES)
+
+// 🏠 GET PUBLIC PROPERTY FOR BOOKING - Any authenticated user can access
+router.get('/public/:id', syncUser, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log(`📖 PUBLIC: Loading property ${id} for booking by user ${req.user.id}`);
+    
+    // Get property with advertising areas (public view for booking)
+    const property = await prisma.properties.findFirst({
+      where: { 
+        id: id,
+        status: 'ACTIVE',        // Only show active properties
+        isActive: true,          // Only show active properties
+        isApproved: true         // Only show approved properties
+      },
+      include: {
+        advertising_areas: {
+          where: {
+            isActive: true,      // Only show active areas
+            status: 'active'     // Only show active areas
+          }
+        },
+        users: {                 // Include property owner info (limited)
+          select: { 
+            id: true, 
+            firstName: true, 
+            lastName: true
+            // Don't include email for privacy
+          }
+        }
+      }
+    });
+    
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        message: 'Property not found or not available for booking'
+      });
+    }
+    
+    console.log(`✅ PUBLIC: Property ${property.title} loaded for booking`);
+    
+    res.json({
+      success: true,
+      data: property
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching public property:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch property',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
+// 🏠 GET SINGLE ADVERTISING AREA - For direct area access
+router.get('/areas/:id', syncUser, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log(`📍 Loading advertising area ${id} for user ${req.user.id}`);
+    
+    // Get advertising area with property info
+    const area = await prisma.advertising_areas.findFirst({
+      where: { 
+        id: id,
+        isActive: true,
+        status: 'active'
+      },
+      include: {
+        properties: {
+          where: {
+            status: 'ACTIVE',
+            isActive: true,
+            isApproved: true
+          },
+          include: {
+            users: {
+              select: { 
+                id: true, 
+                firstName: true, 
+                lastName: true
+                // Don't include email for privacy
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    if (!area || !area.properties) {
+      return res.status(404).json({
+        success: false,
+        message: 'Advertising area not found or not available for booking'
+      });
+    }
+    
+    console.log(`✅ Advertising area ${area.name} loaded for booking`);
+    
+    res.json({
+      success: true,
+      data: area
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching advertising area:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch advertising area',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
+// ✅ EXISTING ROUTES (UNCHANGED)
+
 // 🏠 CREATE PROPERTY
-router.post('/', async (req, res) => {
+router.post('/', syncUser, async (req, res) => {
   try {
     console.log('🏠 Creating new property...');
     console.log('Form data received:', JSON.stringify(req.body, null, 2));
@@ -327,7 +448,7 @@ router.post('/', async (req, res) => {
 });
 
 // 🏠 GET ALL PROPERTIES (for the property owner)
-router.get('/', async (req, res) => {
+router.get('/', syncUser, async (req, res) => {
   try {
     // ✅ FIXED: Use middleware-provided user info
     if (!req.user || !req.clerkId) {
@@ -372,8 +493,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 🏠 GET SINGLE PROPERTY
-router.get('/:id', async (req, res) => {
+// 🏠 GET SINGLE PROPERTY (OWNER ACCESS ONLY)
+router.get('/:id', syncUser, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -388,7 +509,7 @@ router.get('/:id', async (req, res) => {
     // ✅ SIMPLIFIED: Use middleware-provided user
     const user = req.user;
     
-    // Get property with advertising areas
+    // Get property with advertising areas (OWNER ACCESS ONLY)
     const property = await prisma.properties.findFirst({
       where: { 
         id: id,

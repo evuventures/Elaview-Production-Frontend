@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useNavigate } from 'react-router-dom'; // ✅ ADD THIS
 import { Property, AdvertisingArea } from '@/api/entities';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,6 +107,8 @@ const getAreaPrice = (area) => {
 };
 
 export default function MapPage() {
+  const navigate = useNavigate(); // ✅ ADD THIS
+  
   // Core state
   const [properties, setProperties] = useState([]);
   const [selectedProperty, setSelectedProperty] = useState(null);
@@ -366,6 +369,21 @@ export default function MapPage() {
     setSelectedArea(null);
     setPropertyAreas([]);
     setMapZoom(12);
+  };
+
+  // ✅ NEW: Handle booking navigation
+  const handleBookSpace = () => {
+    if (!selectedProperty || !selectedArea) {
+      console.error('❌ Missing property or area for booking');
+      return;
+    }
+    
+    console.log('🎯 Navigating to booking:', {
+      propertyId: selectedProperty.id,
+      spaceId: selectedArea.id
+    });
+    
+    navigate(`/booking/${selectedProperty.id}/${selectedArea.id}`);
   };
 
   // Determine what to display in the list
@@ -679,11 +697,14 @@ export default function MapPage() {
               )}
               
               <div className="space-y-2">
-                <Button className="w-full rounded-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95">
+                <Button 
+                  onClick={handleBookSpace} // ✅ UPDATED: Use the safe handler
+                  className="w-full rounded-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95"
+                >
                   Book This Space
                 </Button>
                 <Button variant="outline" className="w-full rounded-2xl transition-all duration-300 hover:scale-[1.02] active:scale-95">
-                  View Details & Pricing
+                  View Details
                 </Button>
               </div>
             </div>
