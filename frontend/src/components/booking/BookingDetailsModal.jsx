@@ -22,14 +22,14 @@ export default function BookingDetailsModal({
     switch (status) {
       case 'confirmed':
       case 'active':
-        return 'bg-gradient-to-r from-[hsl(var(--success))]/20 to-[hsl(var(--success))]/10 text-[hsl(var(--success))] border border-[hsl(var(--success))]/30';
+        return 'badge-success';
       case 'pending_approval':
-        return 'bg-gradient-to-r from-[hsl(var(--warning))]/20 to-[hsl(var(--warning))]/10 text-[hsl(var(--warning))] border border-[hsl(var(--warning))]/30';
+        return 'badge-warning';
       case 'cancelled':
       case 'declined':
-        return 'bg-gradient-to-r from-[hsl(var(--destructive))]/20 to-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] border border-[hsl(var(--destructive))]/30';
+        return 'badge-destructive';
       default:
-        return 'bg-gradient-to-r from-[hsl(var(--primary))]/20 to-[hsl(var(--accent-light))]/10 text-[hsl(var(--primary))] border border-[hsl(var(--primary))]/30';
+        return 'badge-primary';
     }
   };
 
@@ -99,7 +99,7 @@ export default function BookingDetailsModal({
                     <MapPin className="w-4 h-4 text-[hsl(var(--success))]" />
                     <span className="text-sm text-[hsl(var(--success))]">{property?.name}</span>
                   </div>
-                  <Badge className="bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] border border-[hsl(var(--success))]/30 rounded-full">
+                  <Badge className="badge-success rounded-full">
                     {space.type?.replace('_', ' ')}
                   </Badge>
                 </div>
@@ -159,7 +159,7 @@ export default function BookingDetailsModal({
 
         {/* Actions */}
         <div className="flex justify-between gap-4 p-6 bg-[hsl(var(--card))]/50 border-t border-[hsl(var(--border))] rounded-b-3xl -mb-6 -mx-6">
-          <Button variant="outline" onClick={onClose} className="rounded-2xl transition-brand">
+          <Button variant="outline" onClick={onClose} className="btn-outline rounded-2xl transition-brand">
             Close
           </Button>
           <Link to={createPageUrl('Dashboard')}>

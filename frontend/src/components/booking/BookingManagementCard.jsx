@@ -43,12 +43,12 @@ export default function BookingManagementCard({ campaignGroup, onUpdate }) {
 
     const getStatusDetails = (status) => {
         const details = {
-            'pending_approval': { text: 'Approval Required', color: 'bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))] border-[hsl(var(--warning))]', icon: <AlertTriangle className="w-4 h-4" /> },
-            'pending': { text: 'Pending', color: 'bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))] border-[hsl(var(--warning))]', icon: <AlertTriangle className="w-4 h-4" /> },
-            'confirmed': { text: 'Confirmed', color: 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] border-[hsl(var(--success))]', icon: <Check className="w-4 h-4" /> },
-            'active': { text: 'Active', color: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] border-[hsl(var(--primary))]', icon: <Check className="w-4 h-4" /> },
+            'pending_approval': { text: 'Approval Required', color: 'badge-warning', icon: <AlertTriangle className="w-4 h-4" /> },
+            'pending': { text: 'Pending', color: 'badge-warning', icon: <AlertTriangle className="w-4 h-4" /> },
+            'confirmed': { text: 'Confirmed', color: 'badge-success', icon: <Check className="w-4 h-4" /> },
+            'active': { text: 'Active', color: 'badge-primary', icon: <Check className="w-4 h-4" /> },
         };
-        return details[campaignGroup.status] || { text: 'Unknown', color: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] border-[hsl(var(--border))]', icon: null };
+        return details[campaignGroup.status] || { text: 'Unknown', color: 'badge-secondary', icon: null };
     };
 
     const statusDetails = getStatusDetails(campaignGroup.status);
@@ -104,7 +104,7 @@ export default function BookingManagementCard({ campaignGroup, onUpdate }) {
             </CardContent>
             {campaignGroup.status !== 'confirmed' && campaignGroup.status !== 'active' && (
                 <CardFooter className="p-6 glass-strong border-t border-[hsl(var(--border))] flex justify-end gap-4">
-                    <Button variant="outline" asChild className="border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] rounded-xl transition-brand">
+                    <Button variant="outline" asChild className="btn-outline rounded-xl transition-brand">
                         <Link to={createPageUrl(`Messages?recipient_id=${campaignGroup.advertiser.id}&campaign_id=${campaignGroup.campaignId}`)}>
                             <MessageSquare className="w-4 h-4 mr-2" /> Message Advertiser
                         </Link>
@@ -113,14 +113,14 @@ export default function BookingManagementCard({ campaignGroup, onUpdate }) {
                         variant="destructive"
                         onClick={() => handleResponse('declined')}
                         disabled={isProcessing}
-                        className="rounded-xl transition-brand"
+                        className="btn-destructive rounded-xl transition-brand"
                     >
                         {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><X className="w-4 h-4 mr-2" /> Decline All</>}
                     </Button>
                     <Button
                         onClick={() => handleResponse('confirmed')}
                         disabled={isProcessing}
-                        className="bg-gradient-to-r from-[hsl(var(--success))] to-[hsl(var(--success))]/80 hover:from-[hsl(var(--success))]/90 hover:to-[hsl(var(--success))]/70 text-white rounded-xl transition-brand"
+                        className="btn-success rounded-xl transition-brand"
                     >
                          {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4 mr-2" /> Approve All</>}
                     </Button>

@@ -59,7 +59,7 @@ const CalendarView = ({ startDate, endDate, hoveredDate, onDateSelect, onDateHov
             variant="outline" 
             size="sm" 
             onClick={() => setCurrentMonth(prev => addDays(startOfMonth(prev), -1))}
-            className="glass border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--muted))] transition-brand"
+            className="btn-outline rounded-xl transition-brand"
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
@@ -68,7 +68,7 @@ const CalendarView = ({ startDate, endDate, hoveredDate, onDateSelect, onDateHov
             variant="outline" 
             size="sm" 
             onClick={() => setCurrentMonth(prev => addDays(startOfMonth(prev), 31))}
-            className="glass border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--muted))] transition-brand"
+            className="btn-outline rounded-xl transition-brand"
           >
             <ArrowRight className="w-4 h-4" />
           </Button>
@@ -327,7 +327,7 @@ export default function RequestChangeModal({ booking, space, isOpen, onClose }) 
               <Button 
                 onClick={handleSubmitRequest} 
                 disabled={isLoading || !startDate || !endDate} 
-                className="w-full btn-gradient font-bold py-4 text-lg rounded-2xl shadow-[var(--shadow-brand)] hover:shadow-[var(--shadow-brand-lg)] transition-brand disabled:opacity-50"
+                className="btn-gradient btn-xl w-full font-bold shadow-[var(--shadow-brand)] hover:shadow-[var(--shadow-brand-lg)] transition-brand disabled:opacity-50"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-3">
@@ -344,7 +344,7 @@ export default function RequestChangeModal({ booking, space, isOpen, onClose }) 
               <Button 
                 variant="outline" 
                 onClick={onClose} 
-                className="w-full border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] rounded-2xl py-3 font-bold transition-brand"
+                className="btn-outline w-full font-bold transition-brand"
               >
                 Cancel
               </Button>

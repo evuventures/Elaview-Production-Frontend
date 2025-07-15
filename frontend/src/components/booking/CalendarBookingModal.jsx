@@ -80,7 +80,7 @@ const CalendarView = ({ startDate, endDate, hoveredDate, onDateSelect, onDateHov
             variant="outline" 
             size="sm" 
             onClick={() => setCurrentMonth(prev => subMonths(prev, 1))}
-            className="glass border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--muted))] transition-brand"
+            className="btn-outline rounded-xl transition-brand"
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
@@ -91,7 +91,7 @@ const CalendarView = ({ startDate, endDate, hoveredDate, onDateSelect, onDateHov
             variant="outline" 
             size="sm" 
             onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}
-            className="glass border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--muted))] transition-brand"
+            className="btn-outline rounded-xl transition-brand"
           >
             <ArrowRight className="w-4 h-4" />
           </Button>
@@ -355,7 +355,7 @@ export default function CalendarBookingModal({ area, isOpen, onClose, onConfirm 
         <DialogHeader className="bg-gradient-to-r from-[hsl(var(--muted))]/80 to-[hsl(var(--accent-light))]/30 border-b border-[hsl(var(--border))] p-6 rounded-t-3xl">
           <div className="flex items-center gap-3">
             {step > 1 && (
-              <Button variant="ghost" size="icon" onClick={() => setStep(step - 1)} className="text-[hsl(var(--primary))] hover:bg-[hsl(var(--muted))] rounded-xl">
+              <Button variant="ghost" size="icon" onClick={() => setStep(step - 1)} className="btn-ghost rounded-xl">
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             )}
@@ -414,7 +414,7 @@ export default function CalendarBookingModal({ area, isOpen, onClose, onConfirm 
                         <Clock className="w-5 h-5 text-[hsl(var(--success))]" />
                         <span className="font-bold text-[hsl(var(--success))]">Selected Dates:</span>
                       </div>
-                      <Badge className="bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] border-[hsl(var(--success))] font-bold">
+                      <Badge className="badge-success font-bold">
                         {selectedDatesArray.length} days
                       </Badge>
                     </div>
@@ -616,7 +616,7 @@ export default function CalendarBookingModal({ area, isOpen, onClose, onConfirm 
             <Button 
               onClick={handleContinue} 
               disabled={!startDate || !endDate || !!conflictError}
-              className="w-full btn-gradient py-4 font-bold text-lg rounded-2xl shadow-[var(--shadow-brand)] hover:shadow-[var(--shadow-brand-lg)] transition-brand disabled:opacity-50"
+              className="btn-gradient btn-xl w-full font-bold shadow-[var(--shadow-brand)] hover:shadow-[var(--shadow-brand-lg)] transition-brand disabled:opacity-50"
             >
               Continue ({selectedDatesArray.length > 0 ? `${selectedDatesArray.length} days selected` : 'Select Dates'})
             </Button>
@@ -627,13 +627,13 @@ export default function CalendarBookingModal({ area, isOpen, onClose, onConfirm 
               <Button 
                 variant="outline" 
                 onClick={() => setStep(1)} 
-                className="flex-1 border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] rounded-2xl py-3 font-bold transition-brand"
+                className="btn-outline flex-1 font-bold transition-brand"
               >
                 Back
               </Button>
               <Button 
                 onClick={handleConfirm} 
-                className="flex-1 btn-gradient rounded-2xl py-3 font-bold shadow-[var(--shadow-brand)] hover:shadow-[var(--shadow-brand-lg)] transition-brand"
+                className="btn-gradient flex-1 font-bold shadow-[var(--shadow-brand)] hover:shadow-[var(--shadow-brand-lg)] transition-brand"
               >
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Send Request
@@ -646,13 +646,13 @@ export default function CalendarBookingModal({ area, isOpen, onClose, onConfirm 
               <Button 
                 variant="outline" 
                 onClick={handleClose} 
-                className="flex-1 border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] rounded-2xl py-3 font-bold transition-brand"
+                className="btn-outline flex-1 font-bold transition-brand"
               >
                 Close
               </Button>
               <Button 
                 onClick={handleClose} 
-                className="flex-1 bg-gradient-to-r from-[hsl(var(--success))] to-[hsl(var(--success))]/80 hover:from-[hsl(var(--success))]/90 hover:to-[hsl(var(--success))]/70 text-white rounded-2xl py-3 font-bold shadow-[var(--shadow-brand)] hover:shadow-[var(--shadow-brand-lg)] transition-brand"
+                className="btn-success flex-1 font-bold shadow-[var(--shadow-brand)] hover:shadow-[var(--shadow-brand-lg)] transition-brand"
               >
                 <MessageSquare className="w-4 h-4 mr-2" />
                 View Messages

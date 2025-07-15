@@ -262,7 +262,7 @@ export default function BookingPage() {
           <p className="text-muted-foreground mb-6">Please sign in to book this advertising space.</p>
           <button 
             onClick={() => navigate('/sign-in')}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-xl"
+            className="btn-gradient btn-lg font-bold"
           >
             Sign In to Continue
           </button>
@@ -291,7 +291,7 @@ export default function BookingPage() {
           <p className="text-muted-foreground mb-6">The advertising space you're looking for could not be found.</p>
           <button 
             onClick={() => navigate('/browse')}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-xl"
+            className="btn-gradient btn-lg font-bold"
           >
             Browse Other Spaces
           </button>
@@ -315,7 +315,7 @@ export default function BookingPage() {
         >
           <button 
             onClick={() => navigate(-1)}
-            className="p-2 rounded-lg border border-border hover:bg-muted transition-colors"
+            className="btn-ghost p-2 rounded-lg"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -465,7 +465,7 @@ export default function BookingPage() {
                       </p>
                       <button
                         onClick={() => setShowCampaignForm(true)}
-                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-xl transition-all transform hover:scale-105"
+                        className="btn-gradient btn-lg font-bold"
                       >
                         Create Campaign
                       </button>
@@ -525,14 +525,14 @@ export default function BookingPage() {
                           <div className="flex gap-3">
                             <button
                               onClick={() => setShowCampaignForm(false)}
-                              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                              className="btn-outline flex-1"
                             >
                               Cancel
                             </button>
                             <button
                               onClick={handleCreateCampaign}
                               disabled={!newCampaign.title || newCampaign.budget < totalCost || isCreatingCampaign}
-                              className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                              className="btn-gradient flex-1 flex items-center justify-center"
                             >
                               {isCreatingCampaign ? (
                                 <>
@@ -613,7 +613,7 @@ export default function BookingPage() {
                         />
                         <label
                           htmlFor="file-upload"
-                          className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2 px-4 rounded-lg text-sm cursor-pointer"
+                          className="btn-primary btn-sm cursor-pointer"
                         >
                           Choose File
                         </label>
@@ -713,7 +713,7 @@ export default function BookingPage() {
                   <button
                     onClick={handleBooking}
                     disabled={!canProceed}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95"
+                    className="btn-gradient btn-xl w-full font-bold transition-all hover:scale-105 active:scale-95"
                   >
                     {!selectedCampaign ? 'Select Campaign to Continue' :
                      !startDate || !endDate ? 'Select Dates to Continue' :

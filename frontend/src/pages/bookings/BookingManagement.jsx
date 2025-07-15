@@ -1,172 +1,216 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Booking, AdvertisingArea, Property } from '@/api/entities';
-import { useUser } from '@clerk/clerk-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Inbox, Target, Search } from 'lucide-react';
-import BookingManagementCard from '@/components/booking/BookingManagementCard';
-import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { User, Calendar, MapPin, DollarSign, Check, X, Loader2, MessageSquare, AlertTriangle } from 'lucide-react';
+import { format } from 'date-fns';
+import { Booking, Message } from '@/api/entities';
+import { createPageUrl } from '@/utils';
+import { Link } from 'react-router-dom';
 
-export default function BookingManagementPage() {
-    const { user } = useUser();
-    const [campaignGroups, setCampaignGroups] = useState({});
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
+// BookingManagementCard component (moved from the original file)
+function BookingManagementCard({ campaignGroup, onUpdate }) {
+    const [isProcessing, setIsProcessing] = useState(false);
 
-    useEffect(() => {
-        if (user) {
-            loadBookingData();
+    const handleResponse = async (newStatus) => {
+        setIsProcessing(true);
+        try {
+            const updatePromises = campaignGroup.bookings.map(booking => 
+                Booking.update(booking.id, { status: newStatus })
+            );
+            await Promise.all(updatePromises);
+            
+            const messageContent = newStatus === 'confirmed'
+                ? `🚀 Great news! Your campaign "${campaignGroup.campaignName}" has been approved.`
+                : `⚠️ Update on your campaign "${campaignGroup.campaignName}": The property owner has declined the request.`;
+
+            // Send one message for the whole campaign
+            await Message.create({
+                sender_id: campaignGroup.bookings[0].owner_id,
+                recipient_id: campaignGroup.advertiser.id,
+                content: messageContent,
+                message_type: newStatus === 'confirmed' ? 'booking_approved' : 'booking_declined',
+                booking_id: campaignGroup.bookings[0].id, // Link to first booking
+                system_data: { campaign_id: campaignGroup.campaignId }
+            });
+
+            onUpdate(); // Trigger parent to reload data
+        } catch (error) {
+            console.error(`Error ${newStatus === 'confirmed' ? 'approving' : 'declining'} campaign:`, error);
         }
-    }, [user]);
+        setIsProcessing(false);
+    };
+
+    const getStatusDetails = (status) => {
+        const details = {
+            'pending_approval': { text: 'Approval Required', color: 'badge-warning', icon: <AlertTriangle className="w-4 h-4" /> },
+            'pending': { text: 'Pending', color: 'badge-warning', icon: <AlertTriangle className="w-4 h-4" /> },
+            'confirmed': { text: 'Confirmed', color: 'badge-success', icon: <Check className="w-4 h-4" /> },
+            'active': { text: 'Active', color: 'badge-primary', icon: <Check className="w-4 h-4" /> },
+        };
+        return details[campaignGroup.status] || { text: 'Unknown', color: 'badge-secondary', icon: null };
+    };
+
+    const statusDetails = getStatusDetails(campaignGroup.status);
+
+    return (
+        <Card className="glass border-[hsl(var(--border))] rounded-3xl shadow-[var(--shadow-brand)] overflow-hidden">
+            <CardHeader className="p-6 bg-gradient-to-r from-[hsl(var(--muted))]/50 to-[hsl(var(--accent-light))]/30 border-b border-[hsl(var(--border))]">
+                <div className="flex flex-wrap justify-between items-start gap-4">
+                    <div>
+                        <Badge className={`mb-2 ${statusDetails.color} flex items-center gap-1`}>
+                            {statusDetails.icon} {statusDetails.text}
+                        </Badge>
+                        <CardTitle className="text-2xl font-bold text-[hsl(var(--foreground))]">{campaignGroup.campaignName}</CardTitle>
+                        <CardDescription className="text-md text-muted-foreground">Brand: {campaignGroup.brandName}</CardDescription>
+                    </div>
+                    <div className="text-right">
+                        <div className="flex items-center justify-end gap-2 text-muted-foreground">
+                            <User className="w-4 h-4" />
+                            <span>{campaignGroup.advertiser.full_name}</span>
+                        </div>
+                        <div className="flex items-center justify-end gap-2 text-muted-foreground">
+                            <DollarSign className="w-4 h-4" />
+                            <span>Total Value: ${campaignGroup.totalAmount.toLocaleString()}</span>
+                        </div>
+                         <div className="flex items-center justify-end gap-2 text-muted-foreground">
+                            <Calendar className="w-4 h-4" />
+                            <span>{format(new Date(campaignGroup.startDate), 'MMM d, yyyy')} - {format(new Date(campaignGroup.endDate), 'MMM d, yyyy')}</span>
+                        </div>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="p-0">
+                <Accordion type="single" collapsible>
+                    <AccordionItem value="item-1" className="border-b-0">
+                        <AccordionTrigger className="px-6 py-4 text-lg font-semibold text-[hsl(var(--primary))] hover:no-underline">
+                            Show Booked Spaces ({campaignGroup.bookings.length})
+                        </AccordionTrigger>
+                        <AccordionContent className="px-6 pb-6 bg-[hsl(var(--muted))]/20">
+                            <div className="space-y-4">
+                                {campaignGroup.bookings.map(booking => (
+                                    <div key={booking.id} className="p-4 glass-strong rounded-xl border border-[hsl(var(--border))] flex justify-between items-center">
+                                        <div>
+                                            <p className="font-semibold text-[hsl(var(--foreground))]">{booking.area?.title || 'Loading...'}</p>
+                                            <p className="text-sm text-muted-foreground">${booking.total_amount.toLocaleString()}</p>
+                                        </div>
+                                        <Badge variant={booking.status === 'confirmed' ? 'default' : 'secondary'} className="capitalize">{booking.status.replace('_', ' ')}</Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+            </CardContent>
+            {campaignGroup.status !== 'confirmed' && campaignGroup.status !== 'active' && (
+                <CardFooter className="p-6 glass-strong border-t border-[hsl(var(--border))] flex justify-end gap-4">
+                    <Button variant="outline" asChild className="btn-outline rounded-xl transition-brand">
+                        <Link to={createPageUrl(`Messages?recipient_id=${campaignGroup.advertiser.id}&campaign_id=${campaignGroup.campaignId}`)}>
+                            <MessageSquare className="w-4 h-4 mr-2" /> Message Advertiser
+                        </Link>
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        onClick={() => handleResponse('declined')}
+                        disabled={isProcessing}
+                        className="btn-destructive rounded-xl transition-brand"
+                    >
+                        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><X className="w-4 h-4 mr-2" /> Decline All</>}
+                    </Button>
+                    <Button
+                        onClick={() => handleResponse('confirmed')}
+                        disabled={isProcessing}
+                        className="btn-success rounded-xl transition-brand"
+                    >
+                         {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4 mr-2" /> Approve All</>}
+                    </Button>
+                </CardFooter>
+            )}
+        </Card>
+    );
+}
+
+// Main BookingManagement component
+export default function BookingManagement() {
+    const [campaignGroups, setCampaignGroups] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     const loadBookingData = async () => {
         setIsLoading(true);
-        setError(null);
         try {
-            if (!user?.id) {
-                setCampaignGroups({});
-                setIsLoading(false);
-                return;
-            }
-
-            const allBookings = await Booking.filter({ 
-                owner_id: user.id,
-                status: { $in: ['pending', 'pending_approval', 'confirmed', 'active'] } 
-            });
-
-            if (!allBookings || allBookings.length === 0) {
-                setCampaignGroups({});
-                setIsLoading(false);
-                return;
-            }
-
-            const advertiserIds = [...new Set(allBookings.map(b => b.advertiser_id))];
-            const areaIds = [...new Set(allBookings.map(b => b.area_id))];
-            
-            // Note: We'll need to replace User.get with actual API calls to get user data
-            const [areasData] = await Promise.all([
-                Promise.all(areaIds.map(id => AdvertisingArea.get(id)))
-            ]);
-
-            // TODO: Replace with actual API calls to get advertiser data
-            const advertisers = {}; // placeholder
-            const areas = areasData.reduce((acc, area) => ({ ...acc, [area.id]: area }), {});
-            
-            const groupedByCampaign = allBookings.reduce((acc, booking) => {
-                const campaignId = booking.campaign_id;
-                if (!acc[campaignId]) {
-                    acc[campaignId] = {
-                        campaignId,
-                        campaignName: booking.campaign_name,
-                        brandName: booking.brand_name,
-                        advertiser: advertisers[booking.advertiser_id],
-                        bookings: [],
-                        totalAmount: 0,
-                        startDate: booking.start_date,
-                        endDate: booking.end_date,
-                        status: 'pending_approval'
-                    };
+            // This would fetch the actual booking data from your API
+            // For now, using mock data to demonstrate the structure
+            const mockCampaignGroups = [
+                {
+                    campaignId: '1',
+                    campaignName: 'Summer Campaign 2024',
+                    brandName: 'Brand X',
+                    advertiser: { id: '1', full_name: 'John Doe' },
+                    totalAmount: 5000,
+                    startDate: '2024-06-01',
+                    endDate: '2024-08-31',
+                    status: 'pending_approval',
+                    bookings: [
+                        {
+                            id: '1',
+                            total_amount: 2500,
+                            status: 'pending',
+                            area: { title: 'Main Billboard' }
+                        },
+                        {
+                            id: '2',
+                            total_amount: 2500,
+                            status: 'pending',
+                            area: { title: 'Side Banner' }
+                        }
+                    ]
                 }
-                
-                acc[campaignId].bookings.push({
-                    ...booking,
-                    area: areas[booking.area_id]
-                });
-                acc[campaignId].totalAmount += booking.total_amount;
-                
-                // Logic to determine overall status
-                if (acc[campaignId].bookings.some(b => b.status === 'pending_approval')) {
-                    acc[campaignId].status = 'pending_approval';
-                } else if (acc[campaignId].bookings.some(b => b.status === 'pending')) {
-                    acc[campaignId].status = 'pending';
-                } else {
-                    acc[campaignId].status = 'confirmed';
-                }
-
-                return acc;
-            }, {});
-
-            setCampaignGroups(groupedByCampaign);
-        } catch (e) {
-            console.error("Error loading booking data:", e);
-            setError("Failed to load booking requests.");
+            ];
+            
+            setCampaignGroups(mockCampaignGroups);
+        } catch (error) {
+            console.error('Failed to load booking data:', error);
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     };
 
-    const handleUpdateRequest = async () => {
-        await loadBookingData();
-    };
-
-    const filteredCampaigns = useMemo(() => {
-        if (!searchTerm) return Object.values(campaignGroups);
-        const lowercasedFilter = searchTerm.toLowerCase();
-        return Object.values(campaignGroups).filter(group => {
-            return (
-                group.campaignName?.toLowerCase().includes(lowercasedFilter) ||
-                group.brandName?.toLowerCase().includes(lowercasedFilter) ||
-                group.advertiser?.full_name.toLowerCase().includes(lowercasedFilter)
-            );
-        });
-    }, [searchTerm, campaignGroups]);
+    useEffect(() => {
+        loadBookingData();
+    }, []);
 
     if (isLoading) {
         return (
-            <div className="flex justify-center items-center h-screen">
-                <Loader2 className="w-16 h-16 animate-spin text-[hsl(var(--primary))]" />
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin" />
             </div>
         );
     }
-    
-    return (
-        <div className="min-h-screen bg-background p-4 md:p-8">
-            <div className="max-w-7xl mx-auto">
-                <Card className="card-brand glass-strong border-[hsl(var(--border))] rounded-3xl shadow-xl mb-8">
-                    <CardHeader className="p-8">
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <CardTitle className="text-4xl font-bold text-gradient-brand flex items-center gap-3">
-                                    <Target className="w-8 h-8 text-[hsl(var(--primary))]" />
-                                    Booking Requests
-                                </CardTitle>
-                                <CardDescription className="text-lg text-muted-foreground mt-2">
-                                    Manage incoming campaign requests for your properties.
-                                </CardDescription>
-                            </div>
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search campaigns..."
-                                    className="pl-10 pr-4 py-3 w-72 bg-[hsl(var(--input))] border-[hsl(var(--border))] rounded-2xl focus-brand"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </div>
-                        </div>
-                    </CardHeader>
-                </Card>
 
-                {error && <p className="text-center text-red-500">{error}</p>}
-                
-                {filteredCampaigns.length > 0 ? (
-                    <div className="space-y-6">
-                        {filteredCampaigns.map(group => (
-                            <BookingManagementCard 
-                                key={group.campaignId} 
-                                campaignGroup={group} 
-                                onUpdate={handleUpdateRequest}
-                            />
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-20">
-                        <Inbox className="w-24 h-24 mx-auto text-gray-400" />
-                        <h3 className="mt-4 text-2xl font-semibold">All Caught Up!</h3>
-                        <p className="mt-2 text-gray-500">You have no new booking requests at the moment.</p>
-                    </div>
-                )}
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold">Booking Management</h1>
             </div>
+            
+            {campaignGroups.length === 0 ? (
+                <Card className="glass border-[hsl(var(--border))] rounded-3xl">
+                    <CardContent className="p-8 text-center">
+                        <p className="text-muted-foreground">No bookings to manage at this time.</p>
+                    </CardContent>
+                </Card>
+            ) : (
+                <div className="space-y-6">
+                    {campaignGroups.map((campaignGroup) => (
+                        <BookingManagementCard
+                            key={campaignGroup.campaignId}
+                            campaignGroup={campaignGroup}
+                            onUpdate={loadBookingData}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

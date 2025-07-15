@@ -131,7 +131,7 @@ export default function MultiSpaceBookingModal({
                                                     {properties[detail.area.property_id]?.name || '...'}
                                                 </div>
                                                 {detail.needsApproval && (
-                                                    <Badge variant="destructive" className="mt-2 text-xs">
+                                                    <Badge variant="destructive" className="badge-destructive mt-2 text-xs">
                                                         <AlertTriangle className="w-3 h-3 mr-1" />
                                                         Owner Approval Required
                                                     </Badge>
@@ -161,7 +161,7 @@ export default function MultiSpaceBookingModal({
                             onClick={handleConfirm} 
                             disabled={isSubmitting}
                             size="lg"
-                            className="btn-gradient font-bold py-4 text-lg rounded-2xl shadow-[var(--shadow-brand)] hover:shadow-[var(--shadow-brand-lg)] transition-brand"
+                            className="btn-gradient btn-xl font-bold shadow-[var(--shadow-brand)] hover:shadow-[var(--shadow-brand-lg)] transition-brand"
                         >
                             {isSubmitting ? (
                                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
