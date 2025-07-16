@@ -411,8 +411,8 @@ export default function MapPage() {
 
       {/* Desktop Search Panel */}
       <div className="absolute top-4 left-4 right-4 md:left-auto md:w-[480px] z-10 p-3 md:p-6">
-        <Card className="shadow-lg rounded-3xl overflow-hidden backdrop-blur-sm bg-background/95">
-          <CardContent className="p-6">
+        <Card className="shadow-lg rounded-3xl overflow-hidden backdrop-blur-sm bg-background/95 max-h-[80vh]">
+          <CardContent className="p-6 overflow-y-auto max-h-[75vh]">
             {/* Back button when viewing areas */}
             {isShowingAreas && (
               <div className="mb-4">
