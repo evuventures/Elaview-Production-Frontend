@@ -17,22 +17,21 @@ import messageRoutes from './routes/messages.js';
 import invoiceRoutes from './routes/invoices.js';
 import uploadRoutes from './routes/upload.js';
 import advertisingAreaRoutes from './routes/advertising-areas.js';
-import debugRoutes from './routes/debug.js'; // 🔍 Add debug route
+import debugRoutes from './routes/debug.js';
 
 // Import middleware
 import { clerkMiddleware } from './middleware/clerk.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
-// Only load .env in development (not in production)
+// Only load .env in development (Railway provides env vars directly)
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
 }
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const HOST = '0.0.0.0'; // Critical for Railway deployment
 
-// CORS configuration - clean up the origins
+// CORS configuration
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
@@ -45,14 +44,18 @@ console.log('🔗 CORS enabled for origins:', allowedOrigins);
 
 // Security middleware
 app.use(helmet());
+
+// CORS middleware - simplified and more reliable
 app.use(cors({
   origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       console.warn(`❌ CORS blocked origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+      callback(null, false); // Don't throw error, just deny
     }
   },
   credentials: true,
@@ -60,17 +63,20 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
+// Handle preflight requests
 app.options('*', cors());
 
-// Rate limiting
+// Rate limiting - more lenient for production
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: 'Too many requests from this IP, please try again later.'
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // Increased limit
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use(limiter);
 
-// Logging
+// Logging - only in development
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
@@ -79,12 +85,16 @@ if (process.env.NODE_ENV !== 'production') {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ✅ ROOT ROUTE - Add this to prevent 502 errors
+// Trust proxy for Railway
+app.set('trust proxy', 1);
+
+// ✅ ROOT ROUTE
 app.get('/', (req, res) => {
   res.status(200).json({ 
     message: 'Elaview API is running',
     status: 'success',
     version: '1.0.0',
+    environment: process.env.NODE_ENV,
     endpoints: {
       health: '/health',
       api_health: '/api/health',
@@ -95,12 +105,13 @@ app.get('/', (req, res) => {
   });
 });
 
-// ✅ PUBLIC HEALTH CHECKS
+// ✅ HEALTH CHECKS
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
+    environment: process.env.NODE_ENV,
     cors: allowedOrigins
   });
 });
@@ -111,17 +122,16 @@ app.get('/api/health', (req, res) => {
     message: 'API is running',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
+    environment: process.env.NODE_ENV,
     cors: allowedOrigins,
     endpoints: {
-      spaces: '/api/spaces (primary, public for GET)',
-      areas: '/api/areas (short alias, public for GET)',
-      'advertising-areas': '/api/advertising-areas (full name, public for GET)',
-      properties: '/api/properties (legacy, redirects to spaces)',
+      spaces: '/api/spaces (public)',
+      areas: '/api/areas (public)',
+      'advertising-areas': '/api/advertising-areas (public)',
       campaigns: '/api/campaigns (protected)',
       bookings: '/api/bookings (protected)',
       messages: '/api/messages (protected)',
-      invoices: '/api/invoices (protected)',
-      debug: '/api/debug (development only)' // 🔍 Add debug info
+      invoices: '/api/invoices (protected)'
     }
   });
 });
@@ -133,8 +143,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // ✅ PUBLIC ROUTES
-console.log('🌍 Setting up PUBLIC routes (no auth required)...');
-
+console.log('🌍 Setting up PUBLIC routes...');
 app.use('/api/spaces', spacesRoutes);
 app.use('/api/areas', advertisingAreaRoutes);
 app.use('/api/advertising-areas', advertisingAreaRoutes);
@@ -144,8 +153,7 @@ console.log('   ✅ /api/areas - Public advertising areas (short)');
 console.log('   ✅ /api/advertising-areas - Public advertising areas (full)');
 
 // ✅ PROTECTED ROUTES
-console.log('🔒 Setting up PROTECTED routes (auth required)...');
-
+console.log('🔒 Setting up PROTECTED routes...');
 app.use('/api/auth', clerkMiddleware, authRoutes);
 app.use('/api/users', clerkMiddleware, userRoutes);
 app.use('/api/properties', clerkMiddleware, propertyRoutes);
@@ -172,66 +180,72 @@ app.use('*', (req, res) => {
   res.status(404).json({ 
     success: false, 
     message: 'Route not found',
+    path: req.originalUrl,
+    method: req.method,
     available_endpoints: {
       public: {
         root: '/ (API info)',
+        health: '/health (health check)',
+        api_health: '/api/health (detailed health)',
         spaces: '/api/spaces (advertising spaces)',
-        areas: '/api/areas (advertising areas)',
-        'advertising-areas': '/api/advertising-areas (advertising areas full name)',
-        health: '/api/health (system health)',
-        debug: '/api/debug (development only)'
+        areas: '/api/areas (advertising areas)'
       },
       protected: {
-        properties: '/api/properties (requires auth)',
-        campaigns: '/api/campaigns (requires auth)',
-        bookings: '/api/bookings (requires auth)',
-        messages: '/api/messages (requires auth)',
-        invoices: '/api/invoices (requires auth)',
-        upload: '/api/upload (requires auth)'
+        auth: '/api/auth (authentication)',
+        users: '/api/users (user management)',
+        properties: '/api/properties (properties)',
+        campaigns: '/api/campaigns (campaigns)',
+        bookings: '/api/bookings (bookings)',
+        messages: '/api/messages (messaging)',
+        invoices: '/api/invoices (invoicing)',
+        upload: '/api/upload (file uploads)'
       }
     }
   });
 });
 
-// ✅ CRITICAL: Bind to 0.0.0.0 for Railway
-app.listen(PORT, HOST, () => {
-  console.log(`🚀 Server running on ${HOST}:${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🔗 CORS enabled for origins: ${allowedOrigins.join(', ')}`);
+// ✅ START SERVER - Bind to 0.0.0.0 for Railway
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on 0.0.0.0:${PORT}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔗 CORS enabled for: ${allowedOrigins.join(', ')}`);
   console.log('');
-  console.log('📍 API ROUTE SUMMARY:');
+  console.log('📍 API ENDPOINTS:');
+  console.log('   🌍 PUBLIC:');
+  console.log('     GET  / (API info)');
+  console.log('     GET  /health (health check)');
+  console.log('     GET  /api/health (detailed health)');
+  console.log('     GET  /api/spaces (advertising spaces)');
+  console.log('     GET  /api/areas (advertising areas)');
   console.log('');
-  console.log('   🌍 PUBLIC ROUTES (no authentication):');
-  console.log('     GET  /');
-  console.log('     GET  /health');
-  console.log('     GET  /api/health');
-  console.log('     GET  /api/spaces');
-  console.log('     GET  /api/areas');
-  console.log('     GET  /api/advertising-areas');
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('     GET  /api/debug/schema (🔍 inspect database)');
-    console.log('     POST /api/debug/test-property (🧪 test creation)');
-  }
-  console.log('');
-  console.log('   🔒 PROTECTED ROUTES (authentication required):');
+  console.log('   🔒 PROTECTED (auth required):');
+  console.log('     ALL  /api/auth');
+  console.log('     ALL  /api/users');
   console.log('     ALL  /api/properties');
   console.log('     ALL  /api/campaigns');
   console.log('     ALL  /api/bookings');
   console.log('     ALL  /api/messages');
   console.log('     ALL  /api/invoices');
   console.log('     ALL  /api/upload');
-  console.log('     ALL  /api/users');
-  console.log('     ALL  /api/auth');
   console.log('');
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`🔍 DEBUG ENDPOINTS:`);
-    console.log(`   curl http://localhost:${PORT}/api/debug/schema`);
-    console.log(`   curl -X POST http://localhost:${PORT}/api/debug/test-property`);
-    console.log('');
-  }
-  console.log(`✅ Test public endpoints:`);
-  console.log(`   curl http://localhost:${PORT}/api/spaces`);
-  console.log(`   curl http://localhost:${PORT}/api/areas`);
+  console.log('✅ Server ready for connections');
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('💤 Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('🛑 SIGINT received, shutting down gracefully');
+  server.close(() => {
+    console.log('💤 Server closed');
+    process.exit(0);
+  });
 });
 
 export default app;
