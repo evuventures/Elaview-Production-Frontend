@@ -23,12 +23,16 @@ import debugRoutes from './routes/debug.js'; // 🔍 Add debug route
 import { clerkMiddleware } from './middleware/clerk.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
-dotenv.config();
+// Only load .env in development (not in production)
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const HOST = '0.0.0.0'; // Critical for Railway deployment
 
-// CORS configuration
+// CORS configuration - clean up the origins
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
@@ -67,13 +71,29 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Logging
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// ✅ ROOT ROUTE - Add this to prevent 502 errors
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    message: 'Elaview API is running',
+    status: 'success',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      api_health: '/api/health',
+      spaces: '/api/spaces',
+      areas: '/api/areas'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
 
 // ✅ PUBLIC HEALTH CHECKS
 app.get('/health', (req, res) => {
@@ -107,7 +127,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // 🔍 DEBUG ROUTES - DEVELOPMENT ONLY
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV !== 'production') {
   app.use('/api/debug', debugRoutes);
   console.log('🔍 Debug routes enabled for development');
 }
@@ -154,6 +174,7 @@ app.use('*', (req, res) => {
     message: 'Route not found',
     available_endpoints: {
       public: {
+        root: '/ (API info)',
         spaces: '/api/spaces (advertising spaces)',
         areas: '/api/areas (advertising areas)',
         'advertising-areas': '/api/advertising-areas (advertising areas full name)',
@@ -172,20 +193,22 @@ app.use('*', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+// ✅ CRITICAL: Bind to 0.0.0.0 for Railway
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 Server running on ${HOST}:${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
   console.log(`🔗 CORS enabled for origins: ${allowedOrigins.join(', ')}`);
   console.log('');
   console.log('📍 API ROUTE SUMMARY:');
   console.log('');
   console.log('   🌍 PUBLIC ROUTES (no authentication):');
+  console.log('     GET  /');
   console.log('     GET  /health');
   console.log('     GET  /api/health');
   console.log('     GET  /api/spaces');
   console.log('     GET  /api/areas');
   console.log('     GET  /api/advertising-areas');
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV !== 'production') {
     console.log('     GET  /api/debug/schema (🔍 inspect database)');
     console.log('     POST /api/debug/test-property (🧪 test creation)');
   }
@@ -200,7 +223,7 @@ app.listen(PORT, () => {
   console.log('     ALL  /api/users');
   console.log('     ALL  /api/auth');
   console.log('');
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV !== 'production') {
     console.log(`🔍 DEBUG ENDPOINTS:`);
     console.log(`   curl http://localhost:${PORT}/api/debug/schema`);
     console.log(`   curl -X POST http://localhost:${PORT}/api/debug/test-property`);

@@ -1,3 +1,14 @@
+/* TEMPORARY TEST - Add this at the very top */
+.btn-gradient {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.dark .btn-gradient {
+  background: linear-gradient(135deg, #8b5cf6, #a855f7) !important;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
