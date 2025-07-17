@@ -94,14 +94,15 @@ const DesktopSidebar = ({ unreadCount, pendingInvoices, actionItemsCount, curren
             <Search className="w-4 h-4" />
           </Button>
         </div>
-        <div className="mt-2">
+
+        {/* <div className="mt-2">
           <Link 
             to="/search"
             className="text-xs text-muted-foreground hover:text-primary transition-colors"
           >
             Advanced Search →
           </Link>
-        </div>
+        </div> */}
       </div>
 
       {/* Navigation Section */}
