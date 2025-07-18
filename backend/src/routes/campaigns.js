@@ -424,4 +424,118 @@ router.post('/:id/pause', syncUser, async (req, res, next) => {
   }
 });
 
+// DELETE /api/campaigns/:id - Delete campaign
+router.delete('/:id', syncUser, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    console.log(`🗑️ DELETE /api/campaigns/${id} - Attempting to delete campaign...`);
+
+    // First, find the campaign and check ownership
+    const existingCampaign = await prisma.campaigns.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { 
+            bookings: true,
+            invoices: true 
+          }
+        }
+      }
+    });
+
+    if (!existingCampaign) {
+      console.log(`❌ Campaign ${id} not found`);
+      return res.status(404).json({
+        success: false,
+        message: 'Campaign not found'
+      });
+    }
+
+    // Check if user owns the campaign or is admin
+    if (existingCampaign.advertiserId !== req.user.id && !['ADMIN', 'SUPER_ADMIN'].includes(req.user.role)) {
+      console.log(`❌ User ${req.user.id} not authorized to delete campaign ${id}`);
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to delete this campaign'
+      });
+    }
+
+    // Check for active bookings (optional business logic)
+    const activeBookingsCount = await prisma.bookings.count({
+      where: {
+        campaignId: id,
+        status: 'ACTIVE'
+      }
+    });
+
+    if (activeBookingsCount > 0) {
+      console.log(`❌ Campaign ${id} has ${activeBookingsCount} active bookings`);
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete campaign with ${activeBookingsCount} active booking(s). Please cancel or complete the bookings first.`
+      });
+    }
+
+    // Optional: Check if campaign is currently active
+    if (existingCampaign.status === 'ACTIVE' && existingCampaign.isActive) {
+      console.log(`⚠️ Campaign ${id} is currently active - proceeding with deletion anyway`);
+    }
+
+    // Delete related records first (if needed)
+    console.log(`🧹 Cleaning up related records for campaign ${id}...`);
+    
+    // Delete related invoices (if not using cascading delete)
+    await prisma.invoices.deleteMany({
+      where: { campaignId: id }
+    });
+
+    // Delete related bookings (if not using cascading delete)
+    await prisma.bookings.deleteMany({
+      where: { campaignId: id }
+    });
+
+    // Finally, delete the campaign
+    console.log(`🗑️ Deleting campaign ${id}...`);
+    await prisma.campaigns.delete({
+      where: { id }
+    });
+
+    console.log(`✅ Campaign ${id} deleted successfully`);
+
+    res.json({
+      success: true,
+      message: 'Campaign deleted successfully',
+      data: {
+        deletedCampaignId: id,
+        deletedBookings: existingCampaign._count.bookings,
+        deletedInvoices: existingCampaign._count.invoices
+      }
+    });
+
+  } catch (error) {
+    console.error(`❌ Error deleting campaign ${req.params.id}:`, error);
+    
+    // Handle specific Prisma errors
+    if (error.code === 'P2025') {
+      return res.status(404).json({
+        success: false,
+        message: 'Campaign not found'
+      });
+    }
+    
+    if (error.code === 'P2003') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete campaign due to related records. Please remove associated bookings first.'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete campaign',
+      message: error.message
+    });
+  }
+});
+
 export default router;

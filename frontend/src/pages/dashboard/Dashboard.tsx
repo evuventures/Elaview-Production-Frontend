@@ -12,6 +12,14 @@ import { isPast, differenceInDays } from 'date-fns';
 // import MyCampaignsView from '../../components/dashboard/MyCampaignsView';
 import BookingDetailsModal from '../../components/booking/BookingDetailsModal';
 import InvoiceModal from '../../components/invoices/InvoiceModal';
+import { Campaign } from '@/api/entities';
+import DeleteCampaignDialog from '@/components/campaigns/DeleteCampaignDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 // Extracted components and hooks
 import { useKPICalculations } from '@/hooks/useKPICalculations';
@@ -58,6 +66,9 @@ type Campaign = {
   conversions: number;
   lastUpdated: string;
   advertiser_id: string;
+  _count?: {
+    bookings: number;
+  };
 };
 
 type Property = {
@@ -146,6 +157,11 @@ export default function DashboardPage() {
   const [allPropertiesMap, setAllPropertiesMap] = useState<PropertiesMap>({});
   const [allUsers, setAllUsers] = useState<UsersMap>({});
 
+  // Delete campaign states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Modal states
   const [modalData, setModalData] = useState<ModalData>({ type: null, data: null });
   const location = useLocation();
@@ -196,6 +212,39 @@ export default function DashboardPage() {
       } catch (error) {
         console.error("Failed to load invoice details from URL", error);
       }
+    }
+  };
+
+  // ✅ Delete campaign functions
+  const handleDeleteClick = (campaign: Campaign) => {
+    setCampaignToDelete(campaign);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async (campaignId: string) => {
+    setIsDeleting(true);
+    try {
+      await Campaign.delete(campaignId);
+      
+      // Remove from local state
+      setCampaigns(prev => prev.filter(campaign => campaign.id !== campaignId));
+      
+      // Show success message (you can replace with toast if you have it)
+      alert('Campaign deleted successfully!');
+      
+    } catch (error: any) {
+      console.error('Error deleting campaign:', error);
+      
+      // Handle specific error cases
+      if (error.response?.status === 400) {
+        alert(error.response.data.message || 'Cannot delete campaign with active bookings');
+      } else if (error.response?.status === 403) {
+        alert('You do not have permission to delete this campaign');
+      } else {
+        alert('Failed to delete campaign. Please try again.');
+      }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -285,7 +334,8 @@ export default function DashboardPage() {
             ctr: campaign.clicks && campaign.impressions ? ((campaign.clicks / campaign.impressions) * 100) : 0,
             conversions: campaign.conversions || 0,
             lastUpdated: campaign.updatedAt ? formatTimeAgo(campaign.updatedAt) : 'Unknown',
-            advertiser_id: campaign.advertiserId
+            advertiser_id: campaign.advertiserId,
+            _count: campaign._count || { bookings: 0 }
           }));
           
           setCampaigns(transformedCampaigns);
@@ -629,12 +679,30 @@ export default function DashboardPage() {
                                               <Play className="w-4 h-4" />
                                             </button>
                                           ) : null}
-                                          <button className="p-2 text-muted-foreground hover:bg-muted rounded-lg transition-colors">
-                                            <Edit className="w-4 h-4" />
-                                          </button>
-                                          <button className="p-2 text-muted-foreground hover:bg-muted rounded-lg transition-colors">
-                                            <MoreHorizontal className="w-4 h-4" />
-                                          </button>
+                                          
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <button className="p-2 text-muted-foreground hover:bg-muted rounded-lg transition-colors">
+                                                <MoreHorizontal className="w-4 h-4" />
+                                              </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-48">
+                                              <DropdownMenuItem 
+                                                onClick={() => navigate(`/campaigns/${campaign.id}/edit`)}
+                                                className="cursor-pointer"
+                                              >
+                                                <Edit className="h-4 w-4 mr-2" />
+                                                Edit Campaign
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem 
+                                                onClick={() => handleDeleteClick(campaign)}
+                                                className="cursor-pointer text-red-600 focus:text-red-600"
+                                              >
+                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                Delete Campaign
+                                              </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
                                         </div>
                                       </td>
                                     </tr>
@@ -667,9 +735,30 @@ export default function DashboardPage() {
                                         </p>
                                       </div>
                                     </div>
-                                    <button className="p-2 text-muted-foreground hover:bg-muted rounded-lg transition-colors">
-                                      <MoreHorizontal className="w-4 h-4" />
-                                    </button>
+                                    
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <button className="p-2 text-muted-foreground hover:bg-muted rounded-lg transition-colors">
+                                          <MoreHorizontal className="w-4 h-4" />
+                                        </button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" className="w-48">
+                                        <DropdownMenuItem 
+                                          onClick={() => navigate(`/campaigns/${campaign.id}/edit`)}
+                                          className="cursor-pointer"
+                                        >
+                                          <Edit className="h-4 w-4 mr-2" />
+                                          Edit Campaign
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem 
+                                          onClick={() => handleDeleteClick(campaign)}
+                                          className="cursor-pointer text-red-600 focus:text-red-600"
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          Delete Campaign
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                   </div>
 
                                   {/* Budget Progress */}
@@ -911,6 +1000,17 @@ export default function DashboardPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Delete Campaign Dialog */}
+      <DeleteCampaignDialog
+        campaign={campaignToDelete}
+        isOpen={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setCampaignToDelete(null);
+        }}
+        onConfirmDelete={handleConfirmDelete}
+      />
     </div>
   );
 }
