@@ -93,72 +93,67 @@ export default function VerificationModal() {
     setErrors({});
 
     try {
-      // ✅ FIXED: Use privateMetadata instead of publicMetadata
-      const privateMetadataUpdates = {};
+      // ✅ FIXED: Use unsafeMetadata instead of privateMetadata/publicMetadata
+      const metadataUpdates = {};
       
-      // Handle company, address, bio in private metadata
+      // Handle company, address, bio in unsafe metadata (allows updates)
       if (modalState.missingFields?.includes('company') && formData.company) {
-        privateMetadataUpdates.company = formData.company.trim();
+        metadataUpdates.company = formData.company.trim();
       }
       
       if (modalState.missingFields?.includes('address') && formData.address) {
-        privateMetadataUpdates.address = formData.address.trim();
+        metadataUpdates.address = formData.address.trim();
       }
       
       if (modalState.missingFields?.includes('bio') && formData.bio) {
-        privateMetadataUpdates.bio = formData.bio.trim();
+        metadataUpdates.bio = formData.bio.trim();
       }
 
-      // ✅ FIXED: Update private metadata (which is allowed)
-      if (Object.keys(privateMetadataUpdates).length > 0) {
+      // ✅ FIXED: Update unsafe metadata (which is allowed for user updates)
+      if (Object.keys(metadataUpdates).length > 0) {
         await user.update({
-          privateMetadata: {
-            ...user.privateMetadata,
-            ...privateMetadataUpdates
+          unsafeMetadata: {
+            ...user.unsafeMetadata,
+            ...metadataUpdates
           }
         });
       }
 
-      // ✅ FIXED: Handle phone number through private metadata for now
+      // ✅ FIXED: Handle phone number through unsafeMetadata for now
       if (modalState.missingFields?.includes('phone') && formData.phone) {
         try {
-          // Store phone number in private metadata temporarily
-          // In production, implement proper Clerk phone verification flow
           await user.update({
-            privateMetadata: {
-              ...user.privateMetadata,
-              pendingPhoneVerification: formData.phone.trim()
+            unsafeMetadata: {
+              ...user.unsafeMetadata,
+              phone: formData.phone.trim(),
+              phoneVerified: false // Mark as needing verification
             }
           });
           
-          console.log('Phone verification needed:', formData.phone);
-          // TODO: Implement proper phone verification:
-          // 1. await user.createPhoneNumber({ phoneNumber: formData.phone });
-          // 2. Send verification code to user
-          // 3. await user.getPhoneNumber(phoneNumberId).attemptVerification({ code: verificationCode });
+          console.log('Phone stored for verification:', formData.phone);
+          // TODO: Implement proper phone verification in production
         } catch (phoneError) {
-          console.error('Phone verification error:', phoneError);
-          // Don't fail the entire process for phone verification
+          console.error('Phone storage error:', phoneError);
+          // Don't fail the entire process for phone
         }
       }
 
-      // ✅ FIXED: Handle profile image upload separately
+      // ✅ FIXED: Handle profile image reference in unsafeMetadata
       if (modalState.missingFields?.includes('profileImage') && formData.profileImage) {
         try {
-          // Store image reference in private metadata for now
-          // In production, implement proper image upload:
-          // await user.setProfileImage({ file: formData.profileImage });
           await user.update({
-            privateMetadata: {
-              ...user.privateMetadata,
-              pendingProfileImageUpload: true
+            unsafeMetadata: {
+              ...user.unsafeMetadata,
+              hasProfileImage: true,
+              profileImageName: formData.profileImage.name
             }
           });
           
-          console.log('Profile image upload needed:', formData.profileImage);
+          console.log('Profile image reference stored:', formData.profileImage.name);
+          // TODO: Implement actual image upload to Clerk in production
         } catch (imageError) {
-          console.error('Image upload error:', imageError);
-          // Don't fail the entire process for image upload
+          console.error('Image reference storage error:', imageError);
+          // Don't fail the entire process for image
         }
       }
 
@@ -173,20 +168,14 @@ export default function VerificationModal() {
       console.error('Error updating verification info:', error);
       
       // ✅ FIXED: Better error handling for specific Clerk API errors
-      if (error.message?.includes('public_metadata')) {
-        setErrors({ submit: 'Cannot update public metadata directly. Please contact support.' });
+      if (error.message?.includes('metadata')) {
+        setErrors({ submit: 'Unable to update profile information. Please try again.' });
       } else if (error.message?.includes('422')) {
         setErrors({ submit: 'Invalid data provided. Please check your information and try again.' });
-      } else if (error.message?.includes('400')) {
-        setErrors({ submit: 'Bad request. Please verify your information is correct.' });
       } else if (error.message?.includes('401')) {
         setErrors({ submit: 'Authentication error. Please sign in again.' });
-      } else if (error.message?.includes('403')) {
-        setErrors({ submit: 'Permission denied. You may not have access to update this information.' });
       } else if (error.message?.includes('429')) {
         setErrors({ submit: 'Too many requests. Please wait a moment and try again.' });
-      } else if (error.message?.includes('500')) {
-        setErrors({ submit: 'Server error. Please try again later.' });
       } else {
         setErrors({ submit: 'Failed to update information. Please try again.' });
       }

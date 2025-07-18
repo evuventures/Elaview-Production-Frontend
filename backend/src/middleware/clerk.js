@@ -52,15 +52,21 @@ export const clerkMiddleware = async (req, res, next) => {
           throw new Error('No key ID in token header');
         }
 
-        // Fetch the public key from Clerk's JWKS endpoint
-        const jwksUrl = `https://${process.env.CLERK_PUBLISHABLE_KEY?.split('_')[2]}.clerk.accounts.dev/.well-known/jwks.json`;
+        // ✅ FIXED: Get the instance ID from publishable key correctly
+        const publishableKey = process.env.CLERK_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+        if (!publishableKey) {
+          throw new Error('No Clerk publishable key found');
+        }
+        
+        const instanceId = publishableKey.split('_')[2];
+        const jwksUrl = `https://${instanceId}.clerk.accounts.dev/.well-known/jwks.json`;
         
         console.log('🔍 Fetching JWKS from:', jwksUrl);
         const jwksResponse = await fetch(jwksUrl);
         const jwks = await jwksResponse.json();
         
         // Find the matching key
-        const key = jwks.keys.find(k => k.kid === kid);
+        const key = jwks.keys?.find(k => k.kid === kid);
         if (!key) {
           throw new Error('No matching key found in JWKS');
         }
@@ -71,7 +77,7 @@ export const clerkMiddleware = async (req, res, next) => {
         // Verify the token
         const decoded = jwt.verify(sessionToken, publicKey, {
           algorithms: ['RS256'],
-          issuer: `https://${process.env.CLERK_PUBLISHABLE_KEY?.split('_')[2]}.clerk.accounts.dev`
+          issuer: `https://${instanceId}.clerk.accounts.dev`
         });
         
         clerkId = decoded.sub;
@@ -109,13 +115,13 @@ export const clerkMiddleware = async (req, res, next) => {
     console.log('🧪 DEBUG: About to query database...');
     console.log('🧪 DEBUG: Prisma exists:', !!prisma);
     console.log('🧪 DEBUG: Prisma type:', typeof prisma);
-    console.log('🧪 DEBUG: Prisma.users exists:', !!prisma?.users); // ✅ FIXED: Changed from user to users
+    console.log('🧪 DEBUG: Prisma.users exists:', !!prisma?.users);
     console.log('🧪 DEBUG: Process env NODE_ENV:', process.env.NODE_ENV);
 
     
-    // ✅ FIXED: Check if user exists in our database - using correct model and field names
+    // Check if user exists in our database
     let user = await prisma.users.findUnique({
-      where: { clerkId: clerkId }  // ✅ FIXED: Changed from clerk_id to clerkId (camelCase)
+      where: { clerkId: clerkId }
     });
 
     // If user doesn't exist, create them
@@ -123,19 +129,31 @@ export const clerkMiddleware = async (req, res, next) => {
       console.log('👤 Creating new user in database:', clerkId);
       
       try {
-        // Get user details from Clerk
-        const clerkUser = await clerkClient.users.getUser(clerkId);
+        // ✅ FIXED: Only try to get user from Clerk if we have the secret key
+        let clerkUser = null;
         
-        // ✅ FIXED: Using correct model name and field names
+        if (process.env.CLERK_SECRET_KEY) {
+          try {
+            clerkUser = await clerkClient.users.getUser(clerkId);
+            console.log('✅ Retrieved user details from Clerk API');
+          } catch (clerkError) {
+            console.log('⚠️ Failed to get user from Clerk API:', clerkError.message);
+          }
+        } else {
+          console.log('⚠️ No Clerk secret key - creating user with minimal data');
+        }
+        
+        // ✅ FIXED: Create user without updatedAt - let Prisma handle it automatically
         user = await prisma.users.create({
           data: {
-            id: crypto.randomUUID(), // Generate UUID for the id field
-            clerkId: clerkId,  // ✅ FIXED: Changed from clerk_id to clerkId
-            email: clerkUser.emailAddresses?.[0]?.emailAddress || `user_${clerkId}@temp.com`,
-            firstName: clerkUser.firstName || '',
-            lastName: clerkUser.lastName || '',
-            imageUrl: clerkUser.imageUrl || '',
+            id: crypto.randomUUID(),
+            clerkId: clerkId,
+            email: clerkUser?.emailAddresses?.[0]?.emailAddress || `user_${clerkId}@temp.com`,
+            firstName: clerkUser?.firstName || 'User',
+            lastName: clerkUser?.lastName || '',
+            imageUrl: clerkUser?.imageUrl || null,
             role: 'USER'
+            // ✅ REMOVED: updatedAt - Prisma handles this automatically with @updatedAt
           }
         });
         
@@ -143,20 +161,29 @@ export const clerkMiddleware = async (req, res, next) => {
       } catch (createError) {
         console.error('❌ Error creating user:', createError);
         
-        // Create a minimal user record if Clerk API fails
-        // ✅ FIXED: Using correct model name and field names
-        user = await prisma.users.create({
-          data: {
-            id: crypto.randomUUID(), // Generate UUID for the id field
-            clerkId: clerkId,  // ✅ FIXED: Changed from clerk_id to clerkId
-            email: `user_${clerkId}@temp.com`,
-            firstName: 'User',
-            lastName: '',
-            role: 'USER'
-          }
-        });
-        
-        console.log('✅ Created minimal user record:', user.id);
+        // ✅ FIXED: Create minimal user record if all else fails
+        try {
+          user = await prisma.users.create({
+            data: {
+              id: crypto.randomUUID(),
+              clerkId: clerkId,
+              email: `user_${clerkId}@temp.com`,
+              firstName: 'User',
+              lastName: '',
+              role: 'USER'
+              // ✅ REMOVED: updatedAt - let Prisma handle it
+            }
+          });
+          
+          console.log('✅ Created minimal user record:', user.id);
+        } catch (fallbackError) {
+          console.error('❌ Failed to create even minimal user:', fallbackError);
+          return res.status(500).json({ 
+            success: false, 
+            message: 'Failed to create user account',
+            error: process.env.NODE_ENV === 'development' ? fallbackError.message : undefined
+          });
+        }
       }
     } else {
       console.log('✅ User found in database:', user.id);

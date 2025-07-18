@@ -3,39 +3,48 @@
 
 console.warn('🚨 Base44 integrations have been disabled. Using mock implementations.');
 
-// Mock file upload function
+// ✅ IMPROVED: Better mock file upload function
 export const UploadFile = async ({ file }) => {
-  console.log('📎 Mock file upload:', file.name);
+  console.log('📎 Mock file upload:', file.name, `(${Math.round(file.size / 1024)}KB)`);
   
-  // Simulate upload delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  // Simulate upload delay based on file size
+  const uploadTime = Math.min(Math.max(file.size / 1000000, 500), 2000); // 0.5-2 seconds
+  await new Promise(resolve => setTimeout(resolve, uploadTime));
   
-  // Create a mock URL
-  const mockUrl = `https://example.com/uploads/${Date.now()}_${file.name}`;
+  // Create a mock URL that looks more realistic
+  const timestamp = Date.now();
+  const extension = file.name.split('.').pop();
+  const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const mockUrl = `https://storage.example.com/uploads/${timestamp}_${sanitizedName}`;
   
-  // Return mock upload result
+  // Return mock upload result that matches expected format
   return {
     success: true,
     file_url: mockUrl,
     url: mockUrl, // Alternative property name
-    file_id: `file_${Date.now()}`,
+    file_id: `file_${timestamp}`,
+    original_name: file.name,
+    file_size: file.size,
+    content_type: file.type,
     message: 'File uploaded successfully (mock)'
   };
 };
 
-// Mock email sending function
-export const SendEmail = async ({ to, subject, body }) => {
+// ✅ IMPROVED: Better mock email sending function
+export const SendEmail = async ({ to, subject, body, from }) => {
   console.log('📧 Mock email send:');
+  console.log('From:', from || 'noreply@yourapp.com');
   console.log('To:', to);
   console.log('Subject:', subject);
-  console.log('Body:', body.substring(0, 100) + '...');
+  console.log('Body preview:', body.substring(0, 100) + '...');
   
   // Simulate email sending delay
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await new Promise(resolve => setTimeout(resolve, 800));
   
   return {
     success: true,
     message_id: `email_${Date.now()}`,
+    status: 'sent',
     message: 'Email sent successfully (mock)'
   };
 };
@@ -63,10 +72,12 @@ export const Core = {
   
   GenerateImage: async (params) => {
     console.warn('GenerateImage called - Base44 disabled. Image not generated.');
+    const { prompt, width = 400, height = 300 } = params;
     return { 
       success: false, 
       message: 'Image generation service disabled during Base44 transition',
-      image_url: 'https://via.placeholder.com/400x300?text=Mock+Image'
+      image_url: `https://via.placeholder.com/${width}x${height}?text=Mock+Image`,
+      prompt: prompt
     };
   },
   
@@ -75,7 +86,8 @@ export const Core = {
     return { 
       success: false, 
       message: 'Data extraction service disabled during Base44 transition',
-      data: {}
+      data: {},
+      file_info: params.file_url ? { url: params.file_url } : {}
     };
   }
 };

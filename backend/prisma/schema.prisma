@@ -27,7 +27,7 @@ model advertising_areas {
   maxBookings Int?
   images      String?
   createdAt   DateTime    @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime    @updatedAt
   propertyId  String?
   features    Json?
   properties  properties? @relation(fields: [propertyId], references: [id])
@@ -47,7 +47,7 @@ model bookings {
   bookingType       String?
   booker_id         String?
   createdAt         DateTime            @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime            @updatedAt
   bookerId          String
   propertyId        String?
   campaignId        String?
@@ -61,42 +61,51 @@ model bookings {
 }
 
 model campaigns {
-  id                  String         @id
-  name                String
-  title               String?
-  description         String?
-  budget              Float?
-  dailyBudget         Float?
-  currency            String         @default("USD")
-  targetAudience      Json?
-  startDate           DateTime?
-  endDate             DateTime?
-  isActive            Boolean        @default(false)
-  impressions         Int            @default(0)
-  clicks              Int            @default(0)
-  conversions         Int            @default(0)
-  totalSpent          Float          @default(0)
-  status              CampaignStatus @default(DRAFT)
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime
-  advertiserId        String
-  propertyId          String?
-  advertiser_id       String?
-  brand_name          String
-  content_description String?
-  content_type        Json?
-  end_date            DateTime?
-  media_dimensions    String?
-  media_files         Json?
-  media_type          String?
-  notes               String?
-  start_date          DateTime
-  total_budget        Float?
-  keywords            Json?
-  bookings            bookings[]
-  users               users          @relation(fields: [advertiserId], references: [id], onDelete: Cascade)
-  properties          properties?    @relation(fields: [propertyId], references: [id])
-  invoices            invoices[]
+  id                     String         @id
+  name                   String
+  title                  String?
+  description            String?
+  budget                 Float?
+  dailyBudget            Float?
+  currency               String         @default("USD")
+  targetAudience         Json?
+  startDate              DateTime?
+  endDate                DateTime?
+  isActive               Boolean        @default(false)
+  impressions            Int            @default(0)
+  clicks                 Int            @default(0)
+  conversions            Int            @default(0)
+  totalSpent             Float          @default(0)
+  status                 CampaignStatus @default(DRAFT)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  advertiserId           String
+  propertyId             String?
+  advertiser_id          String?
+  brand_name             String
+  content_description    String?
+  content_type           Json?
+  end_date               DateTime?
+  media_dimensions       String?
+  media_files            Json?
+  media_type             String?
+  notes                  String?
+  start_date             DateTime
+  total_budget           Float?
+  keywords               Json?
+  primary_objective      String?
+  target_demographics    Json?
+  geographic_targeting   Json?
+  creative_concept       String?
+  call_to_action         String?
+  brand_guidelines       Json?
+  placement_preferences  Json?
+  success_metrics        Json?
+  technical_specs        Json?
+  bookings               bookings[]
+  users                  users          @relation(fields: [advertiserId], references: [id], onDelete: Cascade)
+  properties             properties?    @relation(fields: [propertyId], references: [id])
+  invoices               invoices[]
 }
 
 model chat_messages {
@@ -122,7 +131,7 @@ model invoices {
   stripeInvoiceId       String?
   stripePaymentIntentId String?
   createdAt             DateTime            @default(now())
-  updatedAt             DateTime
+  updatedAt             DateTime            @updatedAt
   userId                String
   bookingId             String?
   campaignId            String?
@@ -140,7 +149,7 @@ model messages {
   type        MessageType @default(GENERAL)
   priority    Priority    @default(NORMAL)
   createdAt   DateTime    @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime    @updatedAt
   senderId    String?
   recipientId String
   users       users?      @relation(fields: [senderId], references: [id])
@@ -171,7 +180,7 @@ model payment_settings {
   reminderEnabled      Boolean  @default(true)
   reminderDaysBefore   Int      @default(3)
   createdAt            DateTime @default(now())
-  updatedAt            DateTime
+  updatedAt            DateTime @updatedAt
   userId               String   @unique
   users                users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -207,7 +216,7 @@ model properties {
   owner_id           String?
   ownerId            String
   createdAt          DateTime             @default(now())
-  updatedAt          DateTime
+  updatedAt          DateTime             @updatedAt
   features           Json?
   images             Json?
   photos             Json?
@@ -232,7 +241,7 @@ model property_approvals {
   property_id  String?
   reviewer_id  String?
   createdAt    DateTime       @default(now())
-  updatedAt    DateTime
+  updatedAt    DateTime       @updatedAt
   properties   properties     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   users        users?         @relation(fields: [reviewerId], references: [id])
 }
@@ -249,7 +258,7 @@ model users {
   role               UserRole             @default(USER)
   isActive           Boolean              @default(true)
   createdAt          DateTime             @default(now())
-  updatedAt          DateTime
+  updatedAt          DateTime             @updatedAt
   bookings           bookings[]
   campaigns          campaigns[]
   chat_messages      chat_messages[]

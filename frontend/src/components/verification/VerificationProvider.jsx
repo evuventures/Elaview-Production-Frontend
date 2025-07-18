@@ -43,12 +43,13 @@ export function VerificationProvider({ children }) {
 
     setIsLoading(true);
     try {
+      // ✅ FIXED: Check unsafeMetadata instead of publicMetadata
       const status = {
-        hasPhone: !!(user.phoneNumbers?.[0]?.phoneNumber?.trim()),
-        hasCompany: !!(user.publicMetadata?.company?.trim()),
-        hasAddress: !!(user.publicMetadata?.address?.trim()),
-        hasBio: !!(user.publicMetadata?.bio?.trim()),
-        hasProfileImage: !!(user.imageUrl?.trim() && user.imageUrl !== user.profileImageUrl)
+        hasPhone: !!(user.phoneNumbers?.[0]?.phoneNumber?.trim() || user.unsafeMetadata?.phone?.trim()),
+        hasCompany: !!(user.unsafeMetadata?.company?.trim()),
+        hasAddress: !!(user.unsafeMetadata?.address?.trim()),
+        hasBio: !!(user.unsafeMetadata?.bio?.trim()),
+        hasProfileImage: !!(user.imageUrl?.trim() && user.imageUrl !== user.profileImageUrl) || !!(user.unsafeMetadata?.hasProfileImage)
       };
       
       setVerificationStatus(status);
@@ -64,7 +65,7 @@ export function VerificationProvider({ children }) {
       });
       setIsLoading(false);
     }
-  }, [user?.id]); // Only depend on user.id to prevent infinite loops
+  }, [user?.id, user?.unsafeMetadata]); // Include unsafeMetadata in dependencies
 
   // Check if verified for specific action
   const isVerifiedForAction = useCallback((action) => {
