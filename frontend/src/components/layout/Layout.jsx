@@ -5,6 +5,9 @@ import { motion } from 'framer-motion';
 
 // Extracted components
 import DesktopSidebar from '@/components/layout/nested/DesktopSidebar';
+import DesktopSidebarV2 from './nested/DesktopSidebarV2';
+import DesktopTopNav from './nested/DesktopTopNav';
+import DesktopTopNavV2 from './nested/DesktopTopNavV2';
 import MobileNav from '@/components/layout/nested/MobileNav';
 import MobileTopBar from '@/components/layout/nested/MobileTopBar';
 
@@ -100,7 +103,7 @@ export default function Layout({ children, currentPageName }) {
       }, [isLoaded, isSignedIn, currentUser]);
     
     return (
-        <div className="min-h-screen flex font-sans bg-background text-foreground relative overflow-hidden">
+        <div className="min-h-screen flex flex-col font-sans bg-background text-foreground relative overflow-hidden">
             {/* Background Effects */}
             <div className="fixed inset-0 pointer-events-none opacity-30 dark:opacity-100">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5"></div>
@@ -108,14 +111,17 @@ export default function Layout({ children, currentPageName }) {
               <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-accent/10 to-transparent rounded-full blur-3xl"></div>
             </div>
             
-            <DesktopSidebar 
+            {/* Top Navigation */}
+            <DesktopTopNavV2
               unreadCount={unreadCount} 
               pendingInvoices={pendingInvoices} 
               actionItemsCount={actionItemsCount} 
               currentUser={currentUser} 
             />
             
-            <main className="flex-1 relative md:ml-72">
+            {/* Main Content Area - FIXED: Removed md:ml-72 and updated layout */}
+            <main className="flex-1 relative">
+                {/* Mobile Components */}
                 <MobileTopBar />
                 <MobileNav 
                   unreadCount={unreadCount} 
@@ -124,7 +130,8 @@ export default function Layout({ children, currentPageName }) {
                   currentUser={currentUser}
                 />
                 
-                <div className="p-4 md:p-8 pt-20 pb-24 md:pt-8 md:pb-8 h-full overflow-y-auto">
+                {/* Content Container - Updated padding for top nav */}
+                <div className="p-4 md:p-8 pt-20 pb-24 md:pt-6 md:pb-8 h-full overflow-y-auto">
                     <motion.div
                         initial="initial"
                         animate="in"

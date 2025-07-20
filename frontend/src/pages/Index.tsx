@@ -1,6 +1,6 @@
 import Layout from "../components/layout/Layout.jsx";
 import Bookings from "./bookings/BookingPage.jsx";
-import Map from "./map/Map.jsx";
+import Map from "./browse/Map.jsx";
 import Messages from "./messages/Messages.tsx";
 import Profile from "./user/Profile.jsx";
 import Help from "./help/Help.jsx";

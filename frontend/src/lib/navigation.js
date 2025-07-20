@@ -29,11 +29,11 @@ export const getNavigationItems = ({
       badge: actionItemsCount, 
       badgeColor: 'bg-orange-500' 
     },
-    { 
-      title: isMobile ? "Search" : "Advanced Search", 
-      url: "/search", 
-      icon: Search 
-    },
+    // { 
+    //   title: isMobile ? "Search" : "Advanced Search", 
+    //   url: "/search", 
+    //   icon: Search 
+    // },
     { 
       title: isMobile ? "Browse" : "Browse Map", 
       url: "/browse", 
@@ -46,13 +46,13 @@ export const getNavigationItems = ({
       badge: unreadCount, 
       badgeColor: 'bg-red-500' 
     },
-    { 
-      title: "Invoices", 
-      url: "/invoices", 
-      icon: FileText, 
-      badge: pendingInvoices, 
-      badgeColor: 'bg-gradient-brand' 
-    },
+    // { 
+    //   title: "Invoices", 
+    //   url: "/invoices", 
+    //   icon: FileText, 
+    //   badge: pendingInvoices, 
+    //   badgeColor: 'bg-gradient-brand' 
+    // },
   ];
 
   // Add admin-only items
