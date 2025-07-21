@@ -29,11 +29,11 @@ export const getNavigationItems = ({
       badge: actionItemsCount, 
       badgeColor: 'bg-orange-500' 
     },
-    { 
-      title: isMobile ? "Search" : "Advanced Search", 
-      url: "/search", 
-      icon: Search 
-    },
+    // { 
+    //   title: isMobile ? "Search" : "Advanced Search", 
+    //   url: "/search", 
+    //   icon: Search 
+    // },
     { 
       title: isMobile ? "Browse" : "Browse Map", 
       url: "/browse", 
