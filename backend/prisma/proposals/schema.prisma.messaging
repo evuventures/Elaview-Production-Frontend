@@ -1,0 +1,230 @@
+// ENHANCED MESSAGING ENTITIES
+// Proposal: Minimal changes to existing data, additive approach
+
+// 1. KEEP EXISTING - Update the messages model (minor changes)
+model messages {
+  id            String         @id
+  subject       String?
+  content       String
+  isRead        Boolean        @default(false)
+  type          MessageType    @default(GENERAL)
+  priority      Priority       @default(NORMAL)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  senderId      String?
+  recipientId   String
+  
+  // NEW FIELDS (additive - won't break existing data)
+  conversationId String?       // Link to conversations
+  replyToId     String?        // For threading
+  editedAt      DateTime?      // Track edits
+  isDeleted     Boolean        @default(false)
+  deletedAt     DateTime?
+  messageData   Json?          // For rich content metadata
+  
+  // RELATIONSHIPS
+  sender        users?         @relation("MessageSender", fields: [senderId], references: [id])
+  recipient     users          @relation("MessageRecipient", fields: [recipientId], references: [id])
+  conversation  conversations? @relation(fields: [conversationId], references: [id])
+  replyTo       messages?      @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies       messages[]     @relation("MessageReplies")
+  
+  // NEW RELATED ENTITIES
+  attachments   message_attachments[]
+  reactions     message_reactions[]
+  readReceipts  message_read_receipts[]
+}
+
+// 2. DEPRECATE chat_messages (or migrate data to messages/conversations)
+// Keep for now but mark as legacy
+model chat_messages {
+  id        String   @id
+  content   String
+  chatRoom  String   // This becomes conversationId in new system
+  createdAt DateTime @default(now())
+  senderId  String
+  users     users    @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  
+  @@map("chat_messages_legacy") // Rename table to indicate legacy
+}
+
+// 3. NEW ENTITIES (completely additive)
+
+model conversations {
+  id               String                     @id
+  type             ConversationType           @default(DIRECT)
+  name             String?                    // For group chats
+  description      String?
+  isActive         Boolean                    @default(true)
+  isArchived       Boolean                    @default(false)
+  lastMessageId    String?
+  lastActivity     DateTime                   @default(now())
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+  createdBy        String?
+  
+  // Business context (leverage existing models)
+  propertyId       String?                    // Link to property discussions
+  bookingId        String?                    // Link to booking discussions
+  campaignId       String?                    // Link to campaign discussions
+  
+  // RELATIONSHIPS
+  creator          users?                     @relation("ConversationCreator", fields: [createdBy], references: [id])
+  lastMessage      messages?                  @relation("ConversationLastMessage", fields: [lastMessageId], references: [id])
+  property         properties?                @relation(fields: [propertyId], references: [id])
+  booking          bookings?                  @relation(fields: [bookingId], references: [id])
+  campaign         campaigns?                 @relation(fields: [campaignId], references: [id])
+  
+  participants     conversation_participants[]
+  messages         messages[]
+}
+
+model conversation_participants {
+  id             String                    @id
+  conversationId String
+  userId         String
+  role           ConversationRole          @default(MEMBER)
+  joinedAt       DateTime                  @default(now())
+  leftAt         DateTime?
+  isActive       Boolean                   @default(true)
+  isMuted        Boolean                   @default(false)
+  lastReadAt     DateTime?
+  
+  conversation   conversations             @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           users                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([conversationId, userId])
+}
+
+model message_attachments {
+  id           String      @id
+  messageId    String
+  fileName     String
+  fileSize     Int?
+  fileType     String
+  fileUrl      String
+  thumbnailUrl String?
+  uploadStatus String      @default("completed")
+  createdAt    DateTime    @default(now())
+  
+  message      messages    @relation(fields: [messageId], references: [id], onDelete: Cascade)
+}
+
+model message_reactions {
+  id         String   @id
+  messageId  String
+  userId     String
+  reaction   String   // emoji or reaction type
+  createdAt  DateTime @default(now())
+  
+  message    messages @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([messageId, userId, reaction])
+}
+
+model message_read_receipts {
+  id        String   @id
+  messageId String
+  userId    String
+  readAt    DateTime @default(now())
+  
+  message   messages @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([messageId, userId])
+}
+
+// 4. UPDATE EXISTING MODELS (minimal changes)
+
+model users {
+  id                         String               @id
+  clerkId                    String               @unique
+  email                      String               @unique
+  firstName                  String?
+  lastName                   String?
+  full_name                  String?
+  imageUrl                   String?
+  phone                      String?
+  role                       UserRole             @default(USER)
+  isActive                   Boolean              @default(true)
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+  
+  // EXISTING RELATIONSHIPS
+  bookings                   bookings[]
+  campaigns                  campaigns[]
+  chat_messages              chat_messages[]
+  invoices                   invoices[]
+  payment_reminders          payment_reminders[]
+  payment_settings           payment_settings?
+  properties                 properties[]
+  property_approvals         property_approvals[]
+  
+  // UPDATED MESSAGING RELATIONSHIPS
+  sentMessages               messages[]           @relation("MessageSender")
+  receivedMessages           messages[]           @relation("MessageRecipient")
+  
+  // NEW MESSAGING RELATIONSHIPS
+  createdConversations       conversations[]      @relation("ConversationCreator")
+  conversationParticipants   conversation_participants[]
+  messageReactions           message_reactions[]
+  messageReadReceipts        message_read_receipts[]
+}
+
+// Add foreign key relationships to existing models
+model properties {
+  // ... existing fields ...
+  
+  // NEW RELATIONSHIP
+  conversations              conversations[]
+}
+
+model bookings {
+  // ... existing fields ...
+  
+  // NEW RELATIONSHIP  
+  conversations              conversations[]
+}
+
+model campaigns {
+  // ... existing fields ...
+  
+  // NEW RELATIONSHIP
+  conversations              conversations[]
+}
+
+// 5. NEW ENUMS
+
+enum ConversationType {
+  DIRECT        // 1-on-1 chat
+  GROUP         // Multi-user chat
+  PROPERTY      // Property-related discussion
+  BOOKING       // Booking-related discussion  
+  CAMPAIGN      // Campaign-related discussion
+  SUPPORT       // Support ticket conversation
+}
+
+enum ConversationRole {
+  ADMIN         // Can manage conversation
+  MODERATOR     // Can moderate content
+  MEMBER        // Regular participant
+  VIEWER        // Read-only access
+}
+
+// 6. EXTEND EXISTING ENUMS
+
+enum MessageType {
+  GENERAL
+  BOOKING_UPDATE
+  PAYMENT_REMINDER
+  SYSTEM_NOTIFICATION
+  SUPPORT_TICKET
+  SPACE_INQUIRY
+  CAMPAIGN_UPDATE
+  // NEW TYPES
+  FILE_SHARE
+  MEDIA_SHARE
+  SYSTEM_MESSAGE
+  CONVERSATION_EVENT  // User joined/left, etc.
+}
