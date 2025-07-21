@@ -258,8 +258,18 @@ const MessagesPage: React.FC = () => {
   };
 
   if (!isLoaded) {
-    return <LoadingState message="Loading authentication..." />;
-  }
+
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-[hsl(var(--background))]">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-brand rounded-2xl flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-white" />
+          </div>
+          <div className="text-[hsl(var(--muted-foreground))] font-medium">Loading authentication...</div>
+        </div>
+      </div>
+    );
+  } //
 
   if (isPageLoading) {
     return <LoadingState message="Loading your conversations..." />;
