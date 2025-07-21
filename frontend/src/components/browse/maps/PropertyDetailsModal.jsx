@@ -6,6 +6,9 @@ import { X, MapPin, Star, DollarSign, Building, Edit, Trash2, EyeOff } from 'luc
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { motion, AnimatePresence } from 'framer-motion';
+import useIsMobile from '@/hooks/use-mobile';
+
+const isMobile = useIsMobile();
 
 const modalVariants = {
   hidden: { opacity: 0, scale: 0.95 },
@@ -44,7 +47,7 @@ const PropertyDetailsModal = ({
                         animate="visible"
                         exit="exit"
                     >
-                        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 glass border-[hsl(var(--border))] rounded-3xl overflow-hidden">
+                        <DialogContent className={isMobile ? 'w-full h-full p-0' : 'max-w-4xl h-[90vh] p-6'}>
                             <DialogHeader className="p-6 border-b border-[hsl(var(--border))]">
                                 <DialogTitle className="text-2xl font-bold text-[hsl(var(--foreground))]">{property.name}</DialogTitle>
                                 <DialogDescription className="flex items-center gap-4 text-[hsl(var(--muted-foreground))]">

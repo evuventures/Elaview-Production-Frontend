@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import {useIsMobile} from '@/hooks/use-mobile';
 import {
   Search,
   MapPin,
@@ -22,6 +23,8 @@ import {
   X,
   Target
 } from 'lucide-react';
+
+const isMobile = useIsMobile();
 
 const MapSearchFilter = ({
   properties = [],
@@ -262,7 +265,7 @@ const MapSearchFilter = ({
   };
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={isMobile ? "flex-col space-y-2" : "grid grid-cols-2 gap-4"}>
       {/* Main Search Bar */}
       <div className="flex flex-col sm:flex-row gap-3">
         {/* Property Search */}

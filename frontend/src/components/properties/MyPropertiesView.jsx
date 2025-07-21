@@ -5,31 +5,41 @@ import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Plus, Eye, EyeOff } from 'lucide-react';
+import useIsMobile from '@/hooks/use-mobile';
+import MobilePropertiesView from './MobilePropertiesView';
+
 
 const MyPropertiesView = ({ properties, allAreasMap }) => {
-    
-    const areaCounts = useMemo(() => {
-        const counts = {};
-        if (!properties) return counts;
+  const isMobile = useIsMobile();
 
-        if (!allAreasMap) {
-            properties.forEach(prop => { counts[prop.id] = 0; });
-            return counts;
-        };
+  if (isMobile) {
+    return (
+      <MobilePropertiesView properties={properties} allAreasMap={allAreasMap} />
+    );
+  }
 
-        const allAreasList = Object.values(allAreasMap);
-        properties.forEach(prop => {
-            counts[prop.id] = allAreasList.filter(area => area.property_id === prop.id).length;
-        });
+  const areaCounts = useMemo(() => {
+    const counts = {};
+    if (!properties) return counts;
 
-        return counts;
-    }, [properties, allAreasMap]);
+    if (!allAreasMap) {
+      properties.forEach(prop => { counts[prop.id] = 0; });
+      return counts;
+    }
+
+    const allAreasList = Object.values(allAreasMap);
+    properties.forEach(prop => {
+      counts[prop.id] = allAreasList.filter(area => area.property_id === prop.id).length;
+    });
+
+    return counts;
+  }, [properties, allAreasMap]);
 
   if (!properties) {
     return (
-        <div className="text-center p-8">
-            <p className="text-muted-foreground">No properties to display.</p>
-        </div>
+      <div className="text-center p-8">
+        <p className="text-muted-foreground">No properties to display.</p>
+      </div>
     );
   }
 

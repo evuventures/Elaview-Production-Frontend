@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Extracted components
 import DesktopSidebar from '@/components/layout/nested/DesktopSidebar';
@@ -12,6 +13,7 @@ import MobileNav from '@/components/layout/nested/MobileNav';
 import MobileTopBar from '@/components/layout/nested/MobileTopBar';
 
 export default function Layout({ children, currentPageName }) {
+    const isMobile = useIsMobile();
     const [unreadCount, setUnreadCount] = useState(0);
     const [pendingInvoices, setPendingInvoices] = useState(0);
     const [actionItemsCount, setActionItemsCount] = useState(0);
@@ -101,6 +103,23 @@ export default function Layout({ children, currentPageName }) {
         const interval = setInterval(fetchUserData, 300000);
         return () => clearInterval(interval);
       }, [isLoaded, isSignedIn, currentUser]);
+
+       if (isMobile) {
+    return (
+      <div className="flex flex-col h-screen bg-background text-foreground font-sans">
+        <MobileTopBar />
+        <main className="flex-1 overflow-auto pt-16 pb-20">
+          {children}
+        </main>
+        <MobileNav
+          unreadCount={unreadCount}
+          pendingInvoices={pendingInvoices}
+          actionItemsCount={actionItemsCount}
+          currentUser={currentUser}
+        />
+      </div>
+    );
+  }
     
     return (
         <div className="min-h-screen flex flex-col font-sans bg-background text-foreground relative overflow-hidden">

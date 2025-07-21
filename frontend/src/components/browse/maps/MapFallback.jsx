@@ -3,8 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MapPin, DollarSign, Star, ExternalLink } from 'lucide-react';
+import useIsMobile from '@/hooks/use-mobile';
 
 const MapFallback = ({ properties = [], className = '' }) => {
+  const isMobile = useIsMobile();
   const openInGoogleMaps = (property) => {
     if (property.latitude && property.longitude) {
       const url = `https://www.google.com/maps/search/?api=1&query=${property.latitude},${property.longitude}`;
@@ -13,7 +15,7 @@ const MapFallback = ({ properties = [], className = '' }) => {
   };
 
   return (
-    <div className={`w-full h-full bg-gray-50 rounded-lg p-4 ${className}`}>
+    <div className={`w-full h-full bg-gray-50 rounded-lg ${isMobile ? 'p-2' : 'p-4'} ${className}`}>
       <div className="text-center mb-6">
         <MapPin className="w-12 h-12 mx-auto text-gray-400 mb-2" />
         <h3 className="text-lg font-semibold text-gray-700">Map View Unavailable</h3>

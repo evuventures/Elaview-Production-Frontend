@@ -3,6 +3,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { GoogleMapsApiLoader } from '@/lib/google-maps';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Property {
   id: string;
@@ -26,6 +27,8 @@ interface SimpleBrowseMapProps {
   zoom?: number;
   className?: string;
 }
+
+const isMobile = useIsMobile();
 
 const SimpleBrowseMap: React.FC<SimpleBrowseMapProps> = ({
   properties,
@@ -56,11 +59,11 @@ const SimpleBrowseMap: React.FC<SimpleBrowseMapProps> = ({
         // Create map
         const map = new google.maps.Map(mapRef.current, {
           center,
-          zoom,
+          zoom: isMobile ? 8 : zoom,
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: true,
-          gestureHandling: 'greedy',
+          gestureHandling: isMobile ? 'auto' : 'greedy',
           styles: [
             {
               featureType: 'poi',
