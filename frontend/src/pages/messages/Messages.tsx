@@ -507,7 +507,7 @@ export default function MessagesPage(): JSX.Element {
         </div>
       </div>
     );
-  }
+  } //
 
   if (isPageLoading) {
     return (
