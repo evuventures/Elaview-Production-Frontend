@@ -1,12 +1,12 @@
 /* TEMPORARY TEST - Add this at the very top */
 .btn-gradient {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  background: linear-gradient(135deg, #0ea5e9, #22d3ee) !important;
   color: white !important;
   border: none !important;
 }
 
 .dark .btn-gradient {
-  background: linear-gradient(135deg, #8b5cf6, #a855f7) !important;
+  background: linear-gradient(135deg, #38bdf8, #67e8f9) !important;
 }
 
 @tailwind base;
@@ -14,39 +14,39 @@
 @tailwind utilities;
 
 /* ================================
-   ENHANCED DARK MODE SYSTEM
-   Blue Palette with Improved Contrast
+   ELECTRIC BLUE & CYAN THEME
+   High-tech and dynamic, futuristic feel - HSL FORMAT
    ================================ */
 
 @layer base {
   :root {
-    /* Enhanced Brand Colors - Better Dark Mode Support */
-    --brand-primary: 220 30% 65%;           /* #6B7BD6 - Lighter for better contrast */
-    --brand-primary-hover: 220 35% 55%;     /* #5A6BC9 */
-    --brand-primary-dark: 220 25% 45%;      /* #4A5A8C */
-    --brand-secondary: 220 25% 40%;         /* #404F70 */
-    --brand-accent: 250 65% 70%;            /* #A899F0 - Desaturated for dark mode */
-    --brand-accent-light: 230 55% 80%;      /* #B5C4F7 */
-    --brand-accent-dark: 250 70% 60%;       /* #9385E8 */
+    /* Electric Blue Brand Colors */
+    --brand-primary: 199 89% 48%;           /* #0ea5e9 - Sky blue */
+    --brand-primary-hover: 200 98% 39%;     /* #0284c7 - Darker sky blue */
+    --brand-primary-dark: 201 96% 32%;      /* #0369a1 - Deep blue */
+    --brand-secondary: 215 19% 35%;         /* #475569 - Slate gray */
+    --brand-accent: 187 85% 53%;            /* #22d3ee - Cyan */
+    --brand-accent-light: 187 77% 70%;      /* #67e8f9 - Light cyan */
+    --brand-accent-dark: 188 83% 40%;       /* #0891b2 - Dark cyan */
     
     /* Enhanced Gradient System */
-    --brand-gradient-start: 220 30% 65%;    /* #6B7BD6 */
-    --brand-gradient-end: 250 65% 70%;      /* #A899F0 */
-    --brand-gradient-hover-start: 220 35% 55%; /* #5A6BC9 */
-    --brand-gradient-hover-end: 250 70% 60%; /* #9385E8 */
+    --brand-gradient-start: 199 89% 48%;    /* #0ea5e9 - Sky blue */
+    --brand-gradient-end: 187 85% 53%;      /* #22d3ee - Cyan */
+    --brand-gradient-hover-start: 200 98% 39%; /* #0284c7 - Darker sky blue */
+    --brand-gradient-hover-end: 188 83% 40%; /* #0891b2 - Dark cyan */
 
     /* Base colors */
-    --background: 210 20% 98%;              /* #fafbfc */
-    --foreground: 210 20% 10%;              /* #1a1d21 */
+    --background: 210 40% 98%;              /* #f8fafc - Cool white */
+    --foreground: 222 84% 5%;               /* #0f172a - Deep slate */
     
     /* Card system */
-    --card: 0 0% 100%;                      /* #ffffff */
-    --card-foreground: 210 20% 10%;        /* #1a1d21 */
-    --card-border: 210 15% 90%;            /* #e1e5e9 */
+    --card: 0 0% 100%;                      /* #ffffff - Pure white */
+    --card-foreground: 222 84% 5%;          /* #0f172a - Deep slate */
+    --card-border: 214 32% 91%;             /* #e2e8f0 - Light slate */
     
     /* Muted colors */
-    --muted: 210 15% 95%;                  /* #f1f3f5 */
-    --muted-foreground: 210 10% 45%;       /* #6c7481 */
+    --muted: 210 40% 96%;                   /* #f1f5f9 - Very light slate */
+    --muted-foreground: 215 16% 47%;        /* #64748b - Slate gray */
     
     /* Primary system */
     --primary: var(--brand-primary);
@@ -54,38 +54,38 @@
     --primary-hover: var(--brand-primary-hover);
     
     /* Secondary system */
-    --secondary: 210 25% 92%;              /* #e8eaf2 */
+    --secondary: 210 40% 96%;               /* #f1f5f9 - Very light slate */
     --secondary-foreground: var(--brand-secondary);
     
     /* Accent system */
     --accent: var(--brand-accent);
-    --accent-foreground: 0 0% 100%;
+    --accent-foreground: 201 96% 32%;       /* #0369a1 - Deep blue text */
     --accent-light: var(--brand-accent-light);
     
     /* Interactive elements */
-    --border: 210 15% 90%;                 /* #e1e5e9 */
-    --input: 0 0% 100%;                    /* #ffffff */
+    --border: 214 32% 91%;                  /* #e2e8f0 - Light slate border */
+    --input: 0 0% 100%;                     /* #ffffff - Pure white */
     --ring: var(--brand-primary);
     
     /* Semantic colors */
-    --success: 142 76% 36%;                /* #16a34a */
+    --success: 158 64% 52%;                 /* #10b981 - Emerald */
     --success-foreground: 0 0% 100%;
-    --success-hover: 142 76% 32%;          /* #15803d */
-    --warning: 45 96% 64%;                 /* #eab308 */
-    --warning-foreground: 45 100% 10%;
-    --warning-hover: 45 96% 56%;           /* #ca8a04 */
-    --destructive: 0 84% 60%;              /* #ef4444 */
+    --success-hover: 158 64% 40%;           /* #059669 - Darker emerald */
+    --warning: 43 96% 56%;                  /* #f59e0b - Amber */
+    --warning-foreground: 30 100% 20%;      /* #92400e - Dark amber */
+    --warning-hover: 32 95% 44%;            /* #d97706 - Darker amber */
+    --destructive: 0 84% 60%;               /* #ef4444 - Red */
     --destructive-foreground: 0 0% 100%;
-    --destructive-hover: 0 84% 54%;        /* #dc2626 */
+    --destructive-hover: 0 84% 54%;         /* #dc2626 - Darker red */
     
     /* Sidebar system */
-    --sidebar-background: 210 20% 98%;
-    --sidebar-foreground: 210 20% 15%;
+    --sidebar-background: 210 40% 98%;
+    --sidebar-foreground: 215 25% 27%;
     --sidebar-primary: var(--brand-primary);
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 15% 95%;
+    --sidebar-accent: 210 40% 96%;
     --sidebar-accent-foreground: var(--brand-primary);
-    --sidebar-border: 210 15% 90%;
+    --sidebar-border: 214 32% 91%;
     --sidebar-ring: var(--brand-primary);
     
     /* Chart colors */
@@ -137,55 +137,55 @@
 
   /* Enhanced Dark Mode */
   .dark {
-    /* Dark mode uses desaturated colors for better readability */
-    --brand-primary: 220 45% 75%;           /* #8FA3F3 - Much lighter, desaturated */
-    --brand-primary-hover: 220 50% 80%;     /* #A1B2F5 */
-    --brand-primary-dark: 220 40% 70%;      /* #7D94F0 */
-    --brand-secondary: 220 30% 50%;         /* #5A6B8C */
-    --brand-accent: 250 50% 75%;            /* #B8B0F2 - Desaturated */
-    --brand-accent-light: 230 45% 80%;      /* #B8C7F4 */
-    --brand-accent-dark: 250 55% 70%;       /* #A99FF0 */
+    /* Dark mode uses brighter, more vibrant blues and cyans */
+    --brand-primary: 199 95% 74%;           /* #38bdf8 - Bright sky blue */
+    --brand-primary-hover: 187 77% 70%;     /* #67e8f9 - Light cyan */
+    --brand-primary-dark: 199 89% 48%;      /* #0ea5e9 - Sky blue */
+    --brand-secondary: 215 20% 65%;         /* #94a3b8 - Light slate */
+    --brand-accent: 187 77% 70%;            /* #67e8f9 - Light cyan */
+    --brand-accent-light: 180 78% 81%;      /* #a5f3fc - Very light cyan */
+    --brand-accent-dark: 187 85% 53%;       /* #22d3ee - Cyan */
     
     /* Enhanced gradients for dark mode */
-    --brand-gradient-start: 220 45% 75%;    /* #8FA3F3 */
-    --brand-gradient-end: 250 50% 75%;      /* #B8B0F2 */
-    --brand-gradient-hover-start: 220 50% 80%; /* #A1B2F5 */
-    --brand-gradient-hover-end: 250 55% 70%; /* #A99FF0 */
+    --brand-gradient-start: 199 95% 74%;    /* #38bdf8 - Bright sky blue */
+    --brand-gradient-end: 187 77% 70%;      /* #67e8f9 - Light cyan */
+    --brand-gradient-hover-start: 187 77% 70%; /* #67e8f9 - Light cyan */
+    --brand-gradient-hover-end: 180 78% 81%; /* #a5f3fc - Very light cyan */
     
-    --background: 215 30% 7%;               /* #0f1419 */
-    --foreground: 210 20% 95%;              /* #f1f3f5 */
-    --card: 215 25% 12%;                    /* #1a202c */
-    --card-foreground: 210 20% 95%;         /* #f1f3f5 */
-    --card-border: 215 20% 20%;             /* #2d3748 */
-    --muted: 215 20% 18%;                   /* #252d3a */
-    --muted-foreground: 215 15% 70%;        /* #a8b2c0 */
+    --background: 222 47% 11%;              /* #020617 - Deep slate dark */
+    --foreground: 210 40% 98%;              /* #f8fafc - Light slate */
+    --card: 222 84% 5%;                     /* #0f172a - Slate card */
+    --card-foreground: 210 40% 98%;         /* #f8fafc - Light slate */
+    --card-border: 215 25% 27%;             /* #334155 - Slate border */
+    --muted: 215 28% 17%;                   /* #1e293b - Dark slate */
+    --muted-foreground: 214 32% 81%;        /* #cbd5e1 - Light slate text */
     --primary: var(--brand-primary);
-    --primary-foreground: 215 30% 7%;       /* Dark text on light buttons */
+    --primary-foreground: 222 47% 11%;      /* Dark text on bright buttons */
     --primary-hover: var(--brand-primary-hover);
-    --secondary: 215 20% 20%;               /* #2d3748 */
-    --secondary-foreground: 210 15% 85%;    /* #cbd5e1 */
+    --secondary: 215 25% 27%;               /* #334155 - Slate secondary */
+    --secondary-foreground: 214 32% 91%;    /* #e2e8f0 - Light slate text */
     --accent: var(--brand-accent);
-    --accent-foreground: 215 30% 7%;        /* Dark text on light accents */
+    --accent-foreground: 222 47% 11%;       /* Dark text on bright accents */
     --accent-light: var(--brand-accent-light);
-    --border: 215 20% 22%;                  /* #323944 */
-    --input: 215 20% 18%;                   /* #252d3a */
+    --border: 215 25% 27%;                  /* #334155 - Slate border */
+    --input: 215 28% 17%;                   /* #1e293b - Dark slate input */
     --ring: var(--brand-primary);
-    --success: 142 65% 55%;                 /* #34d058 - Lighter for dark mode */
-    --success-foreground: 215 30% 7%;
-    --success-hover: 142 65% 60%;           /* #40d865 */
-    --warning: 48 85% 70%;                  /* #f5d000 - Lighter for dark mode */
-    --warning-foreground: 45 100% 10%;
-    --warning-hover: 48 85% 75%;            /* #f7d71c */
-    --destructive: 0 75% 65%;               /* #f87171 - Lighter for dark mode */
-    --destructive-foreground: 215 30% 7%;
-    --destructive-hover: 0 75% 70%;         /* #fb7d7d */
-    --sidebar-background: 215 30% 7%;
-    --sidebar-foreground: 210 15% 85%;
+    --success: 142 69% 58%;                 /* #34d399 - Bright emerald for dark mode */
+    --success-foreground: 222 47% 11%;
+    --success-hover: 142 69% 64%;           /* #6ee7b7 - Brighter emerald */
+    --warning: 48 96% 53%;                  /* #fbbf24 - Bright amber for dark mode */
+    --warning-foreground: 30 100% 20%;
+    --warning-hover: 48 96% 60%;            /* #fcd34d - Brighter amber */
+    --destructive: 0 73% 72%;               /* #f87171 - Lighter red for dark mode */
+    --destructive-foreground: 222 47% 11%;
+    --destructive-hover: 0 73% 77%;         /* #fca5a5 - Lighter red hover */
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 214 32% 91%;
     --sidebar-primary: var(--brand-primary);
-    --sidebar-primary-foreground: 215 30% 7%;
-    --sidebar-accent: 215 20% 15%;
-    --sidebar-accent-foreground: 210 15% 85%;
-    --sidebar-border: 215 20% 15%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 215 28% 17%;
+    --sidebar-accent-foreground: 214 32% 91%;
+    --sidebar-border: 215 28% 17%;
     --sidebar-ring: var(--brand-primary);
     --shadow-brand: 0 10px 25px -5px hsl(var(--brand-primary) / 0.4);
     --shadow-brand-lg: 0 20px 40px -10px hsl(var(--brand-primary) / 0.5);
