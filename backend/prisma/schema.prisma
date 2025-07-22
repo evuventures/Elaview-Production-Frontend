@@ -58,6 +58,8 @@ model bookings {
   properties        properties?         @relation(fields: [propertyId], references: [id])
   invoices          invoices[]
   payment_reminders payment_reminders[]
+
+  conversation  conversations[] @relation("BookingConversations")
 }
 
 model campaigns {
@@ -106,6 +108,8 @@ model campaigns {
   users                  users          @relation(fields: [advertiserId], references: [id], onDelete: Cascade)
   properties             properties?    @relation(fields: [propertyId], references: [id])
   invoices               invoices[]
+
+  conversation  conversations[] @relation("CampaignConversations")
 }
 
 model chat_messages {
@@ -142,17 +146,116 @@ model invoices {
 }
 
 model messages {
-  id          String      @id
-  subject     String?
-  content     String
-  isRead      Boolean     @default(false)
-  type        MessageType @default(GENERAL)
-  priority    Priority    @default(NORMAL)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  senderId    String?
-  recipientId String
-  users       users?      @relation(fields: [senderId], references: [id])
+  id             String         @id
+  subject        String?
+  content        String
+  isRead         Boolean        @default(false)
+  type           MessageType    @default(GENERAL)
+  priority       Priority       @default(NORMAL)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  senderId       String?
+  recipientId    String
+
+  conversationId String?        // FK to conversations
+  replyToId      String?        // For threading
+  editedAt       DateTime?      // Track edits
+  isDeleted      Boolean        @default(false)
+  deletedAt      DateTime?
+  messageData    Json?          // Rich content metadata
+
+  // RELATIONSHIPS
+  sender         users?         @relation("MessageSender", fields: [senderId], references: [id])
+  recipient      users          @relation("MessageRecipient", fields: [recipientId], references: [id])
+  conversation   conversations? @relation("MessageConversation", fields: [conversationId], references: [id])
+  lastMessageOf  conversations? @relation("ConversationLastMessage")
+
+  replyTo        messages?      @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies        messages[]     @relation("MessageReplies")
+
+  attachments    message_attachments[]
+  reactions      message_reactions[]
+  readReceipts   message_read_receipts[]
+}
+
+model conversations {
+  id             String           @id
+  type           ConversationType @default(DIRECT)
+  name           String?          // For group chats
+  description    String?
+  isActive       Boolean          @default(true)
+  isArchived     Boolean          @default(false)
+  lastMessageId  String?  @unique
+  propertyId     String?
+  bookingId      String?
+  campaignId     String?
+
+  // RELATIONSHIPS
+  createdBy      String?
+  creator        users?           @relation("ConversationCreator", fields: [createdBy], references: [id])
+  lastMessage    messages?        @relation("ConversationLastMessage", fields: [lastMessageId], references: [id])
+  property       properties?      @relation("PropertyConversations", fields: [propertyId], references: [id])
+  booking        bookings?        @relation("BookingConversations", fields: [bookingId], references: [id])
+  campaign       campaigns?       @relation("CampaignConversations", fields: [campaignId], references: [id])
+
+  participants   conversation_participants[]
+  messages       messages[]       @relation("MessageConversation")
+}
+
+model conversation_participants {
+  id             String           @id
+  conversationId String
+  userId         String
+  role           UserRole         @default(USER)
+  joinedAt       DateTime         @default(now())
+  leftAt         DateTime?
+  isActive       Boolean          @default(true)
+  isMuted        Boolean          @default(false)
+  lastReadAt     DateTime?
+
+  conversation   conversations    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           users            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+}
+
+model message_attachments {
+  id           String      @id
+  messageId    String
+  fileName     String
+  fileSize     Int?
+  fileType     String
+  fileUrl      String
+  thumbnailUrl String?
+  uploadStatus String      @default("completed")
+  createdAt    DateTime    @default(now())
+
+  message      messages    @relation(fields: [messageId], references: [id], onDelete: Cascade)
+}
+
+model message_reactions {
+  id         String   @id
+  messageId  String
+  userId     String
+  reaction   String   // emoji or reaction type
+  createdAt  DateTime @default(now())
+
+  message    messages @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, reaction])
+}
+
+model message_read_receipts {
+  id        String   @id
+  messageId String
+  userId    String
+  readAt    DateTime @default(now())
+
+  message   messages @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
 }
 
 model payment_reminders {
@@ -227,6 +330,8 @@ model properties {
   campaigns          campaigns[]
   users              users                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   property_approvals property_approvals[]
+
+  conversation  conversations[] @relation("PropertyConversations")
 }
 
 model property_approvals {
@@ -246,28 +351,40 @@ model property_approvals {
   users        users?         @relation(fields: [reviewerId], references: [id])
 }
 
+
 model users {
-  id                 String               @id
-  clerkId            String               @unique
-  email              String               @unique
-  firstName          String?
-  lastName           String?
-  full_name          String?
-  imageUrl           String?
-  phone              String?
-  role               UserRole             @default(USER)
-  isActive           Boolean              @default(true)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  bookings           bookings[]
-  campaigns          campaigns[]
-  chat_messages      chat_messages[]
-  invoices           invoices[]
-  messages           messages[]
-  payment_reminders  payment_reminders[]
-  payment_settings   payment_settings?
-  properties         properties[]
-  property_approvals property_approvals[]
+  id                         String               @id
+  clerkId                    String               @unique
+  email                      String               @unique
+  firstName                  String?
+  lastName                   String?
+  full_name                  String?
+  imageUrl                   String?
+  phone                      String?
+  role                       UserRole             @default(USER)
+  isActive                   Boolean              @default(true)
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+  
+  // EXISTING RELATIONSHIPS
+  bookings                   bookings[]
+  campaigns                  campaigns[]
+  chat_messages              chat_messages[]
+  invoices                   invoices[]
+  payment_reminders          payment_reminders[]
+  payment_settings           payment_settings?
+  properties                 properties[]
+  property_approvals         property_approvals[]
+  
+  // UPDATED MESSAGING RELATIONSHIPS
+  sentMessages               messages[]           @relation("MessageSender")
+  receivedMessages           messages[]           @relation("MessageRecipient")
+  
+  // NEW MESSAGING RELATIONSHIPS
+  createdConversations       conversations[]      @relation("ConversationCreator")
+  conversationParticipants   conversation_participants[]
+  messageReactions           message_reactions[]
+  messageReadReceipts        message_read_receipts[]
 }
 
 enum ApprovalStatus {
@@ -388,4 +505,9 @@ enum UserRole {
   ADVERTISER
   ADMIN
   SUPER_ADMIN
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
 }
