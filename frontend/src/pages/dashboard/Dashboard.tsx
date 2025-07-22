@@ -516,7 +516,7 @@ export default function CompleteDashboard() {
                               <Clock className="w-5 h-5" />
                               Booking Requests Awaiting Approval
                             </span>
-                            <Badge className="bg-amber-500 text-white">
+                            <Badge variant="secondary" className="bg-amber-500 text-white">
                               {bookingRequests.filter(r => r.status === 'pending').length} pending
                             </Badge>
                           </div>
