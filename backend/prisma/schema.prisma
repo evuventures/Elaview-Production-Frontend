@@ -185,7 +185,7 @@ model conversations {
   description    String?
   isActive       Boolean          @default(true)
   isArchived     Boolean          @default(false)
-  lastMessageId  String?  @unique
+  lastMessageId  String?
   propertyId     String?
   bookingId      String?
   campaignId     String?
