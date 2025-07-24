@@ -1,6 +1,7 @@
 // src/pages/Layout.jsx
 import React, { useState, useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/clerk-react';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -11,6 +12,8 @@ import DesktopTopNav from './nested/DesktopTopNav';
 import DesktopTopNavV2 from './nested/DesktopTopNavV2';
 import MobileNav from '@/components/layout/nested/MobileNav';
 import MobileTopBar from '@/components/layout/nested/MobileTopBar';
+import MobileLayout from './MobileLayout';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function Layout({ children, currentPageName }) {
     const isMobile = useIsMobile();
@@ -22,6 +25,11 @@ export default function Layout({ children, currentPageName }) {
     // Use Clerk hooks instead of Base44
     const { isSignedIn, isLoaded } = useAuth();
     const { user: currentUser } = useUser();
+    const location = useLocation();
+    const isMobile = useIsMobile();
+
+    // Check if we should use mobile layout for browse page
+    const shouldUseMobileLayout = isMobile && location.pathname === '/browse';
 
     const pageVariants = {
         initial: { opacity: 0, y: 15 },
@@ -104,22 +112,17 @@ export default function Layout({ children, currentPageName }) {
         return () => clearInterval(interval);
       }, [isLoaded, isSignedIn, currentUser]);
 
-       if (isMobile) {
-    return (
-      <div className="flex flex-col h-screen bg-background text-foreground font-sans">
-        <MobileTopBar />
-        <main className="flex-1 overflow-auto pt-16 pb-20">
-          {children}
-        </main>
-        <MobileNav
-          unreadCount={unreadCount}
-          pendingInvoices={pendingInvoices}
-          actionItemsCount={actionItemsCount}
-          currentUser={currentUser}
-        />
-      </div>
-    );
-  }
+    // Use mobile layout for browse page on mobile devices
+    if (shouldUseMobileLayout) {
+        return (
+            <MobileLayout 
+                currentUser={currentUser}
+                unreadCount={unreadCount}
+                pendingInvoices={pendingInvoices}
+                actionItemsCount={actionItemsCount}
+            />
+        );
+    }
     
     return (
         <div className="min-h-screen flex flex-col font-sans bg-background text-foreground relative overflow-hidden">
