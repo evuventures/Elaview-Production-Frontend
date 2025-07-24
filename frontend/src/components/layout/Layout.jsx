@@ -166,7 +166,7 @@ export default function Layout({ children, currentPageName }) {
                 />
                 
                 {/* Content Container - Updated padding for top nav */}
-                <div className="p-4 md:p-8 pt-20 pb-24 md:pt-6 md:pb-8 h-full overflow-y-auto">
+                <div className="h-full overflow-y-auto">
                     <motion.div
                         initial="initial"
                         animate="in"

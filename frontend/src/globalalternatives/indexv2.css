@@ -1,0 +1,524 @@
+/* TEMPORARY TEST - Add this at the very top */
+.btn-gradient {
+  background: linear-gradient(135deg, #0d9488, #5eead4) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.dark .btn-gradient {
+  background: linear-gradient(135deg, #2dd4bf, #99f6e4) !important;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ================================
+   OCEAN TEAL & MINT THEME
+   Fresh and modern, nature-inspired
+   ================================ */
+
+@layer base {
+  :root {
+    /* Ocean Teal Brand Colors */
+    --brand-primary: #0d9488;              /* Deep teal */
+    --brand-primary-hover: #0f766e;        /* Darker teal */
+    --brand-primary-dark: #115e59;         /* Darkest teal */
+    --brand-secondary: #047857;            /* Forest green */
+    --brand-accent: #5eead4;               /* Mint green */
+    --brand-accent-light: #99f6e4;         /* Light mint */
+    --brand-accent-dark: #2dd4bf;          /* Vibrant teal */
+    
+    /* Enhanced Gradient System */
+    --brand-gradient-start: #0d9488;       /* Deep teal */
+    --brand-gradient-end: #5eead4;         /* Mint green */
+    --brand-gradient-hover-start: #0f766e; /* Darker teal */
+    --brand-gradient-hover-end: #2dd4bf;   /* Vibrant teal */
+
+    /* Base colors */
+    --background: #f7fdfc;                 /* Cool white */
+    --foreground: #1f2937;                 /* Cool dark */
+    
+    /* Card system */
+    --card: #fafefe;                       /* Pure white with cool tint */
+    --card-foreground: #1f2937;            /* Cool dark */
+    --card-border: #e6fffa;                /* Very light teal */
+    
+    /* Muted colors */
+    --muted: #f0fdfa;                      /* Light teal background */
+    --muted-foreground: #6b7280;           /* Cool gray */
+    
+    /* Primary system */
+    --primary: var(--brand-primary);
+    --primary-foreground: #ffffff;
+    --primary-hover: var(--brand-primary-hover);
+    
+    /* Secondary system */
+    --secondary: #ccfdf7;                  /* Light teal */
+    --secondary-foreground: var(--brand-secondary);
+    
+    /* Accent system */
+    --accent: var(--brand-accent);
+    --accent-foreground: #115e59;          /* Dark teal text */
+    --accent-light: var(--brand-accent-light);
+    
+    /* Interactive elements */
+    --border: #e6fffa;                     /* Light teal border */
+    --input: #fafefe;                      /* Cool white */
+    --ring: var(--brand-primary);
+    
+    /* Semantic colors */
+    --success: #16a34a;                    /* Green */
+    --success-foreground: #ffffff;
+    --success-hover: #15803d;              /* Darker green */
+    --warning: #eab308;                    /* Yellow */
+    --warning-foreground: #422006;         /* Dark yellow */
+    --warning-hover: #ca8a04;              /* Darker yellow */
+    --destructive: #ef4444;                /* Red */
+    --destructive-foreground: #ffffff;
+    --destructive-hover: #dc2626;          /* Darker red */
+    
+    /* Sidebar system */
+    --sidebar-background: #f7fdfc;
+    --sidebar-foreground: #374151;
+    --sidebar-primary: var(--brand-primary);
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #f0fdfa;
+    --sidebar-accent-foreground: var(--brand-primary);
+    --sidebar-border: #e6fffa;
+    --sidebar-ring: var(--brand-primary);
+    
+    /* Chart colors */
+    --chart-1: var(--brand-primary);
+    --chart-2: var(--brand-accent);
+    --chart-3: var(--success);
+    --chart-4: var(--warning);
+    --chart-5: var(--destructive);
+    
+    /* Enhanced Gradient system */
+    --gradient-primary: linear-gradient(135deg, 
+      var(--brand-gradient-start), 
+      var(--brand-gradient-end)
+    );
+    --gradient-primary-hover: linear-gradient(135deg, 
+      var(--brand-gradient-hover-start), 
+      var(--brand-gradient-hover-end)
+    );
+    --gradient-success: linear-gradient(135deg, 
+      var(--success), 
+      var(--success-hover)
+    );
+    --gradient-warning: linear-gradient(135deg, 
+      var(--warning), 
+      var(--warning-hover)
+    );
+    --gradient-destructive: linear-gradient(135deg, 
+      var(--destructive), 
+      var(--destructive-hover)
+    );
+    
+    /* Border radius */
+    --radius: 0.75rem;
+    --radius-sm: 0.5rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    
+    /* Brand shadows */
+    --shadow-brand: 0 10px 25px -5px rgba(13, 148, 136, 0.2);
+    --shadow-brand-lg: 0 20px 40px -10px rgba(13, 148, 136, 0.3);
+  }
+
+  /* Enhanced Dark Mode */
+  .dark {
+    /* Dark mode uses lighter, more vibrant teals */
+    --brand-primary: #2dd4bf;              /* Bright teal */
+    --brand-primary-hover: #5eead4;        /* Light mint */
+    --brand-primary-dark: #14b8a6;         /* Medium teal */
+    --brand-secondary: #10b981;            /* Emerald */
+    --brand-accent: #99f6e4;               /* Very light mint */
+    --brand-accent-light: #ccfbf1;         /* Palest mint */
+    --brand-accent-dark: #5eead4;          /* Light mint */
+    
+    /* Enhanced gradients for dark mode */
+    --brand-gradient-start: #2dd4bf;       /* Bright teal */
+    --brand-gradient-end: #99f6e4;         /* Very light mint */
+    --brand-gradient-hover-start: #5eead4; /* Light mint */
+    --brand-gradient-hover-end: #ccfbf1;   /* Palest mint */
+    
+    --background: #0f1419;                 /* Deep dark blue */
+    --foreground: #f1f3f5;                 /* Light gray */
+    --card: #1a202c;                       /* Dark card */
+    --card-foreground: #f1f3f5;            /* Light gray */
+    --card-border: #2d3748;                /* Medium border */
+    --muted: #252d3a;                      /* Muted background */
+    --muted-foreground: #a8b2c0;           /* Muted text */
+    --primary: var(--brand-primary);
+    --primary-foreground: #0f1419;         /* Dark text on bright buttons */
+    --primary-hover: var(--brand-primary-hover);
+    --secondary: #2d3748;                  /* Dark secondary */
+    --secondary-foreground: #cbd5e1;       /* Light secondary text */
+    --accent: var(--brand-accent);
+    --accent-foreground: #0f1419;          /* Dark text on light accents */
+    --accent-light: var(--brand-accent-light);
+    --border: #323944;                     /* Border color */
+    --input: #252d3a;                      /* Input background */
+    --ring: var(--brand-primary);
+    --success: #34d058;                    /* Bright green for dark mode */
+    --success-foreground: #0f1419;
+    --success-hover: #40d865;              /* Brighter green */
+    --warning: #f5d000;                    /* Bright yellow for dark mode */
+    --warning-foreground: #422006;
+    --warning-hover: #f7d71c;              /* Brighter yellow */
+    --destructive: #f87171;                /* Lighter red for dark mode */
+    --destructive-foreground: #0f1419;
+    --destructive-hover: #fb7d7d;          /* Lighter red hover */
+    --sidebar-background: #0f1419;
+    --sidebar-foreground: #cbd5e1;
+    --sidebar-primary: var(--brand-primary);
+    --sidebar-primary-foreground: #0f1419;
+    --sidebar-accent: #1e293b;
+    --sidebar-accent-foreground: #cbd5e1;
+    --sidebar-border: #1e293b;
+    --sidebar-ring: var(--brand-primary);
+    --shadow-brand: 0 10px 25px -5px rgba(45, 212, 191, 0.4);
+    --shadow-brand-lg: 0 20px 40px -10px rgba(45, 212, 191, 0.5);
+    
+    /* Update gradients for dark mode */
+    --gradient-primary: linear-gradient(135deg, 
+      var(--brand-gradient-start), 
+      var(--brand-gradient-end)
+    );
+    --gradient-primary-hover: linear-gradient(135deg, 
+      var(--brand-gradient-hover-start), 
+      var(--brand-gradient-hover-end)
+    );
+    --gradient-success: linear-gradient(135deg, 
+      var(--success), 
+      var(--success-hover)
+    );
+    --gradient-warning: linear-gradient(135deg, 
+      var(--warning), 
+      var(--warning-hover)
+    );
+    --gradient-destructive: linear-gradient(135deg, 
+      var(--destructive), 
+      var(--destructive-hover)
+    );
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-muted/30;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: rgba(13, 148, 136, 0.5);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(13, 148, 136, 0.7);
+  }
+}
+
+@layer components {
+  /* ================================
+     ENHANCED BUTTON SYSTEM
+     ================================ */
+  
+  /* Base button styles */
+  .btn-base {
+    @apply inline-flex items-center justify-center font-medium transition-brand rounded-xl px-4 py-2 text-sm;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    @apply disabled:pointer-events-none disabled:opacity-50;
+  }
+  
+  /* Primary Buttons */
+  .btn-primary {
+    @apply btn-base;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border: 1px solid var(--primary);
+    box-shadow: var(--shadow-brand);
+  }
+  
+  .btn-primary:hover:not(:disabled) {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+    box-shadow: var(--shadow-brand-lg);
+    transform: translateY(-1px);
+  }
+  
+  /* Gradient Buttons - Primary */
+  .btn-gradient {
+    @apply btn-base;
+    background: var(--gradient-primary);
+    color: var(--primary-foreground);
+    border: none;
+    box-shadow: var(--shadow-brand);
+  }
+  
+  .btn-gradient:hover:not(:disabled) {
+    background: var(--gradient-primary-hover);
+    box-shadow: var(--shadow-brand-lg);
+    transform: translateY(-1px);
+  }
+  
+  /* Success Buttons */
+  .btn-success {
+    @apply btn-base;
+    background: var(--success);
+    color: var(--success-foreground);
+    border: 1px solid var(--success);
+    box-shadow: 0 10px 25px -5px rgba(22, 163, 74, 0.2);
+  }
+  
+  .btn-success:hover:not(:disabled) {
+    background: var(--success-hover);
+    border-color: var(--success-hover);
+    box-shadow: 0 20px 40px -10px rgba(22, 163, 74, 0.3);
+    transform: translateY(-1px);
+  }
+  
+  .btn-gradient-success {
+    @apply btn-base;
+    background: var(--gradient-success);
+    color: var(--success-foreground);
+    border: none;
+    box-shadow: 0 10px 25px -5px rgba(22, 163, 74, 0.2);
+  }
+  
+  .btn-gradient-success:hover:not(:disabled) {
+    background: var(--gradient-success);
+    filter: brightness(1.1);
+    box-shadow: 0 20px 40px -10px rgba(22, 163, 74, 0.3);
+    transform: translateY(-1px);
+  }
+  
+  /* Warning Buttons */
+  .btn-warning {
+    @apply btn-base;
+    background: var(--warning);
+    color: var(--warning-foreground);
+    border: 1px solid var(--warning);
+    box-shadow: 0 10px 25px -5px rgba(234, 179, 8, 0.2);
+  }
+  
+  .btn-warning:hover:not(:disabled) {
+    background: var(--warning-hover);
+    border-color: var(--warning-hover);
+    box-shadow: 0 20px 40px -10px rgba(234, 179, 8, 0.3);
+    transform: translateY(-1px);
+  }
+  
+  /* Destructive Buttons */
+  .btn-destructive {
+    @apply btn-base;
+    background: var(--destructive);
+    color: var(--destructive-foreground);
+    border: 1px solid var(--destructive);
+    box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.2);
+  }
+  
+  .btn-destructive:hover:not(:disabled) {
+    background: var(--destructive-hover);
+    border-color: var(--destructive-hover);
+    box-shadow: 0 20px 40px -10px rgba(239, 68, 68, 0.3);
+    transform: translateY(-1px);
+  }
+  
+  /* Secondary Buttons */
+  .btn-secondary {
+    @apply btn-base;
+    background: var(--secondary);
+    color: var(--secondary-foreground);
+    border: 1px solid var(--border);
+  }
+  
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--muted);
+    transform: translateY(-1px);
+  }
+  
+  /* Outline Buttons */
+  .btn-outline {
+    @apply btn-base;
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+  }
+  
+  .btn-outline:hover:not(:disabled) {
+    background: rgba(13, 148, 136, 0.1);
+    transform: translateY(-1px);
+  }
+  
+  .btn-outline-success {
+    @apply btn-base;
+    background: transparent;
+    color: var(--success);
+    border: 1px solid var(--success);
+  }
+  
+  .btn-outline-success:hover:not(:disabled) {
+    background: rgba(22, 163, 74, 0.1);
+    transform: translateY(-1px);
+  }
+  
+  .btn-outline-destructive {
+    @apply btn-base;
+    background: transparent;
+    color: var(--destructive);
+    border: 1px solid var(--destructive);
+  }
+  
+  .btn-outline-destructive:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.1);
+    transform: translateY(-1px);
+  }
+  
+  /* Ghost Buttons */
+  .btn-ghost {
+    @apply btn-base;
+    background: transparent;
+    color: var(--foreground);
+    border: none;
+  }
+  
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--muted);
+    transform: translateY(-1px);
+  }
+  
+  /* Size Variants */
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs rounded-lg;
+  }
+  
+  .btn-lg {
+    @apply px-6 py-3 text-base rounded-2xl;
+  }
+  
+  .btn-xl {
+    @apply px-8 py-4 text-lg rounded-2xl;
+  }
+  
+  /* ================================
+     ENHANCED UTILITY CLASSES
+     ================================ */
+  
+  .bg-gradient-brand {
+    background: var(--gradient-primary);
+  }
+  
+  .bg-gradient-brand-hover {
+    background: var(--gradient-primary-hover);
+  }
+  
+  .bg-gradient-success {
+    background: var(--gradient-success);
+  }
+  
+  .bg-gradient-warning {
+    background: var(--gradient-warning);
+  }
+  
+  .bg-gradient-destructive {
+    background: var(--gradient-destructive);
+  }
+  
+  .text-gradient-brand {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+  }
+  
+  .glass {
+    background: rgba(250, 254, 254, 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(230, 255, 250, 0.5);
+  }
+  
+  .glass-strong {
+    background: rgba(250, 254, 254, 0.95);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(230, 255, 250, 0.3);
+  }
+  
+  .card-brand {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shadow);
+  }
+  
+  .card-brand:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+  
+  .focus-brand:focus {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  
+  .transition-brand {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .transition-brand-slow {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* ================================
+     COMPONENT-SPECIFIC FIXES
+     ================================ */
+  
+  /* Badge improvements */
+  .badge-primary {
+    background: rgba(13, 148, 136, 0.1);
+    color: var(--primary);
+    border: 1px solid rgba(13, 148, 136, 0.3);
+  }
+  
+  .badge-success {
+    background: rgba(22, 163, 74, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(22, 163, 74, 0.3);
+  }
+  
+  .badge-warning {
+    background: rgba(234, 179, 8, 0.1);
+    color: var(--warning);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+  }
+  
+  .badge-destructive {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--destructive);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+}
