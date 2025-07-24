@@ -11,43 +11,68 @@ const MobileBottomSheet = ({ properties = [], selectedProperty, onPropertySelect
   const controls = useAnimation();
   const y = useMotionValue(0);
   
-  // Usar vh units para movimento mais suave
-  const PEEK_HEIGHT = 35; // 35vh
-  const HALF_HEIGHT = 65; // 65vh  
-  const FULL_HEIGHT = 85; // 85vh (para não ir atrás da search bar)
+  // Altura máxima que a sheet pode ir (deixar 15vh livres para search bar)
+  const MAX_HEIGHT_VH = 70; // Reduzido de 85 para 70
+  
+  // Transform Y position to dynamic height - menos sensível
+  const height = useTransform(y, 
+    [-MAX_HEIGHT_VH, 0], 
+    [`${MAX_HEIGHT_VH}vh`, '35vh']
+  );
 
-  // Função para animar para um estado específico
+  // Função para animar para um estado específico (apenas para taps, não drag)
   const animateToState = (state) => {
     let targetY;
     if (state === 'peek') {
       targetY = 0;
+      setSheetState('peek');
     } else if (state === 'half') {
-      targetY = -30; // Move 30vh para cima
+      targetY = -25; // Ajustado para nova altura máxima
+      setSheetState('half');
     } else {
-      targetY = -50; // Move 50vh para cima (máximo)
+      targetY = -45; // Ajustado para nova altura máxima (não vai atrás da search bar)
+      setSheetState('full');
     }
     
-    controls.start({ y: `${targetY}vh` });
-    setSheetState(state);
+    controls.start({ y: targetY });
   };
 
-  // Handle drag end - snap to nearest state
+  // Update sheet state based on current position (durante o drag) - menos sensível
+  const updateSheetState = (currentY) => {
+    if (currentY > -12) { // Menos sensível
+      setSheetState('peek');
+    } else if (currentY > -30) { // Menos sensível
+      setSheetState('half');
+    } else {
+      setSheetState('full');
+    }
+  };
+
+  // Listen to Y changes during drag to update state
+  useEffect(() => {
+    const unsubscribe = y.onChange((latest) => {
+      updateSheetState(latest);
+    });
+    return unsubscribe;
+  }, [y]);
+
+  // Handle drag end - snap to nearest state apenas no final
   const handleDragEnd = (event, info) => {
     const velocity = info.velocity.y;
-    const currentY = parseFloat(y.get()) || 0;
+    const currentY = y.get();
     
-    // Calculate which state to snap to based on position and velocity
-    if (velocity > 300) {
-      // Fast downward swipe - go to peek
+    // Snap suave baseado em velocidade e posição - menos sensível
+    if (velocity > 500) {
+      // Swipe rápido para baixo
       animateToState('peek');
-    } else if (velocity < -300) {
-      // Fast upward swipe - go to full
+    } else if (velocity < -500) {
+      // Swipe rápido para cima 
       animateToState('full');
     } else {
-      // Based on position - usar valores vh mais simples
-      if (currentY > -15) {
+      // Snap para o estado mais próximo baseado na posição atual - ajustado para nova altura
+      if (currentY > -12) { // Menos sensível
         animateToState('peek');
-      } else if (currentY > -35) {
+      } else if (currentY > -30) { // Tolerante para half
         animateToState('half');
       } else {
         animateToState('full');
@@ -70,13 +95,13 @@ const MobileBottomSheet = ({ properties = [], selectedProperty, onPropertySelect
     <div className="fixed inset-x-0 bottom-0 z-30 pointer-events-none">
       <motion.div
         drag="y"
-        dragConstraints={{ top: -50, bottom: 0 }}
-        dragElastic={0.2}
+        dragConstraints={{ top: -MAX_HEIGHT_VH, bottom: 0 }}
+        dragElastic={0.1}
         dragMomentum={false}
         onDragEnd={handleDragEnd}
         animate={controls}
-        style={{ y }}
-        className="bg-background rounded-t-2xl shadow-xl border-t border-border pointer-events-auto"
+        style={{ y, height }}
+        className="bg-background rounded-t-2xl shadow-xl border-t border-border pointer-events-auto flex flex-col"
         initial={{ y: 0 }}
       >
         {/* Drag Handle */}
@@ -96,13 +121,7 @@ const MobileBottomSheet = ({ properties = [], selectedProperty, onPropertySelect
         </div>
 
         {/* Content */}
-        <div 
-          className="px-4 pb-4 overflow-hidden"
-          style={{ 
-            height: sheetState === 'peek' ? `${PEEK_HEIGHT}vh` : 
-                   sheetState === 'half' ? `${HALF_HEIGHT}vh` : `${FULL_HEIGHT}vh`
-          }}
-        >
+        <div className="px-4 pb-4 overflow-hidden flex-1">
           <ScrollArea className="h-full">
             {sheetState === 'peek' ? (
               // Peek state - horizontal scroll of cards
