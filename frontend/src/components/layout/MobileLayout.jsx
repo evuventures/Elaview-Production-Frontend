@@ -1,6 +1,6 @@
 // src/components/layout/MobileLayout.jsx
 import React, { useState, useEffect } from 'react';
-import { Search, Bot, User, MapPin } from 'lucide-react';
+import { Search, Bot, User, MapPin, Crown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,13 +74,13 @@ const MobileLayout = ({ currentUser, unreadCount, pendingInvoices, actionItemsCo
     <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
       {/* Top Bar - Logo & Profile */}
       <header className="flex items-center justify-between px-4 py-3 bg-background border-b border-border z-50">
-        <Link to="/dashboard" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center shadow-lg">
-            <span className="text-white font-bold text-sm">E</span>
+        <Link to="/dashboard" className="flex items-center gap-3 group">
+          <div className="w-10 h-10 bg-gradient-brand rounded-2xl flex items-center justify-center shadow-brand-lg group-hover:scale-105 transition-transform">
+            <Crown className="text-white font-bold w-5 h-5" />
           </div>
-          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            ELAVIEW
-          </h1>
+          <h2 className="font-bold text-2xl text-gradient-brand">
+            Elaview
+          </h2>
         </Link>
         
         <Button 

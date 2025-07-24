@@ -492,12 +492,15 @@
   .transition-brand-slow {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
+
+  /* Shadow utilities */
+  .shadow-brand-lg {
+    box-shadow: var(--shadow-brand-lg);
+  }
+
   /* ================================
      COMPONENT-SPECIFIC FIXES
-     ================================ */
-  
-  /* Badge improvements */
+     ================================ */  /* Badge improvements */
   .badge-primary {
     background: hsl(var(--primary) / 0.1);
     color: hsl(var(--primary));
