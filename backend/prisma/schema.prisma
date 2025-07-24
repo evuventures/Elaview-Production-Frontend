@@ -60,6 +60,8 @@ model bookings {
   payment_reminders payment_reminders[]
 
   conversation  conversations[] @relation("BookingConversations")
+
+  conversation  conversations[] @relation("BookingConversations")
 }
 
 model campaigns {
@@ -108,6 +110,8 @@ model campaigns {
   users                  users          @relation(fields: [advertiserId], references: [id], onDelete: Cascade)
   properties             properties?    @relation(fields: [propertyId], references: [id])
   invoices               invoices[]
+
+  conversation  conversations[] @relation("CampaignConversations")
 
   conversation  conversations[] @relation("CampaignConversations")
 }
@@ -332,6 +336,8 @@ model properties {
   property_approvals property_approvals[]
 
   conversation  conversations[] @relation("PropertyConversations")
+
+  conversation  conversations[] @relation("PropertyConversations")
 }
 
 model property_approvals {
@@ -352,7 +358,40 @@ model property_approvals {
 }
 
 
+
 model users {
+  id                         String               @id
+  clerkId                    String               @unique
+  email                      String               @unique
+  firstName                  String?
+  lastName                   String?
+  full_name                  String?
+  imageUrl                   String?
+  phone                      String?
+  role                       UserRole             @default(USER)
+  isActive                   Boolean              @default(true)
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+  
+  // EXISTING RELATIONSHIPS
+  bookings                   bookings[]
+  campaigns                  campaigns[]
+  chat_messages              chat_messages[]
+  invoices                   invoices[]
+  payment_reminders          payment_reminders[]
+  payment_settings           payment_settings?
+  properties                 properties[]
+  property_approvals         property_approvals[]
+  
+  // UPDATED MESSAGING RELATIONSHIPS
+  sentMessages               messages[]           @relation("MessageSender")
+  receivedMessages           messages[]           @relation("MessageRecipient")
+  
+  // NEW MESSAGING RELATIONSHIPS
+  createdConversations       conversations[]      @relation("ConversationCreator")
+  conversationParticipants   conversation_participants[]
+  messageReactions           message_reactions[]
+  messageReadReceipts        message_read_receipts[]
   id                         String               @id
   clerkId                    String               @unique
   email                      String               @unique
