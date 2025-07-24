@@ -60,8 +60,6 @@ model bookings {
   payment_reminders payment_reminders[]
 
   conversation  conversations[] @relation("BookingConversations")
-
-  conversation  conversations[] @relation("BookingConversations")
 }
 
 model campaigns {
