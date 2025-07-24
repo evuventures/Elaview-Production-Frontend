@@ -11,12 +11,10 @@ const MobileBottomSheet = ({ properties = [], selectedProperty, onPropertySelect
   const controls = useAnimation();
   const y = useMotionValue(0);
   
-  // Heights for different states - usando vh units
-  const HEIGHTS = {
-    peek: '35vh',    // 35% da tela
-    half: '65vh',    // 65% da tela  
-    full: '90vh'     // 90% da tela (para na search bar)
-  };
+  // Usar vh units para movimento mais suave
+  const PEEK_HEIGHT = 35; // 35vh
+  const HALF_HEIGHT = 65; // 65vh  
+  const FULL_HEIGHT = 85; // 85vh (para não ir atrás da search bar)
 
   // Função para animar para um estado específico
   const animateToState = (state) => {
@@ -24,19 +22,19 @@ const MobileBottomSheet = ({ properties = [], selectedProperty, onPropertySelect
     if (state === 'peek') {
       targetY = 0;
     } else if (state === 'half') {
-      targetY = -window.innerHeight * 0.3; // Move up 30vh from peek
+      targetY = -30; // Move 30vh para cima
     } else {
-      targetY = -window.innerHeight * 0.55; // Move up 55vh from peek  
+      targetY = -50; // Move 50vh para cima (máximo)
     }
     
-    controls.start({ y: targetY });
+    controls.start({ y: `${targetY}vh` });
     setSheetState(state);
   };
 
   // Handle drag end - snap to nearest state
   const handleDragEnd = (event, info) => {
     const velocity = info.velocity.y;
-    const currentY = y.get();
+    const currentY = parseFloat(y.get()) || 0;
     
     // Calculate which state to snap to based on position and velocity
     if (velocity > 300) {
@@ -46,10 +44,10 @@ const MobileBottomSheet = ({ properties = [], selectedProperty, onPropertySelect
       // Fast upward swipe - go to full
       animateToState('full');
     } else {
-      // Based on position
-      if (currentY > -window.innerHeight * 0.15) {
+      // Based on position - usar valores vh mais simples
+      if (currentY > -15) {
         animateToState('peek');
-      } else if (currentY > -window.innerHeight * 0.42) {
+      } else if (currentY > -35) {
         animateToState('half');
       } else {
         animateToState('full');
@@ -72,8 +70,8 @@ const MobileBottomSheet = ({ properties = [], selectedProperty, onPropertySelect
     <div className="fixed inset-x-0 bottom-0 z-30 pointer-events-none">
       <motion.div
         drag="y"
-        dragConstraints={{ top: -window.innerHeight * 0.55, bottom: 0 }}
-        dragElastic={0.1}
+        dragConstraints={{ top: -50, bottom: 0 }}
+        dragElastic={0.2}
         dragMomentum={false}
         onDragEnd={handleDragEnd}
         animate={controls}
@@ -101,8 +99,8 @@ const MobileBottomSheet = ({ properties = [], selectedProperty, onPropertySelect
         <div 
           className="px-4 pb-4 overflow-hidden"
           style={{ 
-            height: sheetState === 'peek' ? '25vh' : 
-                   sheetState === 'half' ? '55vh' : '80vh'
+            height: sheetState === 'peek' ? `${PEEK_HEIGHT}vh` : 
+                   sheetState === 'half' ? `${HALF_HEIGHT}vh` : `${FULL_HEIGHT}vh`
           }}
         >
           <ScrollArea className="h-full">

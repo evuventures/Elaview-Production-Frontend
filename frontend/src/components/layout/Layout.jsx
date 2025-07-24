@@ -13,7 +13,6 @@ import DesktopTopNavV2 from './nested/DesktopTopNavV2';
 import MobileNav from '@/components/layout/nested/MobileNav';
 import MobileTopBar from '@/components/layout/nested/MobileTopBar';
 import MobileLayout from './MobileLayout';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function Layout({ children, currentPageName }) {
     const isMobile = useIsMobile();
@@ -26,12 +25,9 @@ export default function Layout({ children, currentPageName }) {
     const { isSignedIn, isLoaded } = useAuth();
     const { user: currentUser } = useUser();
     const location = useLocation();
-    const isMobile = useIsMobile();
 
     // Check if we should use mobile layout for browse page
-    const shouldUseMobileLayout = isMobile && location.pathname === '/browse';
-
-    const pageVariants = {
+    const shouldUseMobileLayout = isMobile && location.pathname === '/browse';    const pageVariants = {
         initial: { opacity: 0, y: 15 },
         in: { opacity: 1, y: 0 },
         out: { opacity: 0, y: -15 }
@@ -123,6 +119,23 @@ export default function Layout({ children, currentPageName }) {
             />
         );
     }
+
+       if (isMobile) {
+    return (
+      <div className="flex flex-col h-screen bg-background text-foreground font-sans">
+        <MobileTopBar />
+        <main className="flex-1 overflow-auto pt-16 pb-20">
+          {children}
+        </main>
+        <MobileNav
+          unreadCount={unreadCount}
+          pendingInvoices={pendingInvoices}
+          actionItemsCount={actionItemsCount}
+          currentUser={currentUser}
+        />
+      </div>
+    );
+  }
     
     return (
         <div className="min-h-screen flex flex-col font-sans bg-background text-foreground relative overflow-hidden">

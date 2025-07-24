@@ -24,8 +24,6 @@ import {
   Target
 } from 'lucide-react';
 
-const isMobile = useIsMobile();
-
 const MapSearchFilter = ({
   properties = [],
   onFilter,
@@ -34,6 +32,7 @@ const MapSearchFilter = ({
   onCenterMap,
   className = ""
 }) => {
+  const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState('');
   const [locationSearch, setLocationSearch] = useState('');
   const [filters, setFilters] = useState({

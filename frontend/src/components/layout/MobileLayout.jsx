@@ -9,12 +9,10 @@ import { Link, useLocation } from 'react-router-dom';
 import GoogleMap from '@/components/browse/maps/GoogleMap';
 import MobileBottomSheet from './MobileBottomSheet';
 import { getNavigationItems } from '@/lib/navigation';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { Property } from '@/api/entities';
 
 const MobileLayout = ({ currentUser, unreadCount, pendingInvoices, actionItemsCount }) => {
   const location = useLocation();
-  const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState('');
   const [properties, setProperties] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,11 +69,6 @@ const MobileLayout = ({ currentUser, unreadCount, pendingInvoices, actionItemsCo
   const handleAISearch = () => {
     console.log('AI Search activated');
   };
-
-  // Only show mobile layout on mobile devices
-  if (!isMobile) {
-    return null;
-  }
 
   return (
     <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
