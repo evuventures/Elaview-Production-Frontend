@@ -1,9 +1,9 @@
-// src/pages/Layout.jsx
+// src/components/layout/Layout.tsx
 import React, { useState, useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
 
-// Extracted components
+// Extracted components - update these imports to match your actual file structure
 import DesktopSidebar from '@/components/layout/nested/DesktopSidebar';
 import DesktopSidebarV2 from './nested/DesktopSidebarV2';
 import DesktopTopNav from './nested/DesktopTopNav';
@@ -11,13 +11,18 @@ import DesktopTopNavV2 from './nested/DesktopTopNavV2';
 import MobileNav from '@/components/layout/nested/MobileNav';
 import MobileTopBar from '@/components/layout/nested/MobileTopBar';
 
-export default function Layout({ children, currentPageName }) {
+interface LayoutProps {
+  children: React.ReactNode;
+  currentPageName?: string;
+}
+
+export default function Layout({ children, currentPageName }: LayoutProps) {
     const [unreadCount, setUnreadCount] = useState(0);
     const [pendingInvoices, setPendingInvoices] = useState(0);
     const [actionItemsCount, setActionItemsCount] = useState(0);
-    const [theme, setTheme] = useState('light');
+    const [theme, setTheme] = useState('dark'); // Default to dark theme
     
-    // Use Clerk hooks instead of Base44
+    // Use Clerk hooks
     const { isSignedIn, isLoaded } = useAuth();
     const { user: currentUser } = useUser();
 
@@ -33,7 +38,7 @@ export default function Layout({ children, currentPageName }) {
         duration: 0.4
     };
 
-    const applyThemeToDOM = (themeToApply) => {
+    const applyThemeToDOM = (themeToApply: string) => {
         const root = window.document.documentElement;
         root.classList.remove('light', 'dark');
         root.classList.add(themeToApply);
@@ -59,7 +64,7 @@ export default function Layout({ children, currentPageName }) {
               // User is signed in with Clerk
               console.log('User signed in:', currentUser.firstName, currentUser.lastName);
               
-              // Fetch actual user data from API
+              // Fetch actual user data from API when ready
               try {
                 // Replace with actual API calls when ready
                 setUnreadCount(0); // Will be populated by actual API
@@ -74,9 +79,9 @@ export default function Layout({ children, currentPageName }) {
               }
               
               // Get theme from user preferences or localStorage
-              const userTheme = currentUser.publicMetadata?.theme || 
+              const userTheme = (typeof currentUser.publicMetadata?.theme === 'string' ? currentUser.publicMetadata.theme : null) || 
                                localStorage.getItem('theme-preference') || 
-                               'light';
+                               'dark'; // Default to dark for dashboard
               setTheme(userTheme);
               applyThemeToDOM(userTheme);
             } else {
@@ -86,8 +91,8 @@ export default function Layout({ children, currentPageName }) {
               setPendingInvoices(0);
               setActionItemsCount(0);
               
-              // For logged-out users, use stored preference or default to light
-              const storedTheme = localStorage.getItem('theme-preference') || 'light';
+              // For logged-out users, use stored preference or default to dark
+              const storedTheme = localStorage.getItem('theme-preference') || 'dark';
               setTheme(storedTheme);
               applyThemeToDOM(storedTheme);
             }
@@ -104,33 +109,49 @@ export default function Layout({ children, currentPageName }) {
     
     return (
         <div className="min-h-screen flex flex-col font-sans bg-background text-foreground relative overflow-hidden">
-            {/* Background Effects */}
+            {/* Background Effects - Updated for dark theme */}
             <div className="fixed inset-0 pointer-events-none opacity-30 dark:opacity-100">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5"></div>
-              <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl"></div>
-              <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-accent/10 to-transparent rounded-full blur-3xl"></div>
+              <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-lime-400/10 to-transparent rounded-full blur-3xl"></div>
+              <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-cyan-400/10 to-transparent rounded-full blur-3xl"></div>
             </div>
             
-            {/* Top Navigation */}
-            <DesktopTopNavV2
-              unreadCount={unreadCount} 
-              pendingInvoices={pendingInvoices} 
-              actionItemsCount={actionItemsCount} 
-              currentUser={currentUser} 
-            />
+            {/* Top Navigation - Only show if components exist */}
+            {typeof DesktopTopNavV2 !== 'undefined' ? (
+              <DesktopTopNavV2
+                unreadCount={unreadCount} 
+                pendingInvoices={pendingInvoices} 
+                actionItemsCount={actionItemsCount} 
+                currentUser={currentUser} 
+              />
+            ) : (
+              // Fallback simple header if nav components don't exist
+              <header className="bg-gray-800 border-b border-gray-700 p-4">
+                <div className="flex items-center justify-between">
+                  <h1 className="text-xl font-bold text-white">Dashboard</h1>
+                  {currentUser && (
+                    <div className="text-sm text-gray-300">
+                      Welcome, {currentUser.firstName || currentUser.email}
+                    </div>
+                  )}
+                </div>
+              </header>
+            )}
             
-            {/* Main Content Area - FIXED: Removed md:ml-72 and updated layout */}
+            {/* Main Content Area */}
             <main className="flex-1 relative">
-                {/* Mobile Components */}
-                <MobileTopBar />
-                <MobileNav 
-                  unreadCount={unreadCount} 
-                  pendingInvoices={pendingInvoices} 
-                  actionItemsCount={actionItemsCount} 
-                  currentUser={currentUser}
-                />
+                {/* Mobile Components - Only show if they exist */}
+                {typeof MobileTopBar !== 'undefined' && <MobileTopBar />}
+                {typeof MobileNav !== 'undefined' && (
+                  <MobileNav 
+                    unreadCount={unreadCount} 
+                    pendingInvoices={pendingInvoices} 
+                    actionItemsCount={actionItemsCount} 
+                    currentUser={currentUser}
+                  />
+                )}
                 
-                {/* Content Container - Updated padding for top nav */}
+                {/* Content Container */}
                 <div className="h-full overflow-y-auto">
                     <motion.div
                         initial="initial"

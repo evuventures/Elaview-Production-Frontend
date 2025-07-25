@@ -1,4 +1,4 @@
-import Layout from "../components/layout/Layout.jsx";
+import Layout from "../components/layout/Layout.tsx";
 import Bookings from "./bookings/BookingPage.jsx";
 import Map from "./browse/Map.jsx";
 import Messages from "./messages/Messages.tsx";

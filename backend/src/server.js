@@ -18,6 +18,7 @@ import invoiceRoutes from './routes/invoices.js';
 import uploadRoutes from './routes/upload.js';
 import advertisingAreaRoutes from './routes/advertising-areas.js';
 import debugRoutes from './routes/debug.js';
+import creativesRoutes from './routes/creatives.js'; // ✅ NEW: Creatives routes
 
 // Import middleware
 import { clerkMiddleware } from './middleware/clerk.js';
@@ -131,7 +132,8 @@ app.get('/api/health', (req, res) => {
       campaigns: '/api/campaigns (protected)',
       bookings: '/api/bookings (protected)',
       messages: '/api/messages (protected)',
-      invoices: '/api/invoices (protected)'
+      invoices: '/api/invoices (protected)',
+      creatives: '/api/creatives (protected)' // ✅ NEW: Added to health check
     }
   });
 });
@@ -162,6 +164,7 @@ app.use('/api/bookings', clerkMiddleware, bookingRoutes);
 app.use('/api/messages', clerkMiddleware, messageRoutes);
 app.use('/api/invoices', clerkMiddleware, invoiceRoutes);
 app.use('/api/upload', clerkMiddleware, uploadRoutes);
+app.use('/api/creatives', clerkMiddleware, creativesRoutes); // ✅ NEW: Creatives routes
 
 console.log('   🔒 /api/auth - Authentication');
 console.log('   🔒 /api/users - User management');
@@ -171,6 +174,7 @@ console.log('   🔒 /api/bookings - Booking management');
 console.log('   🔒 /api/messages - Messaging');
 console.log('   🔒 /api/invoices - Invoicing');
 console.log('   🔒 /api/upload - File uploads');
+console.log('   🔒 /api/creatives - Creative asset management'); // ✅ NEW: Added to console log
 
 // Error handling middleware
 app.use(errorHandler);
@@ -198,7 +202,8 @@ app.use('*', (req, res) => {
         bookings: '/api/bookings (bookings)',
         messages: '/api/messages (messaging)',
         invoices: '/api/invoices (invoicing)',
-        upload: '/api/upload (file uploads)'
+        upload: '/api/upload (file uploads)',
+        creatives: '/api/creatives (creative assets)' // ✅ NEW: Added to 404 handler
       }
     }
   });
@@ -227,6 +232,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log('     ALL  /api/messages');
   console.log('     ALL  /api/invoices');
   console.log('     ALL  /api/upload');
+  console.log('     ALL  /api/creatives'); // ✅ NEW: Added to startup log
   console.log('');
   console.log('✅ Server ready for connections');
 });

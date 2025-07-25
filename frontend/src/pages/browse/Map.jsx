@@ -1,11 +1,9 @@
-// src/pages/browse/Map.jsx - Clean Fixed Layout
-// ✅ SIMPLE: Fixed containers with scrollable content inside
+// src/pages/browse/Map.jsx - Fixed: Stationary Map + Pagination
+// ✅ UPDATED: Stationary map, 24 cards per page, proper API integration
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
-import { Property, AdvertisingArea } from '@/api/entities';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -16,12 +14,15 @@ import {
   Calculator, MessageCircle, BookOpen, Phone, Mail, TrendingUp,
   Shield, Target, Clock, Bookmark, CheckCircle, AlertCircle,
   BarChart3, PieChart, Activity, Thermometer, Calendar, Home,
-  Settings, Tag, Zap as Lightning, Wifi, Monitor
+  Settings, Tag, Zap as Lightning, Wifi, Monitor, ShoppingCart,
+  Plus, Minus, ChevronLeft
 } from "lucide-react";
 import GoogleMap from "@/components/browse/maps/GoogleMap";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUser } from '@clerk/clerk-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// ✅ API Configuration
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // Distance calculation utility
 const getDistanceInKm = (lat1, lon1, lat2, lon2) => {
@@ -82,21 +83,6 @@ const getPropertyName = (property) => {
   return property.title || property.name || 'Unnamed Property';
 };
 
-const getPropertyType = (property) => {
-  const type = property.propertyType || property.type;
-  
-  const typeLabels = {
-    'BUILDING': 'Building',
-    'OFFICE': 'Office Building',  
-    'RETAIL': 'Retail Space',
-    'COMMERCIAL': 'Commercial',
-    'WAREHOUSE': 'Warehouse',
-    'OTHER': 'Other'
-  };
-  
-  return typeLabels[type] || (type ? type.charAt(0).toUpperCase() + type.slice(1).toLowerCase() : 'Property');
-};
-
 // Helper functions for AdvertisingAreas
 const getAreaName = (area) => {
   return area.name || area.title || 'Unnamed Advertising Area';
@@ -129,7 +115,7 @@ const getAreaType = (area) => {
 
 const getAreaPrice = (area) => {
   if (area.baseRate) {
-    const rateType = area.rateType || 'DAILY';
+    const rateType = area.rateType || 'MONTHLY';
     const suffix = rateType.toLowerCase().replace('ly', '').replace('y', 'y');
     return `$${area.baseRate}/${suffix}`;
   }
@@ -146,7 +132,21 @@ const getAreaPrice = (area) => {
   return 'Price on request';
 };
 
-// ✅ NEW: Get area category icon for better UX
+const getNumericPrice = (area) => {
+  if (area.baseRate) return area.baseRate;
+  if (area.pricing) {
+    try {
+      const pricing = typeof area.pricing === 'string' ? JSON.parse(area.pricing) : area.pricing;
+      if (pricing.daily) return pricing.daily;
+      if (pricing.weekly) return Math.round(pricing.weekly / 7);
+      if (pricing.monthly) return Math.round(pricing.monthly / 30);
+    } catch (e) {
+      console.warn('Error parsing area pricing:', e);
+    }
+  }
+  return 150;
+};
+
 const getAreaCategoryIcon = (area) => {
   const type = area.type?.toLowerCase() || '';
   const categories = {
@@ -162,47 +162,48 @@ const getAreaCategoryIcon = (area) => {
       return category.icon;
     }
   }
-  return Building2; // Default
+  return Building2;
 };
 
 export default function MapPage() {
   const navigate = useNavigate();
   
-  // ✅ ENHANCED: Core state focusing on spaces
+  // ✅ FIXED: Core state for stationary map and pagination
   const [properties, setProperties] = useState([]);
-  const [allSpaces, setAllSpaces] = useState([]); // ✅ NEW: Flattened spaces array
+  const [allSpaces, setAllSpaces] = useState([]);
   const [selectedSpace, setSelectedSpace] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [mapCenter, setMapCenter] = useState({ lat: 33.7175, lng: -117.8311 });
-  const [mapZoom, setMapZoom] = useState(10);
+  const [error, setError] = useState(null);
+  
+  // ✅ FIXED: Static map center (no more movement)
+  const [mapCenter] = useState({ lat: 33.7175, lng: -117.8311 }); // Orange County, CA
+  const [mapZoom] = useState(10); // Fixed zoom level
   const [userLocation, setUserLocation] = useState(null);
   
-  // ✅ NEW: Filter state
+  // ✅ NEW: Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const CARDS_PER_PAGE = 24;
+  
+  // Cart state
+  const [cart, setCart] = useState([]);
+  const [showCart, setShowCart] = useState(false);
+  
+  // Filter state
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
-    priceRange: 'all', // 'under500', 'under1000', 'under2000', 'all'
-    spaceType: 'all', // 'digital', 'outdoor', 'retail', 'transit', 'indoor', 'all'
-    availability: 'all', // 'available', 'booking_required', 'all'
-    audience: 'all', // 'families', 'professionals', 'commuters', 'all'
-    features: [], // ['verified', 'high_traffic', 'premium', 'digital']
+    priceRange: 'all',
+    spaceType: 'all',
+    availability: 'all',
+    audience: 'all',
+    features: [],
   });
   
   // UI state
   const [animatingSpace, setAnimatingSpace] = useState(null);
-  const [hoverSpace, setHoverSpace] = useState(null);
   const [savedSpaces, setSavedSpaces] = useState(new Set());
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showROICalculator, setShowROICalculator] = useState(false);
-  const [groupByProperty, setGroupByProperty] = useState(false);
-
-  // Business metrics
-  const [mapLayers, setMapLayers] = useState({
-    properties: true,
-    heatMap: false,
-    competitors: false,
-    demographics: false
-  });
   
   const { user: currentUser } = useUser();
   const isMountedRef = useRef(true);
@@ -219,64 +220,72 @@ export default function MapPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // ✅ ENHANCED: Load properties and flatten spaces
+  // ✅ FIXED: API call to your backend
   const loadPropertiesData = async () => {
     if (!isMountedRef.current) return;
     
     setIsLoading(true);
+    setError(null);
+    
     try {
-      console.log('🗺️ Loading properties and spaces data...');
+      console.log('🗺️ Loading properties from API...');
       
-      const propertiesData = await Property.list();
-
+      const response = await fetch(`${API_BASE_URL}/api/spaces`);
+      
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
       if (!isMountedRef.current) {
         console.log('🗺️ Component unmounted during loading, aborting');
         return;
       }
 
+      if (!data.success || !data.data) {
+        throw new Error('Invalid API response format');
+      }
+
+      const propertiesData = data.data;
+      console.log(`🏢 API returned ${propertiesData.length} properties`);
+
+      // Filter properties that have coordinates AND advertising areas
       const validProperties = propertiesData.filter(property => {
         const coords = getPropertyCoords(property);
-        return coords !== null;
+        const hasSpaces = property.advertising_areas && property.advertising_areas.length > 0;
+        return coords !== null && hasSpaces;
       });
 
-      // ✅ NEW: Flatten all spaces from all properties
+      // Flatten all spaces from all properties
       const flattenedSpaces = [];
       validProperties.forEach(property => {
-        if (property.advertising_areas && property.advertising_areas.length > 0) {
-          property.advertising_areas.forEach(area => {
-            flattenedSpaces.push({
-              ...area,
-              // Add property context to each space
-              propertyId: property.id,
-              propertyName: getPropertyName(property),
-              propertyAddress: getPropertyAddress(property),
-              propertyCoords: getPropertyCoords(property),
-              propertyType: getPropertyType(property),
-              // Add property metadata
-              property: property,
-              // Add computed values
-              distance: null // Will be calculated later
-            });
+        property.advertising_areas.forEach(area => {
+          flattenedSpaces.push({
+            ...area,
+            // Add property context to each space
+            propertyId: property.id,
+            propertyName: getPropertyName(property),
+            propertyAddress: getPropertyAddress(property),
+            propertyCoords: getPropertyCoords(property),
+            propertyType: property.propertyType,
+            property: property,
+            distance: null
           });
-        }
+        });
       });
 
-      console.log(`🏢 Loaded ${validProperties.length} properties with ${flattenedSpaces.length} total spaces`);
-
+      console.log(`🏢 Processed ${validProperties.length} properties with ${flattenedSpaces.length} total spaces`);
+      
       if (isMountedRef.current) {
         setProperties(validProperties);
         setAllSpaces(flattenedSpaces);
-
-        if (flattenedSpaces.length > 0) {
-          const firstSpaceCoords = flattenedSpaces[0].propertyCoords;
-          if (firstSpaceCoords) {
-            setMapCenter(firstSpaceCoords);
-          }
-        }
+        // ✅ NO MAP MOVEMENT - map stays on Orange County
       }
     } catch (error) {
       console.error("❌ Error loading data:", error);
       if (isMountedRef.current) {
+        setError(error.message);
         setProperties([]);
         setAllSpaces([]);
       }
@@ -303,7 +312,7 @@ export default function MapPage() {
     };
   }, []);
 
-  // Get user location
+  // ✅ FIXED: User location detection (NO auto-centering)
   useEffect(() => {
     if (!isMountedRef.current) return;
     
@@ -319,10 +328,7 @@ export default function MapPage() {
           };
           console.log('📍 User location detected:', userCoords);
           setUserLocation(userCoords);
-          
-          if (allSpaces.length === 0) {
-            setMapCenter({ lat: userCoords.lat, lng: userCoords.lng });
-          }
+          // ✅ NO AUTO-CENTERING - map stays put
         },
         (error) => {
           console.log("⚠️ Could not get user location:", error.message);
@@ -331,14 +337,14 @@ export default function MapPage() {
     }
   }, []);
 
-  // ✅ NEW: Advanced filtering for spaces
-  const filteredSpaces = useMemo(() => {
+  // ✅ NEW: Advanced filtering for spaces with pagination
+  const { filteredSpaces, totalPages, paginatedSpaces } = useMemo(() => {
     let filtered = allSpaces;
 
     // Price filter
     if (filters.priceRange !== 'all') {
       filtered = filtered.filter(space => {
-        const price = space.baseRate || 150;
+        const price = getNumericPrice(space);
         switch (filters.priceRange) {
           case 'under500': return price <= 500/30;
           case 'under1000': return price <= 1000/30;
@@ -387,7 +393,7 @@ export default function MapPage() {
           switch (feature) {
             case 'verified': return trust.verified;
             case 'high_traffic': return insights.footTraffic > 15000;
-            case 'premium': return space.baseRate > 300;
+            case 'premium': return getNumericPrice(space) > 300;
             case 'digital': return space.type?.toLowerCase().includes('digital');
             default: return true;
           }
@@ -404,48 +410,73 @@ export default function MapPage() {
             getDistanceInKm(mapCenter.lat, mapCenter.lng, space.propertyCoords.lat, space.propertyCoords.lng) :
             Infinity
         }))
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, 50); // Limit to 50 for performance
+        .sort((a, b) => a.distance - b.distance);
       
-      return spacesWithDistance;
+      filtered = spacesWithDistance;
     }
-    
-    return filtered.slice(0, 50);
-  }, [allSpaces, filters, mapCenter]);
 
-  // ✅ NEW: Group spaces by property for better UX
-  const groupedSpaces = useMemo(() => {
-    if (!groupByProperty) return filteredSpaces;
+    // ✅ PAGINATION LOGIC
+    const totalSpaces = filtered.length;
+    const totalPages = Math.ceil(totalSpaces / CARDS_PER_PAGE);
+    const startIndex = (currentPage - 1) * CARDS_PER_PAGE;
+    const endIndex = startIndex + CARDS_PER_PAGE;
+    const paginatedSpaces = filtered.slice(startIndex, endIndex);
     
-    const grouped = filteredSpaces.reduce((acc, space) => {
-      const propertyId = space.propertyId;
-      if (!acc[propertyId]) {
-        acc[propertyId] = {
-          property: space.property,
-          propertyName: space.propertyName,
-          propertyAddress: space.propertyAddress,
-          spaces: []
-        };
-      }
-      acc[propertyId].spaces.push(space);
-      return acc;
-    }, {});
-    
-    return Object.values(grouped);
-  }, [filteredSpaces, groupByProperty]);
+    return {
+      filteredSpaces: filtered,
+      totalPages,
+      paginatedSpaces
+    };
+  }, [allSpaces, filters, mapCenter, currentPage]);
 
-  // Event handlers
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
+  // Cart functions
+  const addToCart = (space, duration = 30) => {
+    const cartItem = {
+      id: `${space.id}_${Date.now()}`,
+      spaceId: space.id,
+      space: space,
+      duration: duration,
+      pricePerDay: getNumericPrice(space),
+      totalPrice: getNumericPrice(space) * duration,
+      addedAt: new Date()
+    };
+    
+    setCart(prev => [...prev, cartItem]);
+  };
+
+  const removeFromCart = (cartItemId) => {
+    setCart(prev => prev.filter(item => item.id !== cartItemId));
+  };
+
+  const updateCartItemDuration = (cartItemId, newDuration) => {
+    setCart(prev => prev.map(item => 
+      item.id === cartItemId 
+        ? { ...item, duration: newDuration, totalPrice: item.pricePerDay * newDuration }
+        : item
+    ));
+  };
+
+  const getTotalCartValue = () => {
+    return cart.reduce((total, item) => total + item.totalPrice, 0);
+  };
+
+  const isInCart = (spaceId) => {
+    return cart.some(item => item.spaceId === spaceId);
+  };
+
+  // ✅ FIXED: Event handlers with NO map movement
   const handleSpaceClick = (space) => {
     if (!isMountedRef.current) return;
     
     console.log('📍 Space clicked:', space);
     setSelectedSpace(space);
     setDetailsExpanded(true);
-    
-    if (space.propertyCoords) {
-      setMapCenter(space.propertyCoords);
-      setMapZoom(16);
-    }
+    // ✅ NO MAP MOVEMENT - map stays stationary
   };
 
   const handleSpaceCardClick = (space) => {
@@ -453,28 +484,21 @@ export default function MapPage() {
     
     console.log('📱 Space card clicked:', space);
     setAnimatingSpace(space.id);
+    setSelectedSpace(space);
     
-    if (space.propertyCoords) {
-      setMapCenter(space.propertyCoords);
-      setMapZoom(16);
-      setSelectedSpace(space);
-      
-      setTimeout(() => {
-        setDetailsExpanded(true);
-        setAnimatingSpace(null);
-      }, 600);
-    }
+    setTimeout(() => {
+      setDetailsExpanded(true);
+      setAnimatingSpace(null);
+    }, 600);
+    
+    // ✅ NO MAP MOVEMENT - only card animation
   };
 
   const handlePropertyClick = (property) => {
     if (!isMountedRef.current) return;
     
     console.log('🏢 Property clicked:', property);
-    const coords = getPropertyCoords(property);
-    if (coords) {
-      setMapCenter(coords);
-      setMapZoom(15);
-    }
+    // ✅ NO MAP MOVEMENT - map stays stationary
   };
 
   // Filter handlers
@@ -516,17 +540,12 @@ export default function MapPage() {
     });
   };
 
-  const toggleMapLayer = (layer) => {
-    setMapLayers(prev => ({
-      ...prev,
-      [layer]: !prev[layer]
-    }));
-  };
-
+  // ✅ ONLY location button can move the map
   const handleCenterOnLocation = () => {
     if (userLocation) {
-      setMapCenter({ lat: userLocation.lat, lng: userLocation.lng });
-      setMapZoom(14);
+      // For demo - would actually move map to user location
+      console.log('📍 Would center map on user location:', userLocation);
+      alert('Location feature coming soon! For now, the map stays centered on Orange County.');
     } else {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -535,8 +554,8 @@ export default function MapPage() {
             lng: position.coords.longitude
           };
           setUserLocation(coords);
-          setMapCenter(coords);
-          setMapZoom(14);
+          console.log('📍 Would center map on user location:', coords);
+          alert('Location detected! For now, the map stays centered on Orange County.');
         },
         (error) => {
           console.error('Could not get location:', error);
@@ -552,7 +571,7 @@ export default function MapPage() {
 
   // Calculate ROI for a space
   const calculateROI = (space) => {
-    const price = space.baseRate || 150;
+    const price = getNumericPrice(space);
     const monthlyPrice = price * 30;
     const insights = getBusinessInsights(space.property);
     
@@ -580,15 +599,92 @@ export default function MapPage() {
     return count;
   }, [filters]);
 
+  // ✅ NEW: Pagination controls
+  const renderPaginationControls = () => {
+    if (totalPages <= 1) return null;
+
+    const getPageNumbers = () => {
+      const pages = [];
+      const maxVisiblePages = 5;
+      
+      if (totalPages <= maxVisiblePages) {
+        for (let i = 1; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        const start = Math.max(1, currentPage - 2);
+        const end = Math.min(totalPages, start + maxVisiblePages - 1);
+        
+        for (let i = start; i <= end; i++) {
+          pages.push(i);
+        }
+      }
+      
+      return pages;
+    };
+
+    return (
+      <div className="flex items-center justify-between px-6 py-4 border-t border-gray-800/50">
+        <div className="text-sm text-gray-400">
+          Showing {((currentPage - 1) * CARDS_PER_PAGE) + 1}-{Math.min(currentPage * CARDS_PER_PAGE, filteredSpaces.length)} of {filteredSpaces.length} spaces
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {/* Previous Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white disabled:opacity-50"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Previous
+          </Button>
+
+          {/* Page Numbers */}
+          <div className="flex items-center gap-1">
+            {getPageNumbers().map(pageNum => (
+              <Button
+                key={pageNum}
+                variant={currentPage === pageNum ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrentPage(pageNum)}
+                className={`w-10 h-8 p-0 ${
+                  currentPage === pageNum
+                    ? 'bg-lime-400 text-gray-900 hover:bg-lime-500'
+                    : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white'
+                }`}
+              >
+                {pageNum}
+              </Button>
+            ))}
+          </div>
+
+          {/* Next Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white disabled:opacity-50"
+          >
+            Next
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="h-screen overflow-hidden bg-gray-900 text-white pt-16">
-      {/* ✅ CLEAN: Two Fixed Containers */}
+    <div className="h-screen overflow-hidden bg-gray-900 text-white">
       <div className="flex h-full">
         
-        {/* ✅ Left Container: Fixed Container with Scrollable Content (60%) */}
-        <div className="w-[60%] h-full">
+        {/* Left Container: Fixed Container with Scrollable Content (60%) */}
+        <div className="w-[60%] h-full flex flex-col">
           {/* Header - Fixed */}
-          <div className="p-6 bg-gray-900 border-b border-gray-800/50">
+          <div className="p-6 bg-gray-900 border-b border-gray-800/50 flex-shrink-0">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h1 className="text-2xl font-bold text-white mb-1">
@@ -600,16 +696,40 @@ export default function MapPage() {
               </div>
               
               <div className="flex items-center gap-2">
+                {/* Filter Button */}
+                <Button 
+                  onClick={() => setShowFilters(true)}
+                  variant="outline"
+                  size="sm"
+                  className={`bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white ${
+                    activeFiltersCount > 0 ? 'ring-1 ring-lime-400 text-lime-400' : ''
+                  }`}
+                >
+                  <Filter className="w-4 h-4 mr-1" />
+                  Filters
+                  {activeFiltersCount > 0 && (
+                    <Badge className="ml-2 bg-lime-400 text-gray-900 text-xs">
+                      {activeFiltersCount}
+                    </Badge>
+                  )}
+                </Button>
+                
+                {/* Cart Button */}
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setGroupByProperty(!groupByProperty)}
-                  className={`bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white ${
-                    groupByProperty ? 'ring-1 ring-lime-400 text-lime-400' : ''
+                  onClick={() => setShowCart(true)}
+                  className={`bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white relative ${
+                    cart.length > 0 ? 'ring-1 ring-lime-400 text-lime-400' : ''
                   }`}
                 >
-                  <Building2 className="w-4 h-4 mr-1" />
-                  Group by Property
+                  <ShoppingCart className="w-4 h-4 mr-1" />
+                  Cart
+                  {cart.length > 0 && (
+                    <Badge className="ml-2 bg-lime-400 text-gray-900 text-xs">
+                      {cart.length}
+                    </Badge>
+                  )}
                 </Button>
               </div>
             </div>
@@ -663,199 +783,213 @@ export default function MapPage() {
             )}
           </div>
 
-          {/* ✅ Scrollable Content Area */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-6">
-              {isLoading ? (
-                <div className="flex items-center justify-center h-64">
-                  <div className="text-center">
-                    <Loader2 className="w-8 h-8 animate-spin text-lime-400 mx-auto mb-4" />
-                    <p className="text-gray-400">Finding the perfect advertising spaces...</p>
-                  </div>
-                </div>
-              ) : filteredSpaces.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {(groupByProperty ? groupedSpaces : filteredSpaces.map(space => ({ spaces: [space] }))).map((group, groupIndex) => (
-                    <div key={groupByProperty ? group.property?.id || groupIndex : group.spaces[0].id} className="col-span-1">
-                      {/* Property Header (when grouping) */}
-                      {groupByProperty && group.spaces.length > 1 && (
-                        <div className="mb-4 p-3 bg-gray-800/60 backdrop-blur-lg rounded-xl border border-gray-700">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="font-semibold text-white text-sm">{group.propertyName}</h3>
-                              <p className="text-xs text-gray-400 flex items-center">
-                                <MapPin className="w-3 h-3 mr-1" />
-                                {group.propertyAddress}
-                              </p>
-                            </div>
-                            <Badge variant="outline" className="border-gray-600 text-gray-400 text-xs">
-                              {group.spaces.length}
-                            </Badge>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Spaces in this group */}
-                      <div className={groupByProperty && group.spaces.length > 1 ? 'space-y-4 ml-4' : ''}>
-                        {group.spaces.map(space => {
-                          const trust = getTrustIndicators(space.property);
-                          const insights = getBusinessInsights(space.property);
-                          const IconComponent = getAreaCategoryIcon(space);
-                          
-                          return (
-                            <motion.div
-                              key={space.id}
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.3 }}
-                              whileHover={{ y: -4 }}
-                            >
-                              <Card 
-                                onClick={() => handleSpaceCardClick(space)}
-                                className={`cursor-pointer transition-all duration-300 group overflow-hidden rounded-2xl bg-gray-800/60 backdrop-blur-lg border-gray-700/50 hover:bg-gray-700/60 hover:border-lime-400/30 hover:shadow-xl hover:shadow-lime-400/10 ${
-                                  animatingSpace === space.id ? 'ring-2 ring-lime-400 shadow-xl shadow-lime-400/20' : ''
-                                }`}
-                              >
-                                <CardContent className="p-0">
-                                  {/* Square Image Section */}
-                                  <div className="relative aspect-square overflow-hidden">
-                                    <img 
-                                      src={space.images || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400'} 
-                                      alt={getAreaName(space)} 
-                                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                                      onError={(e) => {
-                                        e.target.src = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400';
-                                      }}
-                                    />
-                                    
-                                    {/* Overlay Elements */}
-                                    <div className="absolute top-3 left-3">
-                                      <Badge className="bg-lime-400 text-gray-900 flex items-center gap-1 text-xs">
-                                        <IconComponent className="w-3 h-3" />
-                                        {getAreaType(space)}
-                                      </Badge>
-                                    </div>
-
-                                    <div className="absolute top-3 right-3">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          toggleSavedSpace(space.id);
-                                        }}
-                                        className="p-2 bg-gray-900/80 hover:bg-gray-800 rounded-full transition-colors"
-                                      >
-                                        <Heart className={`w-4 h-4 ${
-                                          savedSpaces.has(space.id) ? 'fill-red-500 text-red-500' : 'text-white'
-                                        }`} />
-                                      </button>
-                                    </div>
-
-                                    {trust?.verified && (
-                                      <div className="absolute bottom-3 left-3">
-                                        <Badge className="bg-green-500 text-white border-0 flex items-center gap-1 text-xs">
-                                          <CheckCircle className="w-3 h-3" />
-                                          Verified
-                                        </Badge>
-                                      </div>
-                                    )}
-
-                                    <div className="absolute bottom-3 right-3">
-                                      <Badge className="bg-gray-900/90 text-lime-400 border-0 font-bold">
-                                        {getAreaPrice(space)}
-                                      </Badge>
-                                    </div>
-                                  </div>
-
-                                  {/* Content Section */}
-                                  <div className="p-4 space-y-2">
-                                    <div className="flex items-start justify-between">
-                                      <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-base text-white group-hover:text-lime-400 transition-colors duration-300 truncate">
-                                          {getAreaName(space)}
-                                        </h3>
-                                        {!groupByProperty && (
-                                          <p className="text-xs text-gray-400 font-medium truncate">
-                                            at {space.propertyName}
-                                          </p>
-                                        )}
-                                      </div>
-                                      {trust?.rating && (
-                                        <div className="flex items-center text-yellow-400 ml-2">
-                                          <Star className="w-3 h-3 mr-1 fill-current" />
-                                          <span className="text-xs font-medium">{trust.rating}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                    
-                                    <p className="text-xs text-gray-400 flex items-center truncate">
-                                      <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
-                                      {space.propertyAddress}
-                                    </p>
-
-                                    {/* Performance Metrics */}
-                                    <div className="flex items-center justify-between text-xs">
-                                      <div className="flex items-center text-emerald-400">
-                                        <Users className="w-3 h-3 mr-1" />
-                                        <span>{(insights.footTraffic/1000).toFixed(0)}K/day</span>
-                                      </div>
-                                      <div className="flex items-center text-cyan-400">
-                                        <TrendingUp className="w-3 h-3 mr-1" />
-                                        <span>+{insights.avgCampaignLift}%</span>
-                                      </div>
-                                    </div>
-
-                                    {/* Action Area */}
-                                    <div className="flex items-center justify-between pt-2">
-                                      <div className="flex items-center text-lime-400">
-                                        <Eye className="w-3 h-3 mr-1" />
-                                        <span className="text-xs">Available</span>
-                                      </div>
-                                      <Button 
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleSpaceClick(space);
-                                        }}
-                                        size="sm"
-                                        className="bg-lime-400 text-gray-900 hover:bg-lime-500 text-xs px-3 py-1"
-                                      >
-                                        Details
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            </motion.div>
-                          );
-                        })}
-                      </div>
+          {/* ✅ Content Area - Flex grow with pagination */}
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-6">
+                {error ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-center">
+                      <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-white mb-2">
+                        Failed to load advertising spaces
+                      </h3>
+                      <p className="text-gray-400 mb-4">{error}</p>
+                      <Button 
+                        onClick={loadPropertiesData}
+                        className="bg-lime-400 text-gray-900 hover:bg-lime-500"
+                      >
+                        Try Again
+                      </Button>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-64">
-                  <div className="text-center">
-                    <Building2 className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-white mb-2">
-                      No advertising spaces found
-                    </h3>
-                    <p className="text-gray-400 mb-4">
-                      Try adjusting your filters to see more results
-                    </p>
-                    <Button 
-                      variant="outline" 
-                      onClick={clearFilters}
-                      className="bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white"
-                    >
-                      Clear filters
-                    </Button>
                   </div>
-                </div>
-              )}
+                ) : isLoading ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-center">
+                      <Loader2 className="w-8 h-8 animate-spin text-lime-400 mx-auto mb-4" />
+                      <p className="text-gray-400">Finding the perfect advertising spaces...</p>
+                    </div>
+                  </div>
+                ) : paginatedSpaces.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {paginatedSpaces.map(space => {
+                      const trust = getTrustIndicators(space.property);
+                      const insights = getBusinessInsights(space.property);
+                      const IconComponent = getAreaCategoryIcon(space);
+                      
+                      return (
+                        <motion.div
+                          key={space.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
+                          whileHover={{ y: -4 }}
+                        >
+                          <Card 
+                            onClick={() => handleSpaceCardClick(space)}
+                            className={`cursor-pointer transition-all duration-300 group overflow-hidden rounded-2xl bg-gray-800/60 backdrop-blur-lg border-gray-700/50 hover:bg-gray-700/60 hover:border-lime-400/30 hover:shadow-xl hover:shadow-lime-400/10 ${
+                              animatingSpace === space.id ? 'ring-2 ring-lime-400 shadow-xl shadow-lime-400/20' : ''
+                            }`}
+                          >
+                            <CardContent className="p-0">
+                              {/* Square Image Section */}
+                              <div className="relative aspect-square overflow-hidden">
+                                <img 
+                                  src={space.images || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400'} 
+                                  alt={getAreaName(space)} 
+                                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                                  onError={(e) => {
+                                    e.target.src = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400';
+                                  }}
+                                />
+                                
+                                {/* Overlay Elements */}
+                                <div className="absolute top-3 left-3">
+                                  <Badge className="bg-lime-400 text-gray-900 flex items-center gap-1 text-xs">
+                                    <IconComponent className="w-3 h-3" />
+                                    {getAreaType(space)}
+                                  </Badge>
+                                </div>
+
+                                <div className="absolute top-3 right-3 flex gap-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleSavedSpace(space.id);
+                                    }}
+                                    className="p-2 bg-gray-900/80 hover:bg-gray-800 rounded-full transition-colors"
+                                  >
+                                    <Heart className={`w-4 h-4 ${
+                                      savedSpaces.has(space.id) ? 'fill-red-500 text-red-500' : 'text-white'
+                                    }`} />
+                                  </button>
+                                  
+                                  {/* Quick Add to Cart Button */}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (!isInCart(space.id)) {
+                                        addToCart(space);
+                                      }
+                                    }}
+                                    className={`p-2 bg-gray-900/80 hover:bg-gray-800 rounded-full transition-colors ${
+                                      isInCart(space.id) ? 'bg-lime-400/80 text-gray-900' : ''
+                                    }`}
+                                    disabled={isInCart(space.id)}
+                                  >
+                                    {isInCart(space.id) ? (
+                                      <CheckCircle className="w-4 h-4" />
+                                    ) : (
+                                      <Plus className="w-4 h-4 text-white" />
+                                    )}
+                                  </button>
+                                </div>
+
+                                {trust?.verified && (
+                                  <div className="absolute bottom-3 left-3">
+                                    <Badge className="bg-green-500 text-white border-0 flex items-center gap-1 text-xs">
+                                      <CheckCircle className="w-3 h-3" />
+                                      Verified
+                                    </Badge>
+                                  </div>
+                                )}
+
+                                <div className="absolute bottom-3 right-3">
+                                  <Badge className="bg-gray-900/90 text-lime-400 border-0 font-bold">
+                                    {getAreaPrice(space)}
+                                  </Badge>
+                                </div>
+                              </div>
+
+                              {/* Content Section */}
+                              <div className="p-4 space-y-2">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="font-bold text-base text-white group-hover:text-lime-400 transition-colors duration-300 truncate">
+                                      {getAreaName(space)}
+                                    </h3>
+                                    <p className="text-xs text-gray-400 font-medium truncate">
+                                      at {space.propertyName}
+                                    </p>
+                                  </div>
+                                  {trust?.rating && (
+                                    <div className="flex items-center text-yellow-400 ml-2">
+                                      <Star className="w-3 h-3 mr-1 fill-current" />
+                                      <span className="text-xs font-medium">{trust.rating}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                <p className="text-xs text-gray-400 flex items-center truncate">
+                                  <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
+                                  {space.propertyAddress}
+                                </p>
+
+                                {/* Performance Metrics */}
+                                <div className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center text-emerald-400">
+                                    <Users className="w-3 h-3 mr-1" />
+                                    <span>{(insights.footTraffic/1000).toFixed(0)}K/day</span>
+                                  </div>
+                                  <div className="flex items-center text-cyan-400">
+                                    <TrendingUp className="w-3 h-3 mr-1" />
+                                    <span>+{insights.avgCampaignLift}%</span>
+                                  </div>
+                                </div>
+
+                                {/* Action Area */}
+                                <div className="flex items-center justify-between pt-2">
+                                  <div className="flex items-center text-lime-400">
+                                    <Eye className="w-3 h-3 mr-1" />
+                                    <span className="text-xs">Available</span>
+                                  </div>
+                                  <Button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSpaceClick(space);
+                                    }}
+                                    size="sm"
+                                    className="bg-lime-400 text-gray-900 hover:bg-lime-500 text-xs px-3 py-1"
+                                  >
+                                    Details
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-center">
+                      <Building2 className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-white mb-2">
+                        No advertising spaces found
+                      </h3>
+                      <p className="text-gray-400 mb-4">
+                        Try adjusting your filters to see more results
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        onClick={clearFilters}
+                        className="bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white"
+                      >
+                        Clear filters
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* ✅ Pagination Controls - Fixed at bottom */}
+            {renderPaginationControls()}
           </div>
         </div>
 
-        {/* ✅ Right Container: Fixed Map with Padding (40%) */}
+        {/* Right Container: Fixed Map with Padding (40%) */}
         <div className="w-[40%] h-full p-4">
           <div className="relative w-full h-full bg-gray-800 rounded-2xl overflow-hidden">
             <GoogleMap
@@ -863,63 +997,16 @@ export default function MapPage() {
                 property.latitude && property.longitude
               )}
               onPropertyClick={handlePropertyClick}
-              center={mapCenter}
-              zoom={mapZoom}
+              center={mapCenter} // ✅ Always Orange County
+              zoom={mapZoom} // ✅ Fixed zoom
               className="w-full h-full"
-              advertisingAreas={filteredSpaces}
+              advertisingAreas={paginatedSpaces} // Show only current page spaces on map
               onAreaClick={handleSpaceClick}
               showAreaMarkers={true}
             />
 
-            {/* Map Controls - Over the Map */}
-            <div className="absolute top-4 left-4 z-20">
-              <Button 
-                onClick={() => setShowFilters(true)}
-                className={`bg-gray-800/90 backdrop-blur-lg border border-gray-700 text-white hover:bg-gray-700 rounded-xl font-semibold ${
-                  activeFiltersCount > 0 ? 'ring-2 ring-lime-400 bg-lime-400/20' : ''
-                }`}
-              >
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
-                {activeFiltersCount > 0 && (
-                  <Badge className="ml-2 bg-lime-400 text-gray-900 text-xs">
-                    {activeFiltersCount}
-                  </Badge>
-                )}
-              </Button>
-            </div>
-
-            <div className="absolute top-4 right-4 flex flex-col gap-2 z-20">
-              <div className="bg-gray-800/90 backdrop-blur-lg rounded-xl p-2 border border-gray-700">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className={`${mapLayers.heatMap ? 'bg-lime-400 text-gray-900 hover:bg-lime-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white'} transition-all`}
-                  onClick={() => toggleMapLayer('heatMap')}
-                  title="Toggle foot traffic heat map"
-                >
-                  <Thermometer className="w-4 h-4" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className={`${mapLayers.demographics ? 'bg-lime-400 text-gray-900 hover:bg-lime-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white'} transition-all`}
-                  onClick={() => toggleMapLayer('demographics')}
-                  title="Show audience demographics"
-                >
-                  <Users className="w-4 h-4" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className={`${mapLayers.competitors ? 'bg-lime-400 text-gray-900 hover:bg-lime-500' : 'text-gray-300 hover:bg-gray-700 hover:text-white'} transition-all`}
-                  onClick={() => toggleMapLayer('competitors')}
-                  title="Show competitor locations"
-                >
-                  <Target className="w-4 h-4" />
-                </Button>
-              </div>
-              
+            {/* Map Controls */}
+            <div className="absolute top-4 right-4 z-20">
               <Button 
                 size="sm" 
                 className="bg-gray-800/90 backdrop-blur-lg border border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white rounded-xl"
@@ -930,6 +1017,7 @@ export default function MapPage() {
               </Button>
             </div>
 
+            {/* Map Legend */}
             <div className="absolute bottom-4 left-4 z-20">
               <div className="bg-gray-800/90 backdrop-blur-lg rounded-xl p-3 border border-gray-700">
                 <p className="text-xs text-gray-400 mb-2">Map Legend</p>
@@ -949,7 +1037,126 @@ export default function MapPage() {
         </div>
       </div>
 
-      {/* ✅ All Modals Stay the Same */}
+      {/* ✅ NEW: Cart Modal */}
+      <AnimatePresence>
+        {showCart && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setShowCart(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-2xl bg-gray-800 rounded-2xl overflow-hidden border border-gray-700 max-h-[80vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-white">Your Cart</h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCart(false)}
+                    className="text-gray-400 hover:text-white hover:bg-gray-700"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+
+                {cart.length === 0 ? (
+                  <div className="text-center py-8">
+                    <ShoppingCart className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-white mb-2">Your cart is empty</h3>
+                    <p className="text-gray-400">Add some advertising spaces to get started</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {cart.map(item => (
+                      <div key={item.id} className="p-4 bg-gray-700/50 rounded-xl border border-gray-600">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-white">{getAreaName(item.space)}</h3>
+                            <p className="text-sm text-gray-400">{item.space.propertyName}</p>
+                            <p className="text-xs text-gray-500">{item.space.propertyAddress}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFromCart(item.id)}
+                            className="text-gray-400 hover:text-red-400 hover:bg-gray-600"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm text-gray-400">Duration:</span>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => updateCartItemDuration(item.id, Math.max(1, item.duration - 1))}
+                                className="bg-gray-600 border-gray-500 text-gray-300 hover:bg-gray-500 h-8 w-8 p-0"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </Button>
+                              <span className="text-white font-medium w-12 text-center">{item.duration} days</span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => updateCartItemDuration(item.id, item.duration + 1)}
+                                className="bg-gray-600 border-gray-500 text-gray-300 hover:bg-gray-500 h-8 w-8 p-0"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gray-400">${item.pricePerDay}/day</p>
+                            <p className="text-lg font-bold text-lime-400">${item.totalPrice}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <div className="border-t border-gray-600 pt-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-lg font-semibold text-white">Total:</span>
+                        <span className="text-2xl font-bold text-lime-400">${getTotalCartValue()}</span>
+                      </div>
+                      
+                      <div className="flex gap-3">
+                        <Button 
+                          className="flex-1 bg-lime-400 text-gray-900 hover:bg-lime-500"
+                          onClick={() => {
+                            console.log('Proceeding to checkout with cart:', cart);
+                            setShowCart(false);
+                          }}
+                        >
+                          Proceed to Checkout
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setCart([])}
+                          className="bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
+                        >
+                          Clear Cart
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Filters Modal */}
       <AnimatePresence>
         {showFilters && (
@@ -957,7 +1164,7 @@ export default function MapPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-gray-900/80 backdrop-blur-lg flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4"
             onClick={() => setShowFilters(false)}
           >
             <motion.div
@@ -1130,7 +1337,7 @@ export default function MapPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-gray-900/80 backdrop-blur-lg flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4"
             onClick={() => {
               setSelectedSpace(null);
               setDetailsExpanded(false);
@@ -1140,31 +1347,40 @@ export default function MapPage() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-2xl bg-gray-800 rounded-2xl overflow-hidden border border-gray-700 max-h-[90vh] overflow-y-auto"
+              className="w-full max-w-4xl bg-gray-800 rounded-2xl overflow-hidden border border-gray-700 h-[85vh]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
+              {/* Header */}
+              <div className="p-6 pb-4 border-b border-gray-700">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
                     <h2 className="text-2xl font-bold text-white">{getAreaName(selectedSpace)}</h2>
                     <p className="text-gray-400">at {selectedSpace.propertyName}</p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedSpace(null);
-                      setDetailsExpanded(false);
-                    }}
-                    className="text-gray-400 hover:text-white hover:bg-gray-700"
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <Badge className="bg-lime-400 text-gray-900 px-3 py-1">
+                      {getAreaType(selectedSpace)}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedSpace(null);
+                        setDetailsExpanded(false);
+                      }}
+                      className="text-gray-400 hover:text-white hover:bg-gray-700"
+                    >
+                      <X className="w-5 h-5" />
+                    </Button>
+                  </div>
                 </div>
+              </div>
 
-                <div className="space-y-6">
-                  {/* Space Image */}
-                  <div className="relative w-full h-64 rounded-xl overflow-hidden">
+              {/* Main Content - Split Layout */}
+              <div className="flex h-[calc(85vh-140px)]">
+                {/* Left Side - Image */}
+                <div className="w-1/2 p-6 pr-3">
+                  <div className="relative w-full h-full rounded-xl overflow-hidden">
                     <img 
                       src={selectedSpace.images || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800'} 
                       alt={getAreaName(selectedSpace)}
@@ -1173,75 +1389,131 @@ export default function MapPage() {
                         e.target.src = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800';
                       }}
                     />
-                    <div className="absolute top-4 right-4">
-                      <Badge className="bg-gray-900/80 text-lime-400 border-0">
-                        {getAreaType(selectedSpace)}
-                      </Badge>
-                    </div>
                   </div>
+                </div>
 
-                  {/* Space Details */}
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <p className="text-sm text-gray-400 mb-1">Price</p>
-                      <p className="text-2xl font-bold text-lime-400">{getAreaPrice(selectedSpace)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-400 mb-1">Location</p>
-                      <p className="text-lg font-semibold text-white">{selectedSpace.propertyAddress}</p>
-                    </div>
-                  </div>
-
-                  {/* ROI Preview */}
-                  {(() => {
-                    const roi = calculateROI(selectedSpace);
-                    return (
-                      <div className="p-4 bg-gray-700/50 rounded-xl border border-gray-600">
-                        <h3 className="font-semibold text-white mb-3">Estimated Performance</h3>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-gray-400">Monthly Reach:</span>
-                            <span className="font-semibold text-white ml-2">{roi.estimatedReach.toLocaleString()}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-400">Est. ROI:</span>
-                            <span className="font-bold text-lime-400 ml-2">+{roi.roi}%</span>
-                          </div>
+                {/* Right Side - Details */}
+                <div className="w-1/2 p-6 pl-3 flex flex-col">
+                  {/* Price & Location */}
+                  <div className="grid grid-cols-1 gap-4 mb-6">
+                    <div className="p-4 bg-gray-700/50 rounded-xl border border-gray-600">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-400 mb-1">Price</p>
+                          <p className="text-2xl font-bold text-lime-400">{getAreaPrice(selectedSpace)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-400 mb-1">Location</p>
+                          <p className="text-base font-semibold text-white leading-tight">{selectedSpace.propertyAddress}</p>
                         </div>
                       </div>
-                    );
-                  })()}
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-3">
-                    <Button 
-                      className="flex-1 bg-lime-400 text-gray-900 hover:bg-lime-500"
-                      onClick={() => handleBookingNavigation(selectedSpace)}
-                    >
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Book This Space
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowROICalculator(true)}
-                      className="bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
-                    >
-                      <Calculator className="w-4 h-4 mr-2" />
-                      ROI Calculator
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                    </Button>
+                    </div>
                   </div>
 
-                  {/* Property Context */}
-                  <div className="pt-4 border-t border-gray-600">
-                    <p className="text-sm text-gray-400">
-                      This advertising space is part of {selectedSpace.propertyName}
-                    </p>
+                  {/* Performance Metrics */}
+                  <div className="mb-6">
+                    {(() => {
+                      const roi = calculateROI(selectedSpace);
+                      const insights = getBusinessInsights(selectedSpace.property);
+                      const trust = getTrustIndicators(selectedSpace.property);
+                      
+                      return (
+                        <div className="p-4 bg-gray-700/50 rounded-xl border border-gray-600">
+                          <h3 className="font-semibold text-white mb-3">Performance & Trust</h3>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">Daily Traffic:</span>
+                                <span className="font-semibold text-white">{(insights.footTraffic/1000).toFixed(0)}K</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">Campaign Lift:</span>
+                                <span className="font-semibold text-cyan-400">+{insights.avgCampaignLift}%</span>
+                              </div>
+                              {trust.verified && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">Status:</span>
+                                  <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    Verified
+                                  </Badge>
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">Monthly Reach:</span>
+                                <span className="font-semibold text-white">{roi.estimatedReach.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">Est. ROI:</span>
+                                <span className="font-bold text-lime-400">+{roi.roi}%</span>
+                              </div>
+                              {trust.rating && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">Rating:</span>
+                                  <div className="flex items-center text-yellow-400">
+                                    <Star className="w-3 h-3 mr-1 fill-current" />
+                                    <span className="text-xs font-medium">{trust.rating}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Action Buttons - Flex Grow */}
+                  <div className="flex-1 flex flex-col justify-end">
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      {!isInCart(selectedSpace.id) ? (
+                        <Button 
+                          className="bg-lime-400 text-gray-900 hover:bg-lime-500"
+                          onClick={() => {
+                            addToCart(selectedSpace);
+                          }}
+                        >
+                          <ShoppingCart className="w-4 h-4 mr-2" />
+                          Add to Cart
+                        </Button>
+                      ) : (
+                        <Button 
+                          className="bg-green-500 text-white hover:bg-green-600"
+                          disabled
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          In Cart
+                        </Button>
+                      )}
+                      <Button 
+                        variant="outline" 
+                        onClick={() => handleBookingNavigation(selectedSpace)}
+                        className="bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
+                      >
+                        <Calendar className="w-4 h-4 mr-2" />
+                        Book Now
+                      </Button>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setShowROICalculator(true)}
+                        className="bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
+                      >
+                        <Calculator className="w-4 h-4 mr-2" />
+                        ROI Calculator
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
+                      >
+                        <MessageCircle className="w-4 h-4 mr-2" />
+                        Contact
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1257,14 +1529,14 @@ export default function MapPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-gray-900/80 backdrop-blur-lg flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4"
             onClick={() => setShowROICalculator(false)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-lg bg-gray-800 rounded-2xl border border-gray-700"
+              className="w-full max-w-lg bg-gray-800 rounded-2xl border border-gray-700 max-h-[80vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6">
@@ -1313,15 +1585,29 @@ export default function MapPage() {
                       </div>
 
                       <div className="flex gap-3">
-                        <Button 
-                          className="flex-1 bg-lime-400 text-gray-900 hover:bg-lime-500"
-                          onClick={() => {
-                            setShowROICalculator(false);
-                            handleBookingNavigation(selectedSpace);
-                          }}
-                        >
-                          Book This Space
-                        </Button>
+                        {!isInCart(selectedSpace.id) ? (
+                          <Button 
+                            className="flex-1 bg-lime-400 text-gray-900 hover:bg-lime-500"
+                            onClick={() => {
+                              addToCart(selectedSpace);
+                              setShowROICalculator(false);
+                            }}
+                          >
+                            <ShoppingCart className="w-4 h-4 mr-2" />
+                            Add to Cart
+                          </Button>
+                        ) : (
+                          <Button 
+                            className="flex-1 bg-lime-400 text-gray-900 hover:bg-lime-500"
+                            onClick={() => {
+                              setShowROICalculator(false);
+                              handleBookingNavigation(selectedSpace);
+                            }}
+                          >
+                            <Calendar className="w-4 h-4 mr-2" />
+                            Book This Space
+                          </Button>
+                        )}
                         <Button 
                           variant="outline" 
                           className="bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"

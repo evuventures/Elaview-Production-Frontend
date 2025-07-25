@@ -309,4 +309,137 @@ router.post('/:id/cancel', syncUser, async (req, res, next) => {
   }
 });
 
+// Add these endpoints to the END of your existing bookings.js file
+// (before the export default router; line)
+
+// GET /api/bookings/requests - Get booking requests for property owner
+router.get('/requests', syncUser, async (req, res, next) => {
+  try {
+    // Get bookings for properties owned by the current user
+    const bookingRequests = await prisma.bookings.findMany({
+      where: {
+        properties: {
+          ownerId: req.user.id
+        },
+        status: {
+          in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] // Active statuses
+        }
+      },
+      include: {
+        users: {
+          select: { firstName: true, lastName: true, email: true }
+        },
+        properties: {
+          select: { title: true, address: true }
+        },
+        advertising_areas: {
+          select: { name: true, type: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Transform data for frontend
+    const formattedRequests = bookingRequests.map(booking => ({
+      id: booking.id,
+      propertyId: booking.propertyId,
+      spaceName: booking.advertising_areas?.name || 'Ad Space',
+      advertiserName: `${booking.users.firstName || ''} ${booking.users.lastName || ''}`.trim() || booking.users.email,
+      startDate: booking.startDate,
+      endDate: booking.endDate,
+      totalAmount: booking.totalAmount,
+      status: booking.status.toLowerCase(),
+      submittedDate: booking.createdAt,
+      propertyTitle: booking.properties?.title,
+      propertyAddress: booking.properties?.address
+    }));
+
+    res.json({
+      success: true,
+      data: formattedRequests
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/bookings/:id/approve - Approve a booking request
+router.put('/:id/approve', syncUser, async (req, res, next) => {
+  try {
+    // Verify the booking belongs to a property owned by current user
+    const booking = await prisma.bookings.findFirst({
+      where: {
+        id: req.params.id,
+        properties: {
+          ownerId: req.user.id
+        }
+      }
+    });
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        error: 'Booking not found or not authorized'
+      });
+    }
+
+    const updatedBooking = await prisma.bookings.update({
+      where: { id: req.params.id },
+      data: { 
+        status: 'CONFIRMED',
+        updatedAt: new Date()
+      }
+    });
+
+    res.json({
+      success: true,
+      data: updatedBooking,
+      message: 'Booking approved successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/bookings/:id/reject - Reject a booking request  
+router.put('/:id/reject', syncUser, async (req, res, next) => {
+  try {
+    const { notes } = req.body;
+    
+    // Verify the booking belongs to a property owned by current user
+    const booking = await prisma.bookings.findFirst({
+      where: {
+        id: req.params.id,
+        properties: {
+          ownerId: req.user.id
+        }
+      }
+    });
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        error: 'Booking not found or not authorized'
+      });
+    }
+
+    const updatedBooking = await prisma.bookings.update({
+      where: { id: req.params.id },
+      data: { 
+        status: 'CANCELLED',
+        notes: notes || 'Booking rejected by property owner',
+        updatedAt: new Date()
+      }
+    });
+
+    res.json({
+      success: true,
+      data: updatedBooking,
+      message: 'Booking rejected successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

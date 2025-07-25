@@ -4,4 +4,4 @@ Step 1: connect to railway - psql "postgresql://postgres:ClKUNLgfgNLHdVdGMMfTXrQ
 
 Step 2: show all tables - \dt
  
-Step 3: show specific table - \dt (table name)
+Step 3: show specific table - \dT (table name)
