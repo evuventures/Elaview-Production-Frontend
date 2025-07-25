@@ -1,119 +1,55 @@
-// src/pages/Dashboard.tsx
+// src/pages/dashboard/Dashboard.tsx
 import React, { useState, useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
-declare global {
-  interface Window {
-    Clerk?: {
-      session?: {
-        getToken(): Promise<string>;
-      };
-    };
-  }
-}
+// ✅ Import types and utilities
+import type { 
+  Booking, 
+  Property, 
+  BookingRequest, 
+  DashboardStats, 
+  CreativeAsset, 
+  UserRole,
+  StatItem,
+  TabItem
+} from './types';
+import { apiCall } from './utils/api';
+import { getFileType, formatFileSize, getCloudinaryResourceType } from './utils/fileUtils';
+
+// ✅ BATCH 1: Common Components
+import { StatusBadge } from './components/common/StatusBadge';
+import { EmptyState } from './components/common/EmptyState';
+import { LoadingState } from './components/common/LoadingState';
+import { FilePreview } from './components/common/FilePreview';
+import { PreviewModal } from './components/common/PreviewModal';
+
+// ✅ BATCH 2: Layout Components
+import { StatsGrid } from './components/layout/StatsGrid';
+import { RoleToggle } from './components/layout/RoleToggle';
+import { TabNavigation } from './components/layout/TabNavigation';
+import { DashboardHeader } from './components/layout/DashboardHeader';
+
+// ✅ BATCH 2 & 3: Card Components
+import { BookingCard } from './components/booking/BookingCard';
+import { PropertyCard } from './components/property/PropertyCard';
 
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
-const TypedCard = Card as React.ComponentType<React.HTMLAttributes<HTMLDivElement>>;
-const TypedCardContent = CardContent as React.ComponentType<React.HTMLAttributes<HTMLDivElement>>;
-const TypedCardHeader = CardHeader as React.ComponentType<React.HTMLAttributes<HTMLDivElement>>;
-const TypedCardTitle = CardTitle as React.ComponentType<React.HTMLAttributes<HTMLDivElement>>;
 import {
-  Loader2, Plus, Eye, Heart, Calendar, Clock, 
-  MapPin, DollarSign, CheckCircle, AlertCircle, 
-  TrendingUp, Zap, Phone, Mail, Settings,
-  ArrowRight, ExternalLink, Play, Pause, MessageSquare,
-  Shield, Image as ImageIcon, BarChart3, Crown, Building2,
-  Edit, Camera, Users, Filter, Search, Bell, User,
-  ChevronRight, MoreHorizontal, Target, Activity,
-  // ✅ Role toggle icons and new feature icons
-  Megaphone, Home, Upload, CreditCard, Star, 
-  Bookmark, FileText, CalendarDays, UserCircle,
-  ThumbsUp, PieChart, ImagePlus, Receipt,
-  // ✅ Creative upload icons
-  X, Download, Trash2, FileImage, Video, File
+  Loader2, Plus, Eye, Calendar, Clock, 
+  DollarSign, TrendingUp, Zap, Target, Building2,
+  BarChart3, Star, Bookmark, CreditCard, Receipt,
+  CalendarDays, UserCircle, ThumbsUp, PieChart,
+  ImagePlus, Search, Edit, Upload, FileImage, 
+  Video, File, Trash2, X, Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// ✅ Same interfaces as before
-interface Booking {
-  id: string;
-  spaceName?: string;
-  location?: string;
-  status: 'live' | 'pending' | 'approved' | 'ended' | 'rejected' | string;
-  startDate: string;
-  endDate: string;
-  dailyRate?: number;
-  totalCost: number;
-  businessName?: string;
-  creativeUrl?: string;
-  impressions?: number;
-  ctr?: number;
-  propertyId?: string;
-  areaId?: string;
-}
-
-interface Property {
-  id: string;
-  name: string;
-  address: string;
-  status: 'active' | 'draft' | 'pending' | 'inactive';
-  spacesCount: number;
-  activeBookings: number;
-  monthlyEarnings: number;
-  totalEarnings: number;
-  createdDate: string;
-}
-
-interface BookingRequest {
-  id: string;
-  propertyId: string;
-  spaceName: string;
-  advertiserName: string;
-  startDate: string;
-  endDate: string;
-  totalAmount: number;
-  status: 'pending' | 'approved' | 'rejected';
-  creativeUrl?: string;
-  submittedDate: string;
-}
-
-interface DashboardStats {
-  totalSpent: number;
-  activeAds: number;
-  totalImpressions: number;
-  avgROI: string;
-  totalProperties: number;
-  activeProperties: number;
-  pendingBookings: number;
-  monthlyRevenue: number;
-  totalRevenue: number;
-  occupancyRate: number;
-}
-
-// ✅ NEW: Creative Asset interface
-interface CreativeAsset {
-  id: string;
-  name: string;
-  type: 'image' | 'video' | 'document';
-  url: string;
-  size: number;
-  uploadDate: string;
-  status: 'pending' | 'approved' | 'rejected';
-  bookingId?: string;
-  notes?: string;
-  publicId?: string;
-}
-
-// ✅ Role type updated
-type UserRole = 'advertiser' | 'property_owner';
-
 export default function Dashboard() {
-  // ✅ Your existing state
+  // ✅ State management
   const [activeTab, setActiveTab] = useState<'bookings' | 'creative' | 'payments' | 'analytics' | 'reviews' | 'saved' | 'listings' | 'calendar' | 'profile'>('bookings');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -125,7 +61,7 @@ export default function Dashboard() {
     monthlyRevenue: 0, totalRevenue: 0, occupancyRate: 0
   });
 
-  // ✅ NEW: Role management state
+  // ✅ Role management state
   const [userRole, setUserRole] = useState<UserRole>('advertiser');
   const [canSwitchRoles, setCanSwitchRoles] = useState(false);
 
@@ -134,49 +70,18 @@ export default function Dashboard() {
   const { isSignedIn, isLoaded } = useAuth();
   const { user: currentUser } = useUser();
 
-  // ✅ Your existing apiCall function - NO CHANGES
-  const apiCall = async (endpoint: string, options: RequestInit = {}): Promise<any> => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-    
-    let authToken = '';
-    try {
-      if (window.Clerk?.session) {
-        authToken = await window.Clerk.session.getToken();
-      }
-    } catch (error) {
-      console.error('Failed to get auth token:', error);
-      throw new Error('Authentication failed');
-    }
-
-    const response = await fetch(`${apiBaseUrl}${endpoint}`, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json',
-        ...options.headers
-      },
-      ...options
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API call failed: ${response.status} ${errorText}`);
-    }
-
-    return await response.json();
-  };
-
-  // ✅ ADD: Role detection helper
+  // ✅ Role detection helper
   const detectUserRole = (loadedBookings: Booking[], loadedProperties: Property[]): UserRole => {
     const hasBookings = loadedBookings.length > 0;
     const hasProperties = loadedProperties.length > 0;
     
     if (hasProperties && !hasBookings) return 'property_owner';
     if (hasBookings && !hasProperties) return 'advertiser';
-    if (hasProperties) return 'property_owner'; // Default to property owner if both
+    if (hasProperties) return 'property_owner';
     return 'advertiser';
   };
 
-  // ✅ MODIFIED: Your loadData function - only added role detection at the end
+  // ✅ Load data function
   const loadData = async (): Promise<void> => {
     setIsLoading(true);
     try {
@@ -185,7 +90,7 @@ export default function Dashboard() {
       let loadedBookings: Booking[] = [];
       let loadedProperties: Property[] = [];
 
-      // Load bookings (your existing code - NO CHANGES)
+      // Load bookings
       try {
         const bookingsResponse = await apiCall('/bookings');
         if (bookingsResponse?.success && Array.isArray(bookingsResponse.data)) {
@@ -209,7 +114,7 @@ export default function Dashboard() {
         setBookings([]);
       }
 
-      // Load properties (your existing code - NO CHANGES)
+      // Load properties
       try {
         const propertiesResponse = await apiCall('/properties');
         if (propertiesResponse?.success && Array.isArray(propertiesResponse.data)) {
@@ -231,7 +136,7 @@ export default function Dashboard() {
         setProperties([]);
       }
 
-      // Load booking requests (your existing code - NO CHANGES)
+      // Load booking requests
       try {
         const requestsResponse = await apiCall('/bookings/requests');
         if (requestsResponse?.success && Array.isArray(requestsResponse.data)) {
@@ -252,15 +157,13 @@ export default function Dashboard() {
         setBookingRequests([]);
       }
 
-      // ✅ NEW: Role detection and setup
+      // Role detection and setup
       const detectedRole = detectUserRole(loadedBookings, loadedProperties);
       setUserRole(detectedRole);
-      setCanSwitchRoles(true); // Always allow switching
+      setCanSwitchRoles(true);
+      setActiveTab('bookings');
 
-      // Auto-set appropriate tab
-      setActiveTab('bookings'); // Always start with bookings for both roles
-
-      // Calculate combined stats (your existing code - NO CHANGES)
+      // Calculate combined stats
       const stats: DashboardStats = {
         totalSpent: loadedBookings.reduce((sum, b) => sum + b.totalCost, 0),
         activeAds: loadedBookings.filter(b => b.status === 'live').length,
@@ -282,7 +185,7 @@ export default function Dashboard() {
     }
   };
 
-  // ✅ Your existing useEffects - NO CHANGES
+  // ✅ UseEffects
   useEffect(() => {
     if (!isLoading && bookings.length > 0 && properties.length === 0) {
       setActiveTab('bookings');
@@ -297,15 +200,14 @@ export default function Dashboard() {
     }
   }, [isSignedIn, isLoaded]);
 
-  // ✅ NEW: Role change handler
+  // ✅ Role change handler
   const handleRoleChange = (newRole: UserRole) => {
     setUserRole(newRole);
-    // Reset to bookings tab when switching roles
     setActiveTab('bookings');
     console.log(`✅ Role switched to: ${newRole}`);
   };
 
-  // ✅ Your existing handlers - NO CHANGES
+  // ✅ Booking handlers
   const handleApproveBooking = async (bookingId: string) => {
     try {
       await apiCall(`/bookings/${bookingId}/approve`, { method: 'POST' });
@@ -328,30 +230,19 @@ export default function Dashboard() {
     }
   };
 
-  // ✅ Your existing renderStatusBadge - NO CHANGES
-  const renderStatusBadge = (status: string) => {
-    const statusConfig = {
-      live: { color: 'bg-lime-400 text-gray-900', icon: Play, text: 'Live' },
-      active: { color: 'bg-lime-400 text-gray-900', icon: Play, text: 'Live' },
-      pending: { color: 'bg-amber-500 text-white', icon: Clock, text: 'Pending' },
-      approved: { color: 'bg-blue-500 text-white', icon: CheckCircle, text: 'Approved' },
-      rejected: { color: 'bg-red-500 text-white', icon: AlertCircle, text: 'Rejected' },
-      ended: { color: 'bg-gray-500 text-white', icon: Pause, text: 'Ended' }
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-    const IconComponent = config.icon;
-
-    return (
-      <Badge variant="secondary" className={`${config.color} border-0 font-medium`}>
-        <IconComponent className="w-3 h-3 mr-1" />
-        {config.text}
-      </Badge>
-    );
+  // ✅ Property handlers
+  const handleViewProperty = (propertyId: string) => {
+    console.log('View property:', propertyId);
+    // TODO: Navigate to property view page
   };
 
-  // ✅ NEW: Get tabs based on role
-  const getTabs = () => {
+  const handleEditProperty = (propertyId: string) => {
+    console.log('Edit property:', propertyId);
+    // TODO: Navigate to property edit page
+  };
+
+  // ✅ Get tabs based on role
+  const getTabs = (): TabItem[] => {
     if (userRole === 'advertiser') {
       return [
         { id: 'bookings', label: 'Manage Bookings', icon: Calendar },
@@ -375,24 +266,13 @@ export default function Dashboard() {
     }
   };
 
-  // ✅ Your existing loading state - NO CHANGES
+  // ✅ Loading state
   if (!isLoaded || isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-6 bg-lime-400 rounded-2xl md:rounded-3xl flex items-center justify-center shadow-xl">
-            <Loader2 className="w-8 h-8 md:w-10 md:h-10 animate-spin text-gray-900" />
-          </div>
-          <p className="text-gray-300 font-semibold text-base md:text-lg">
-            {!isLoaded ? 'Loading authentication...' : 'Loading your dashboard...'}
-          </p>
-        </div>
-      </div>
-    );
+    return <LoadingState isAuthLoading={!isLoaded} />;
   }
 
-  // ✅ NEW: Role-aware stats
-  const getDisplayStats = () => {
+  // ✅ Role-aware stats
+  const getDisplayStats = (): StatItem[] => {
     if (userRole === 'property_owner') {
       return [
         { icon: DollarSign, value: `$${dashboardStats.totalRevenue.toLocaleString()}`, label: 'Total Revenue', color: 'text-emerald-400' },
@@ -410,7 +290,7 @@ export default function Dashboard() {
     }
   };
 
-  // ✅ NEW: Render tab content based on active tab and role
+  // ✅ Render tab content
   const renderTabContent = () => {
     switch (activeTab) {
       case 'bookings':
@@ -475,148 +355,103 @@ export default function Dashboard() {
             {bookings.length > 0 ? (
               <div className="space-y-4">
                 {bookings.map((booking) => (
-                  <div key={booking.id} className="bg-gray-700/30 border border-gray-600/50 rounded-xl p-4 hover:bg-gray-700/50 transition-all duration-300">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-white">{booking.spaceName}</h3>
-                          {renderStatusBadge(booking.status)}
-                        </div>
-                        <p className="text-sm text-gray-400 flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {booking.location}
-                        </p>
-                        <p className="text-sm text-gray-400">
-                          {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold text-lime-400">${booking.totalCost.toLocaleString()}</div>
-                        <div className="text-sm text-gray-400">${Math.round(booking.dailyRate || 0)}/day</div>
-                      </div>
-                    </div>
-                  </div>
+                  <BookingCard 
+                    key={booking.id} 
+                    booking={booking}
+                    onClick={() => console.log('Booking clicked:', booking.id)}
+                  />
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16 px-6">
-                <div className="w-16 h-16 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Calendar className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-3">
-                  {userRole === 'advertiser' ? 'No active ads yet' : 'No bookings yet'}
-                </h3>
-                <p className="text-gray-400 mb-8 max-w-md mx-auto">
-                  {userRole === 'advertiser' 
+              <EmptyState
+                icon={Calendar}
+                title={userRole === 'advertiser' ? 'No active ads yet' : 'No bookings yet'}
+                description={
+                  userRole === 'advertiser' 
                     ? 'Start advertising by booking your first space'
                     : 'Your booking requests will appear here'
-                  }
-                </p>
-                {userRole === 'advertiser' && (
-                  <Button
-                    asChild
-                    className="bg-lime-400 hover:bg-lime-500 text-gray-900 rounded-xl font-bold transition-all duration-300"
-                  >
-                    <Link to={createPageUrl('Map')}>
-                      <Plus className="w-5 h-5 mr-2" />
-                      Browse Spaces
-                    </Link>
-                  </Button>
-                )}
-              </div>
+                }
+                actionButton={
+                  userRole === 'advertiser' ? (
+                    <Button
+                      asChild
+                      className="bg-lime-400 hover:bg-lime-500 text-gray-900 rounded-xl font-bold transition-all duration-300"
+                    >
+                      <Link to={createPageUrl('Map')}>
+                        <Plus className="w-5 h-5 mr-2" />
+                        Browse Spaces
+                      </Link>
+                    </Button>
+                  ) : undefined
+                }
+              />
             )}
           </div>
         );
 
       case 'creative':
-        return <CreativeAssetsTab userRole={userRole} apiCall={apiCall} currentUser={currentUser} renderStatusBadge={renderStatusBadge} />;
+        return <CreativeAssetsTab userRole={userRole} apiCall={apiCall} currentUser={currentUser} />;
 
       case 'payments':
         return (
-          <div className="space-y-6">
-            <div className="text-center py-16 px-6">
-              <div className="w-16 h-16 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CreditCard className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">Payment History</h3>
-              <p className="text-gray-400 mb-8 max-w-md mx-auto">
-                View your transaction history and invoices
-              </p>
+          <EmptyState
+            icon={CreditCard}
+            title="Payment History"
+            description="View your transaction history and invoices"
+            actionButton={
               <Button className="bg-lime-400 hover:bg-lime-500 text-gray-900 rounded-xl font-bold">
                 <Receipt className="w-5 h-5 mr-2" />
                 View Transactions
               </Button>
-            </div>
-          </div>
+            }
+          />
         );
 
       case 'analytics':
         return (
-          <div className="space-y-6">
-            <div className="text-center py-16 px-6">
-              <div className="w-16 h-16 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                {userRole === 'advertiser' ? (
-                  <BarChart3 className="w-8 h-8 text-gray-400" />
-                ) : (
-                  <PieChart className="w-8 h-8 text-gray-400" />
-                )}
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">
-                {userRole === 'advertiser' ? 'Campaign Analytics' : 'Listing Analytics'}
-              </h3>
-              <p className="text-gray-400 mb-8 max-w-md mx-auto">
-                {userRole === 'advertiser' 
-                  ? 'Track your advertising campaign performance'
-                  : 'View performance metrics for your listings'
-                }
-              </p>
+          <EmptyState
+            icon={userRole === 'advertiser' ? BarChart3 : PieChart}
+            title={userRole === 'advertiser' ? 'Campaign Analytics' : 'Listing Analytics'}
+            description={
+              userRole === 'advertiser' 
+                ? 'Track your advertising campaign performance'
+                : 'View performance metrics for your listings'
+            }
+            actionButton={
               <Button className="bg-lime-400 hover:bg-lime-500 text-gray-900 rounded-xl font-bold">
                 <TrendingUp className="w-5 h-5 mr-2" />
                 View Analytics
               </Button>
-            </div>
-          </div>
+            }
+          />
         );
 
       case 'reviews':
         return (
-          <div className="space-y-6">
-            <div className="text-center py-16 px-6">
-              <div className="w-16 h-16 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                {userRole === 'advertiser' ? (
-                  <Star className="w-8 h-8 text-gray-400" />
-                ) : (
-                  <ThumbsUp className="w-8 h-8 text-gray-400" />
-                )}
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">
-                {userRole === 'advertiser' ? 'Give Reviews' : 'Reviews Received'}
-              </h3>
-              <p className="text-gray-400 mb-8 max-w-md mx-auto">
-                {userRole === 'advertiser' 
-                  ? 'Rate and review the properties you\'ve advertised on'
-                  : 'View reviews from advertisers who used your spaces'
-                }
-              </p>
+          <EmptyState
+            icon={userRole === 'advertiser' ? Star : ThumbsUp}
+            title={userRole === 'advertiser' ? 'Give Reviews' : 'Reviews Received'}
+            description={
+              userRole === 'advertiser' 
+                ? 'Rate and review the properties you\'ve advertised on'
+                : 'View reviews from advertisers who used your spaces'
+            }
+            actionButton={
               <Button className="bg-lime-400 hover:bg-lime-500 text-gray-900 rounded-xl font-bold">
                 <Star className="w-5 h-5 mr-2" />
                 {userRole === 'advertiser' ? 'Write Review' : 'View Reviews'}
               </Button>
-            </div>
-          </div>
+            }
+          />
         );
 
       case 'saved':
         return (
-          <div className="space-y-6">
-            <div className="text-center py-16 px-6">
-              <div className="w-16 h-16 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Bookmark className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">Saved Listings</h3>
-              <p className="text-gray-400 mb-8 max-w-md mx-auto">
-                Your watchlist of interesting advertising spaces
-              </p>
+          <EmptyState
+            icon={Bookmark}
+            title="Saved Listings"
+            description="Your watchlist of interesting advertising spaces"
+            actionButton={
               <Button
                 asChild
                 className="bg-lime-400 hover:bg-lime-500 text-gray-900 rounded-xl font-bold"
@@ -626,8 +461,8 @@ export default function Dashboard() {
                   Find Spaces to Save
                 </Link>
               </Button>
-            </div>
-          </div>
+            }
+          />
         );
 
       case 'listings':
@@ -636,101 +471,63 @@ export default function Dashboard() {
             {properties.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {properties.map((property) => (
-                  <div key={property.id} className="bg-gray-700/30 border border-gray-600/50 rounded-xl p-4 hover:bg-gray-700/50 transition-all duration-300">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-white">{property.name}</h3>
-                        <p className="text-sm text-gray-400">{property.address}</p>
-                      </div>
-                      <Badge variant={property.status === 'active' ? 'default' : 'secondary'} 
-                             className={property.status === 'active' ? 'bg-lime-400 text-gray-900' : 'bg-gray-600 text-gray-300'}>
-                        {property.status}
-                      </Badge>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
-                      <div>
-                        <span className="text-gray-400 block">Ad Spaces</span>
-                        <span className="font-semibold text-white">{property.spacesCount}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 block">Bookings</span>
-                        <span className="font-semibold text-white">{property.activeBookings}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white">
-                        <Eye className="w-3 h-3 mr-1" />
-                        View
-                      </Button>
-                      <Button variant="outline" size="sm" className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white">
-                        <Edit className="w-3 h-3 mr-1" />
-                        Edit
-                      </Button>
-                    </div>
-                  </div>
+                  <PropertyCard
+                    key={property.id}
+                    property={property}
+                    onView={handleViewProperty}
+                    onEdit={handleEditProperty}
+                  />
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16 px-6">
-                <div className="w-16 h-16 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Building2 className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-3">Start Earning from Your Spaces</h3>
-                <p className="text-gray-400 mb-8 max-w-md mx-auto">
-                  List your advertising spaces to start earning revenue
-                </p>
-                <Button
-                  asChild
-                  className="bg-lime-400 hover:bg-lime-500 text-gray-900 rounded-xl font-bold transition-all duration-300"
-                >
-                  <Link to={createPageUrl('CreateProperty')}>
-                    <Plus className="w-5 h-5 mr-2" />
-                    List Your First Property
-                  </Link>
-                </Button>
-              </div>
+              <EmptyState
+                icon={Building2}
+                title="Start Earning from Your Spaces"
+                description="List your advertising spaces to start earning revenue"
+                actionButton={
+                  <Button
+                    asChild
+                    className="bg-lime-400 hover:bg-lime-500 text-gray-900 rounded-xl font-bold transition-all duration-300"
+                  >
+                    <Link to={createPageUrl('CreateProperty')}>
+                      <Plus className="w-5 h-5 mr-2" />
+                      List Your First Property
+                    </Link>
+                  </Button>
+                }
+              />
             )}
           </div>
         );
 
       case 'calendar':
         return (
-          <div className="space-y-6">
-            <div className="text-center py-16 px-6">
-              <div className="w-16 h-16 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CalendarDays className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">Calendar & Scheduling</h3>
-              <p className="text-gray-400 mb-8 max-w-md mx-auto">
-                Manage availability and booking schedules for your properties
-              </p>
+          <EmptyState
+            icon={CalendarDays}
+            title="Calendar & Scheduling"
+            description="Manage availability and booking schedules for your properties"
+            actionButton={
               <Button className="bg-lime-400 hover:bg-lime-500 text-gray-900 rounded-xl font-bold">
                 <Calendar className="w-5 h-5 mr-2" />
                 View Calendar
               </Button>
-            </div>
-          </div>
+            }
+          />
         );
 
       case 'profile':
         return (
-          <div className="space-y-6">
-            <div className="text-center py-16 px-6">
-              <div className="w-16 h-16 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <UserCircle className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">Business Profile</h3>
-              <p className="text-gray-400 mb-8 max-w-md mx-auto">
-                Manage your business information and profile settings
-              </p>
+          <EmptyState
+            icon={UserCircle}
+            title="Business Profile"
+            description="Manage your business information and profile settings"
+            actionButton={
               <Button className="bg-lime-400 hover:bg-lime-500 text-gray-900 rounded-xl font-bold">
                 <Edit className="w-5 h-5 mr-2" />
                 Edit Profile
               </Button>
-            </div>
-          </div>
+            }
+          />
         );
 
       default:
@@ -745,129 +542,24 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 space-y-8">
       <div className="w-full max-w-7xl mx-auto space-y-8">
 
-        {/* ✅ MODIFIED: Header with repositioned role toggle */}
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl md:rounded-3xl overflow-hidden shadow-xl border border-gray-700/50">
-            <div className="p-6 md:p-8">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center shadow-xl flex-shrink-0 ${
-                    userRole === 'property_owner' ? 'bg-cyan-400' : 'bg-lime-400'
-                  }`}>
-                    {userRole === 'property_owner' ? (
-                      <Home className="w-6 h-6 md:w-8 md:h-8 text-gray-900" />
-                    ) : (
-                      <Megaphone className="w-6 h-6 md:w-8 md:h-8 text-gray-900" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">
-                      {userRole === 'property_owner' ? 'Property Owner Dashboard' : 'Advertiser Dashboard'}
-                    </h1>
-                    <p className="text-gray-400 text-sm md:text-base">
-                      {userRole === 'property_owner' ? 'Manage your properties and bookings' : 'Track your advertising campaigns'}
-                    </p>
-                  </div>
-                </div>
+        {/* ✅ BATCH 3: Using DashboardHeader component */}
+        <DashboardHeader 
+          userRole={userRole}
+          canSwitchRoles={canSwitchRoles}
+          onRoleChange={handleRoleChange}
+        />
 
-                {/* ✅ MODIFIED: Role toggle moved above action buttons */}
-                <div className="flex flex-col gap-3 lg:flex-shrink-0">
-                  {/* ✅ NEW: Role toggle positioned first */}
-                  {canSwitchRoles && (
-                    <div className="flex items-center justify-center lg:justify-end">
-                      <div className="flex items-center gap-2 bg-gray-700/50 rounded-lg p-1">
-                        <button
-                          onClick={() => handleRoleChange('advertiser')}
-                          className={`px-3 py-1 rounded text-sm font-medium transition-all ${
-                            userRole === 'advertiser' ? 'bg-lime-400 text-gray-900' : 'text-gray-400 hover:text-white'
-                          }`}
-                        >
-                          Advertiser
-                        </button>
-                        <button
-                          onClick={() => handleRoleChange('property_owner')}
-                          className={`px-3 py-1 rounded text-sm font-medium transition-all ${
-                            userRole === 'property_owner' ? 'bg-cyan-400 text-gray-900' : 'text-gray-400 hover:text-white'
-                          }`}
-                        >
-                          Property Owner
-                        </button>
-                      </div>
-                    </div>
-                  )}
+        {/* ✅ BATCH 2: Using StatsGrid component */}
+        <StatsGrid stats={displayStats} />
 
-                  {/* ✅ Action buttons positioned below role toggle */}
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    {userRole === 'advertiser' && (
-                      <Button
-                        asChild
-                        className="bg-lime-400 hover:bg-lime-500 text-gray-900 rounded-xl font-bold transition-all duration-300 hover:scale-105 shadow-lg"
-                      >
-                        <Link to={createPageUrl('Map')}>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Find New Spaces
-                        </Link>
-                      </Button>
-                    )}
-                    {userRole === 'property_owner' && (
-                      <Button
-                        asChild
-                        variant="outline"
-                        className="border-gray-600 text-gray-300 rounded-xl font-bold hover:bg-gray-700 hover:text-white transition-all duration-300"
-                      >
-                        <Link to={createPageUrl('CreateProperty')}>
-                          <Plus className="w-4 h-4 mr-2" />
-                          List Property
-                        </Link>
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ✅ MODIFIED: Role-specific stats */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-            {displayStats.map((stat, index) => (
-              <motion.div key={index} whileHover={{ scale: 1.02, y: -5 }} className="bg-gray-800/50 backdrop-blur-xl border border-gray-700/50 rounded-2xl">
-                <div className="p-4 md:p-6 text-center">
-                  <stat.icon className={`w-6 h-6 md:w-8 md:h-8 ${stat.color} mx-auto mb-3`} />
-                  <div className="text-2xl md:text-3xl font-bold text-white">{stat.value}</div>
-                  <div className="text-sm text-gray-400">{stat.label}</div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* ✅ NEW: Role-specific tabs */}
+        {/* ✅ BATCH 2: Updated Tabs with extracted components */}
         <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700/50 rounded-2xl shadow-xl overflow-hidden">
-          <div className="border-b border-gray-700/50 px-6 py-4">
-            <div className="flex space-x-2 md:space-x-4 overflow-x-auto">
-              {tabs.map((tab) => {
-                const IconComponent = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center gap-2 pb-2 px-2 text-sm font-semibold border-b-2 transition-all duration-300 whitespace-nowrap ${
-                      activeTab === tab.id
-                        ? 'border-lime-400 text-lime-400'
-                        : 'border-transparent text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    <IconComponent className="w-4 h-4" />
-                    <span className="hidden sm:inline">{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <TabNavigation 
+            tabs={tabs}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
 
-          {/* ✅ NEW: Dynamic tab content */}
           <div className="p-6">
             <AnimatePresence mode="wait">
               <motion.div
@@ -887,20 +579,18 @@ export default function Dashboard() {
   );
 }
 
-// ✅ NEW: Creative Assets Tab Component
+// ✅ BATCH 3: Updated CreativeAssetsTab using extracted components
 const CreativeAssetsTab: React.FC<{
   userRole: UserRole;
   apiCall: (endpoint: string, options?: RequestInit) => Promise<any>;
   currentUser: any;
-  renderStatusBadge: (status: string) => JSX.Element;
-}> = ({ userRole, apiCall, currentUser, renderStatusBadge }) => {
+}> = ({ userRole, apiCall, currentUser }) => {
   const [creatives, setCreatives] = useState<CreativeAsset[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
-  // ✅ NEW: Preview modal state
   const [previewModal, setPreviewModal] = useState<{
     isOpen: boolean;
     creative: CreativeAsset | null;
@@ -914,7 +604,6 @@ const CreativeAssetsTab: React.FC<{
     setPreviewModal({ isOpen: false, creative: null });
   };
 
-  // Load existing creatives
   useEffect(() => {
     loadCreatives();
   }, []);
@@ -938,7 +627,7 @@ const CreativeAssetsTab: React.FC<{
       }
     } catch (error) {
       console.warn('Failed to load creatives:', error);
-      // Load mock data for demo
+      // Mock data for demo
       setCreatives([
         {
           id: '1',
@@ -962,21 +651,6 @@ const CreativeAssetsTab: React.FC<{
         }
       ]);
     }
-  };
-
-  const getFileType = (filename: string): 'image' | 'video' | 'document' => {
-    const ext = filename.split('.').pop()?.toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext || '')) return 'image';
-    if (['mp4', 'mov', 'avi', 'webm', 'mkv'].includes(ext || '')) return 'video';
-    return 'document';
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -1022,18 +696,12 @@ const CreativeAssetsTab: React.FC<{
       try {
         setUploadProgress(prev => ({ ...prev, [fileId]: 0 }));
         
-        // ✅ CLOUDINARY UPLOAD
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('upload_preset', 'creative_uploads'); // Use your actual preset name
-        
-        // Optional: Add folder organization
+        formData.append('upload_preset', 'creative_uploads');
         formData.append('folder', 'creatives');
-        
-        // Optional: Add tags for organization
         formData.append('tags', `advertiser_${currentUser?.id || 'unknown'}`);
         
-        // Upload to Cloudinary
         const cloudinaryResponse = await fetch(
           `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/${getCloudinaryResourceType(file)}/upload`,
           {
@@ -1049,12 +717,11 @@ const CreativeAssetsTab: React.FC<{
         const cloudinaryResult = await cloudinaryResponse.json();
         setUploadProgress(prev => ({ ...prev, [fileId]: 50 }));
         
-        // ✅ SAVE METADATA TO YOUR DATABASE
         const creativeData = {
           name: file.name,
           type: getFileType(file.name),
-          url: cloudinaryResult.secure_url, // Permanent Cloudinary URL
-          publicId: cloudinaryResult.public_id, // For deletions/transformations
+          url: cloudinaryResult.secure_url,
+          publicId: cloudinaryResult.public_id,
           size: file.size,
           format: cloudinaryResult.format,
           width: cloudinaryResult.width,
@@ -1069,9 +736,8 @@ const CreativeAssetsTab: React.FC<{
         
         setUploadProgress(prev => ({ ...prev, [fileId]: 100 }));
         
-        // Add to local state
         const newCreative: CreativeAsset = {
-          id: dbResponse.data?.id || fileId, // Use real DB ID
+          id: dbResponse.data?.id || fileId,
           name: file.name,
           type: getFileType(file.name),
           url: cloudinaryResult.secure_url,
@@ -1085,8 +751,7 @@ const CreativeAssetsTab: React.FC<{
         
       } catch (error) {
         console.error('Upload failed for:', file.name, error);
-        setUploadProgress(prev => ({ ...prev, [fileId]: -1 })); // Indicate error
-        // Show error notification to user
+        setUploadProgress(prev => ({ ...prev, [fileId]: -1 }));
       }
     }
     
@@ -1095,37 +760,9 @@ const CreativeAssetsTab: React.FC<{
     setIsUploading(false);
   };
 
-  // ✅ Helper function to determine Cloudinary resource type
-  const getCloudinaryResourceType = (file: File): string => {
-    const fileType = getFileType(file.name);
-    switch (fileType) {
-      case 'video': return 'video';
-      case 'image': return 'image';
-      default: return 'raw'; // For documents
-    }
-  };
-
   const deleteCreative = async (id: string) => {
     try {
-      // ✅ DELETE FROM DATABASE FIRST
       await apiCall(`/creatives/${id}`, { method: 'DELETE' });
-      
-      // ✅ DELETE FROM CLOUDINARY (optional - you can keep files for backup)
-      // You'll need the publicId from your database
-      // const creative = creatives.find(c => c.id === id);
-      // if (creative?.publicId) {
-      //   await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/destroy`, {
-      //     method: 'POST',
-      //     headers: { 'Content-Type': 'application/json' },
-      //     body: JSON.stringify({
-      //       public_id: creative.publicId,
-      //       api_key: import.meta.env.VITE_CLOUDINARY_API_KEY,
-      //       timestamp: Math.floor(Date.now() / 1000),
-      //       signature: generateCloudinarySignature() // You'd need to implement this
-      //     })
-      //   });
-      // }
-      
       setCreatives(prev => prev.filter(c => c.id !== id));
     } catch (error) {
       console.error('Failed to delete creative:', error);
@@ -1140,68 +777,7 @@ const CreativeAssetsTab: React.FC<{
     }
   };
 
-  // ✅ NEW: Component for rendering file previews
-  const FilePreview: React.FC<{ creative: CreativeAsset; size?: 'small' | 'large' }> = ({ 
-    creative, 
-    size = 'small' 
-  }) => {
-    const dimensions = size === 'large' ? 'w-24 h-24' : 'w-10 h-10';
-    
-    if (creative.type === 'image') {
-      return (
-        <div className={`${dimensions} rounded-lg overflow-hidden bg-gray-600 flex-shrink-0`}>
-          <img 
-            src={creative.url} 
-            alt={creative.name}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              // Fallback to icon if image fails to load
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              target.nextElementSibling?.classList.remove('hidden');
-            }}
-          />
-          <div className="hidden w-full h-full flex items-center justify-center">
-            <FileImage className="w-6 h-6 text-gray-400" />
-          </div>
-        </div>
-      );
-    }
-    
-    if (creative.type === 'video') {
-      return (
-        <div className={`${dimensions} rounded-lg overflow-hidden bg-gray-600 flex-shrink-0 relative`}>
-          <video 
-            src={creative.url} 
-            className="w-full h-full object-cover"
-            muted
-            onError={(e) => {
-              // Fallback to icon if video fails to load
-              const target = e.target as HTMLVideoElement;
-              target.style.display = 'none';
-              target.nextElementSibling?.classList.remove('hidden');
-            }}
-          />
-          <div className="hidden w-full h-full flex items-center justify-center absolute inset-0">
-            <Video className="w-6 h-6 text-gray-400" />
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-            <Play className="w-4 h-4 text-white" />
-          </div>
-        </div>
-      );
-    }
-    
-    // Document fallback
-    return (
-      <div className={`${dimensions} bg-gray-600 rounded-lg flex items-center justify-center flex-shrink-0`}>
-        <File className="w-6 h-6 text-gray-400" />
-      </div>
-    );
-  };
-
   if (userRole === 'property_owner') {
-    // Property owner view - Review creatives
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -1250,24 +826,28 @@ const CreativeAssetsTab: React.FC<{
             })}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <Eye className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">No pending creatives</h3>
-            <p className="text-gray-400">Creative assets awaiting review will appear here</p>
-          </div>
+          <EmptyState
+            icon={Eye}
+            title="No pending creatives"
+            description="Creative assets awaiting review will appear here"
+          />
         )}
+
+        <PreviewModal
+          creative={previewModal.creative}
+          isOpen={previewModal.isOpen}
+          onClose={closePreview}
+        />
       </div>
     );
   }
 
-  // Advertiser view - Upload and manage creatives
   return (
     <div className="space-y-6">
-      {/* Upload Area */}
+      {/* Upload Section */}
       <div className="bg-gray-800/50 border border-gray-600 rounded-xl p-6">
         <h2 className="text-xl font-bold text-white mb-4">Upload Creative Assets</h2>
         
-        {/* Drag & Drop Zone */}
         <div
           className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
             dragActive 
@@ -1302,7 +882,6 @@ const CreativeAssetsTab: React.FC<{
           </Button>
         </div>
 
-        {/* Selected Files Preview */}
         {selectedFiles.length > 0 && (
           <div className="mt-6">
             <h3 className="text-lg font-semibold text-white mb-4">Selected Files ({selectedFiles.length})</h3>
@@ -1402,7 +981,7 @@ const CreativeAssetsTab: React.FC<{
                       <h3 className="font-semibold text-white truncate">{creative.name}</h3>
                       <p className="text-sm text-gray-400">{formatFileSize(creative.size)}</p>
                     </div>
-                    {renderStatusBadge(creative.status)}
+                    <StatusBadge status={creative.status} />
                   </div>
                   
                   <p className="text-sm text-gray-400 mb-3">
@@ -1433,74 +1012,19 @@ const CreativeAssetsTab: React.FC<{
             })}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <ImagePlus className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">No creative assets yet</h3>
-            <p className="text-gray-400">Upload your first creative asset to get started</p>
-          </div>
+          <EmptyState
+            icon={ImagePlus}
+            title="No creative assets yet"
+            description="Upload your first creative asset to get started"
+          />
         )}
       </div>
 
-      {/* ✅ NEW: Preview Modal */}
-      {previewModal.isOpen && previewModal.creative && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 border border-gray-600 rounded-xl max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-gray-600">
-              <div>
-                <h3 className="text-lg font-semibold text-white">{previewModal.creative.name}</h3>
-                <p className="text-sm text-gray-400">
-                  {formatFileSize(previewModal.creative.size)} • {previewModal.creative.type}
-                </p>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={closePreview}
-                className="text-gray-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-            
-            <div className="p-4 max-h-[70vh] overflow-auto">
-              {previewModal.creative.type === 'image' && (
-                <img 
-                  src={previewModal.creative.url} 
-                  alt={previewModal.creative.name}
-                  className="max-w-full max-h-full mx-auto rounded-lg"
-                />
-              )}
-              
-              {previewModal.creative.type === 'video' && (
-                <video 
-                  src={previewModal.creative.url} 
-                  controls
-                  className="max-w-full max-h-full mx-auto rounded-lg"
-                >
-                  Your browser does not support the video tag.
-                </video>
-              )}
-              
-              {previewModal.creative.type === 'document' && (
-                <div className="text-center py-8">
-                  <File className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-white mb-2">Document Preview</p>
-                  <p className="text-gray-400 mb-4">
-                    Cannot preview this file type directly
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    className="border-gray-600 text-gray-300 hover:bg-gray-600"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download File
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <PreviewModal
+        creative={previewModal.creative}
+        isOpen={previewModal.isOpen}
+        onClose={closePreview}
+      />
     </div>
   );
 };

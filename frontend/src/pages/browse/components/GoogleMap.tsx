@@ -401,7 +401,7 @@ const SpaceDropdown: React.FC<SpaceDropdownProps> = ({
       }}
     >
       {/* ✅ SMART ARROW */}
-      <div style={getArrowStyles()} />
+      <div style={getArrowStyles() as React.CSSProperties} />
       
       {/* Rest of component remains the same */}
       {/* Header with count and close button */}

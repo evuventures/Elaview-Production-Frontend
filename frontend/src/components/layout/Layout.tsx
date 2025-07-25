@@ -4,9 +4,6 @@ import { useAuth, useUser } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
 
 // Extracted components - update these imports to match your actual file structure
-import DesktopSidebar from '@/components/layout/nested/DesktopSidebar';
-import DesktopSidebarV2 from './nested/DesktopSidebarV2';
-import DesktopTopNav from './nested/DesktopTopNav';
 import DesktopTopNavV2 from './nested/DesktopTopNavV2';
 import MobileNav from '@/components/layout/nested/MobileNav';
 import MobileTopBar from '@/components/layout/nested/MobileTopBar';
@@ -33,8 +30,8 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     };
 
     const pageTransition = {
-        type: "tween",
-        ease: "anticipate",
+        type: "tween" as const,
+        ease: "anticipate" as const,
         duration: 0.4
     };
 
@@ -116,6 +113,8 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
               <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-cyan-400/10 to-transparent rounded-full blur-3xl"></div>
             </div>
             
+            {/* <div id="nav-and-content" className="grid grid-rows-[1fr_11fr] h-screen"> */}
+            <div>
             {/* Top Navigation - Only show if components exist */}
             {typeof DesktopTopNavV2 !== 'undefined' ? (
               <DesktopTopNavV2
@@ -138,9 +137,11 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                 </div>
               </header>
             )}
-            
+            </div>
+
+            <div>
             {/* Main Content Area */}
-            <main className="flex-1 relative">
+            <main className="flex-1 relative overflow-y-hidden">
                 {/* Mobile Components - Only show if they exist */}
                 {typeof MobileTopBar !== 'undefined' && <MobileTopBar />}
                 {typeof MobileNav !== 'undefined' && (
@@ -153,7 +154,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                 )}
                 
                 {/* Content Container */}
-                <div className="h-full overflow-y-auto">
+                <div className="h-full overflow-y-hidden">
                     <motion.div
                         initial="initial"
                         animate="in"
@@ -165,6 +166,8 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                     </motion.div>
                 </div>
             </main>
+            </div>
         </div>
+        // </div>
     );
 }
