@@ -122,7 +122,8 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                 unreadCount={unreadCount} 
                 pendingInvoices={pendingInvoices} 
                 actionItemsCount={actionItemsCount} 
-                currentUser={currentUser} 
+                currentUser={currentUser}
+                onRoleChange={() => {}} // Add empty function as fallback
               />
             ) : (
               // Fallback simple header if nav components don't exist
@@ -131,7 +132,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                   <h1 className="text-xl font-bold text-white">Dashboard</h1>
                   {currentUser && (
                     <div className="text-sm text-gray-300">
-                      Welcome, {currentUser.firstName || currentUser.email}
+                      Welcome, {currentUser.firstName || currentUser.primaryEmailAddress?.emailAddress}
                     </div>
                   )}
                 </div>
