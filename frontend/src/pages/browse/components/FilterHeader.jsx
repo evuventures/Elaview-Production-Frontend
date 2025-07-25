@@ -13,10 +13,10 @@ export default function FilterHeader({
   clearFilters 
 }) {
   return (
-    <div className="py-2 px-6 bg-gray-900 flex-shrink-0">
+    <div className="py-2 px-6 bg-gray-500 text-gray-900 flex-shrink-0">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-gray-800">
             Advertising Spaces
           </h1>
           <p className="text-gray-400 text-sm">

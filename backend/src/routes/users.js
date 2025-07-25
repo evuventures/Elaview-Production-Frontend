@@ -1,4 +1,4 @@
-// backend/src/routes/users.js
+// backend/src/routes/users.js - Clean version without duplicates
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { syncUser } from '../middleware/clerk.js';
@@ -6,10 +6,12 @@ import { syncUser } from '../middleware/clerk.js';
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// GET /api/users/me - Get current user profile (matches frontend expectation)
+// GET /api/users/me - Get current user profile (primary endpoint)
 router.get('/me', syncUser, async (req, res, next) => {
   try {
-    const user = await prisma.user.findUnique({
+    console.log('📋 /me request for user:', req.user.id);
+    
+    const user = await prisma.users.findUnique({
       where: { id: req.user.id },
       include: {
         properties: {
@@ -34,27 +36,13 @@ router.get('/me', syncUser, async (req, res, next) => {
             status: true,
             startDate: true,
             endDate: true,
-            property: {
+            properties: {
               select: {
                 id: true,
                 title: true
               }
             }
           }
-        },
-        sentMessages: {
-          select: {
-            id: true,
-            createdAt: true,
-            conversation: {
-              select: {
-                id: true,
-                subject: true
-              }
-            }
-          },
-          take: 5,
-          orderBy: { createdAt: 'desc' }
         },
         _count: {
           select: {
@@ -67,47 +55,133 @@ router.get('/me', syncUser, async (req, res, next) => {
     });
 
     if (!user) {
+      console.log('❌ User not found in database:', req.user.id);
       return res.status(404).json({
         success: false,
         message: 'User not found'
       });
     }
 
-    console.log(`✅ User profile retrieved: ${user.email}`);
+    console.log('✅ User profile found:', { id: user.id, email: user.email, role: user.role });
 
     res.json({
       success: true,
-      data: user
+      data: user,
+      role: user.role // Include role at top level for frontend compatibility
     });
+
+  } catch (error) {
+    console.error('❌ Error in /me endpoint:', error);
+    next(error);
+  }
+});
+
+// GET /api/users/profile - Alternative endpoint (same as /me for compatibility)
+router.get('/profile', syncUser, async (req, res, next) => {
+  try {
+    console.log('📋 Profile request for user:', req.user.id);
+    
+    const user = await prisma.users.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        phone: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    if (!user) {
+      console.log('❌ User not found in database:', req.user.id);
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    console.log('✅ User profile found:', { id: user.id, email: user.email, role: user.role });
+
+    res.json({
+      success: true,
+      data: user,
+      role: user.role // Make sure role is included at top level too
+    });
+
   } catch (error) {
     console.error('❌ Error fetching user profile:', error);
     next(error);
   }
 });
 
-// GET /api/users/profile - Get current user profile (alternative endpoint)
-router.get('/profile', syncUser, async (req, res, next) => {
+// POST /api/users/update-role - Update user role (primary endpoint)
+router.post('/update-role', syncUser, async (req, res, next) => {
   try {
-    const user = await prisma.user.findUnique({
+    const { role } = req.body;
+    
+    console.log(`🔄 Role update request: User ${req.user.id} -> ${role}`);
+    
+    // Validate role - only allow switching between user roles (not admin roles)
+    const allowedRoles = ['USER', 'ADVERTISER', 'PROPERTY_OWNER'];
+    if (!role || !allowedRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role. Allowed roles: USER, PROPERTY_OWNER, ADVERTISER',
+        allowedRoles
+      });
+    }
+
+    // Prevent changing admin/super admin roles through this endpoint
+    if (['ADMIN', 'SUPER_ADMIN'].includes(req.user.role) && !allowedRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Admin roles cannot be changed through this endpoint'
+      });
+    }
+
+    // Update user role in database
+    const updatedUser = await prisma.users.update({
       where: { id: req.user.id },
-      include: {
-        _count: {
-          select: {
-            properties: true,
-            campaigns: true,
-            bookings: true,
-            sentMessages: true
-          }
-        }
+      data: { 
+        role: role,
+        updatedAt: new Date()
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        updatedAt: true
       }
     });
 
+    console.log(`✅ Role updated successfully: ${req.user.id} -> ${role}`);
+
     res.json({
       success: true,
-      data: user
+      data: updatedUser,
+      message: `Role updated to ${role}`
     });
+
   } catch (error) {
-    next(error);
+    console.error('❌ Error updating user role:', error);
+    
+    if (error.code === 'P2025') {
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -131,7 +205,7 @@ router.put('/me', syncUser, async (req, res, next) => {
     if (preferences !== undefined) updateData.preferences = preferences;
     if (notifications !== undefined) updateData.notifications = notifications;
 
-    const user = await prisma.user.update({
+    const user = await prisma.users.update({
       where: { id: req.user.id },
       data: updateData,
       select: {
@@ -141,10 +215,7 @@ router.put('/me', syncUser, async (req, res, next) => {
         firstName: true,
         lastName: true,
         phone: true,
-        bio: true,
         role: true,
-        preferences: true,
-        notifications: true,
         createdAt: true,
         updatedAt: true
       }
@@ -159,31 +230,6 @@ router.put('/me', syncUser, async (req, res, next) => {
     });
   } catch (error) {
     console.error('❌ Error updating user profile:', error);
-    next(error);
-  }
-});
-
-// PUT /api/users/profile - Update user profile (alternative endpoint)
-router.put('/profile', syncUser, async (req, res, next) => {
-  try {
-    const { firstName, lastName, phone, bio } = req.body;
-
-    const user = await prisma.user.update({
-      where: { id: req.user.id },
-      data: {
-        firstName,
-        lastName,
-        phone,
-        bio
-      }
-    });
-
-    res.json({
-      success: true,
-      data: user,
-      message: 'Profile updated successfully'
-    });
-  } catch (error) {
     next(error);
   }
 });
@@ -212,7 +258,7 @@ router.get('/', syncUser, async (req, res, next) => {
       ];
     }
 
-    const users = await prisma.user.findMany({
+    const users = await prisma.users.findMany({
       where,
       select: {
         id: true,
@@ -236,7 +282,7 @@ router.get('/', syncUser, async (req, res, next) => {
       take: parseInt(limit)
     });
 
-    const total = await prisma.user.count({ where });
+    const total = await prisma.users.count({ where });
 
     console.log(`✅ Users retrieved: ${users.length} of ${total} total`);
 
@@ -269,7 +315,7 @@ router.get('/:id', syncUser, async (req, res, next) => {
       });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id },
       include: {
         properties: {
@@ -277,7 +323,7 @@ router.get('/:id', syncUser, async (req, res, next) => {
             id: true,
             title: true,
             status: true,
-            pricePerNight: true,
+            basePrice: true,
             createdAt: true
           }
         },
@@ -297,7 +343,7 @@ router.get('/:id', syncUser, async (req, res, next) => {
             startDate: true,
             endDate: true,
             totalAmount: true,
-            property: {
+            properties: {
               select: {
                 id: true,
                 title: true
@@ -327,12 +373,69 @@ router.get('/:id', syncUser, async (req, res, next) => {
   }
 });
 
+// PUT /api/users/:id/role - Update user role (admin only)
+router.put('/:id/role', syncUser, async (req, res, next) => {
+  try {
+    // Check if user is admin
+    if (!['ADMIN', 'SUPER_ADMIN'].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin access required'
+      });
+    }
+
+    const { id } = req.params;
+    const { role } = req.body;
+
+    // Validate role
+    const validRoles = ['USER', 'PROPERTY_OWNER', 'ADVERTISER', 'ADMIN', 'SUPER_ADMIN'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role'
+      });
+    }
+
+    // Prevent self-demotion from SUPER_ADMIN
+    if (req.user.id === id && req.user.role === 'SUPER_ADMIN' && role !== 'SUPER_ADMIN') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot demote yourself from SUPER_ADMIN'
+      });
+    }
+
+    const user = await prisma.users.update({
+      where: { id },
+      data: { role },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        updatedAt: true
+      }
+    });
+
+    console.log(`✅ User role updated: ${user.email} -> ${role} by ${req.user.email}`);
+
+    res.json({
+      success: true,
+      data: user,
+      message: 'User role updated successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error updating user role:', error);
+    next(error);
+  }
+});
+
 // Legacy payment settings endpoints (keeping for compatibility)
 // GET /api/users/payment-settings - Get payment settings
 router.get('/payment-settings', syncUser, async (req, res, next) => {
   try {
     // Since we don't have paymentSettings in current schema, return basic user data
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: req.user.id },
       select: {
         id: true,
@@ -377,8 +480,6 @@ router.put('/payment-settings', syncUser, async (req, res, next) => {
     } = req.body;
 
     // For now, just return success since we don't have payment settings table
-    // You can implement this later when adding payment functionality
-    
     const paymentSettings = {
       id: `ps_${req.user.id}`,
       userId: req.user.id,
@@ -396,63 +497,6 @@ router.put('/payment-settings', syncUser, async (req, res, next) => {
       message: 'Payment settings updated successfully'
     });
   } catch (error) {
-    next(error);
-  }
-});
-
-// PUT /api/users/:id/role - Update user role (admin only)
-router.put('/:id/role', syncUser, async (req, res, next) => {
-  try {
-    // Check if user is admin
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Admin access required'
-      });
-    }
-
-    const { id } = req.params;
-    const { role } = req.body;
-
-    // Validate role
-    const validRoles = ['USER', 'PROPERTY_OWNER', 'ADMIN', 'SUPER_ADMIN'];
-    if (!validRoles.includes(role)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid role'
-      });
-    }
-
-    // Prevent self-demotion from SUPER_ADMIN
-    if (req.user.id === id && req.user.role === 'SUPER_ADMIN' && role !== 'SUPER_ADMIN') {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot demote yourself from SUPER_ADMIN'
-      });
-    }
-
-    const user = await prisma.user.update({
-      where: { id },
-      data: { role },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        updatedAt: true
-      }
-    });
-
-    console.log(`✅ User role updated: ${user.email} -> ${role} by ${req.user.email}`);
-
-    res.json({
-      success: true,
-      data: user,
-      message: 'User role updated successfully'
-    });
-  } catch (error) {
-    console.error('❌ Error updating user role:', error);
     next(error);
   }
 });

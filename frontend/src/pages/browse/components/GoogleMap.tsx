@@ -885,7 +885,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
         <div className="absolute top-4 left-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-md border border-white/20">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-sm font-medium">
+            <span className="text-sm font-medium text-white">
               {properties.length} Properties • {advertisingAreas.length} Spaces
             </span>
           </div>

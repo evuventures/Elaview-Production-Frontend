@@ -1,5 +1,6 @@
 import Layout from "../components/layout/Layout.tsx";
-import Bookings from "./bookings/BookingPage.jsx";
+import CheckoutPage from "./checkout/CheckoutPage.jsx"; // ✅ FIXED: Renamed from Bookings to CheckoutPage for clarity
+import BookingsPage from "./bookings/BookingsPage.tsx"; // ✅ NEW: Import the bookings management page
 import Map from "./browse/BrowsePage.jsx";
 import Messages from "./messages/Messages.tsx";
 import Profile from "./user/Profile.jsx";
@@ -27,13 +28,14 @@ import ApiDebugTest from "@/dev/debug/ApiDebugTest.jsx";
 import MinimalTestMap from "@/dev/debug/MinimalTestMap.tsx";
 import TestMapPage from '@/pages/test/TestMapPage.tsx';
 
-import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation, useParams } from 'react-router-dom';
 import { useEffect } from 'react';
 
 const PAGES = {
     Browse: Map, // ✅ Map.jsx is your browse page
     Messages: Messages,
-    Bookings: Bookings,
+    CheckoutPage: CheckoutPage, // ✅ UPDATED: Checkout flow (formerly Bookings)
+    BookingsPage: BookingsPage, // ✅ NEW: Bookings management page
     Profile: Profile,
     Help: Help,
     Dashboard: Dashboard,
@@ -52,6 +54,22 @@ const PAGES = {
     // 🧪 TEMPORARY DEBUG PAGES
     ApiDebugTest: ApiDebugTest,
     MinimalTestMap: MinimalTestMap,
+}
+
+// ✅ FIXED: Proper redirect component that extracts URL parameters
+function BookingToCheckoutRedirect() {
+    const { propertyId, spaceId } = useParams();
+    
+    // Debug logging
+    console.log('🔄 Redirecting from /booking to /checkout');
+    console.log('Property ID:', propertyId);
+    console.log('Space ID:', spaceId);
+    
+    // Construct proper redirect URL with parameters
+    const redirectUrl = `/checkout/${propertyId}/${spaceId}`;
+    console.log('🧭 Redirecting to:', redirectUrl);
+    
+    return <Navigate to={redirectUrl} replace />;
 }
 
 // ✅ PRODUCTION: Create a wrapper component that uses useLocation inside the Router context
@@ -128,6 +146,16 @@ function PagesContent() {
                     </Layout>
                 </ProtectedRoute>
             } />
+
+            {/* ✅ NEW: Bookings Management Page (for buyers to see their bookings) */}
+            <Route path="/bookings" element={
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="bookings-protected">
+                    <Layout currentPageName="Bookings" key="bookings-page">
+                        <BookingsPage key="bookings-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
             <Route path="/messages" element={
                 <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="messages-protected">
                     <Layout currentPageName="Messages" key="messages-page">
@@ -149,17 +177,23 @@ function PagesContent() {
                     </Layout>
                 </ProtectedRoute>
             } />
-            <Route path="/booking/:propertyId/:spaceId" element={
-    <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="booking-protected">
-        <Layout currentPageName="Bookings" key="booking-page">
-            <Bookings key="booking-component" />
-        </Layout>
-    </ProtectedRoute>
-} />
+
+            {/* ✅ CHECKOUT FLOW - Individual booking creation */}
+            <Route path="/checkout/:propertyId/:spaceId" element={
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="checkout-protected">
+                    <Layout currentPageName="Checkout" key="checkout-page">
+                        <CheckoutPage key="checkout-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            {/* ✅ FIXED: Legacy redirect that properly handles URL parameters */}
+            <Route path="/booking/:propertyId/:spaceId" element={<BookingToCheckoutRedirect />} />
+
             <Route path="/booking-management" element={
-                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="booking-protected">
-                    <Layout currentPageName="BookingManagement" key="booking-page">
-                        <BookingManagement key="booking-component" />
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="booking-management-protected">
+                    <Layout currentPageName="BookingManagement" key="booking-management-page">
+                        <BookingManagement key="booking-management-component" />
                     </Layout>
                 </ProtectedRoute>
             } />
@@ -199,9 +233,9 @@ function PagesContent() {
                 </ProtectedRoute>
             } />
             <Route path="/checkout" element={
-                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="checkout-protected">
-                    <Layout currentPageName="Checkout" key="checkout-page">
-                        <Checkout key="checkout-component" />
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="checkout-alt-protected">
+                    <Layout currentPageName="Checkout" key="checkout-alt-page">
+                        <Checkout key="checkout-alt-component" />
                     </Layout>
                 </ProtectedRoute>
             } />

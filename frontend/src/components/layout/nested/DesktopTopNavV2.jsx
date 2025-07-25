@@ -1,26 +1,26 @@
-// Enhanced Navigation with Airbnb-Style Role Toggle
+// Enhanced Navigation with Role-Specific Items
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  Search, Crown, Sparkles, User as UserIcon, ChevronDown, 
+  Search, Crown, Sparkles, User, ChevronDown, 
   Bell, Settings, LogOut, Menu, X, Zap, Filter, ArrowRight,
-  Megaphone, Home, ToggleLeft, ToggleRight, Building2
+  Megaphone, Home, ToggleLeft, ToggleRight, Building2,
+  Calendar, MessageSquare, Map, LayoutDashboard
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import ThemeToggle from '@/components/ui/ThemeToggle';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getNavigationItems, getPrimaryActions, formatBadgeCount } from '@/lib/navigation';
+import elaviewLogo from '../../../public/elaview-logo.png';
 
-const DesktopTopNavWithRoleToggle = ({ 
-  unreadCount, 
-  pendingInvoices, 
-  actionItemsCount, 
+const DesktopTopNavV2 = ({ 
+  unreadCount = 0, 
+  pendingInvoices = 0, 
+  actionItemsCount = 0, 
   currentUser,
-  // ✅ NEW: Role management props
   userRole = 'buyer', // 'buyer' | 'seller'
   onRoleChange,
+  isUpdatingRole = false,
   canSwitchRoles = true,
   bookingsCount = 0,
   propertiesCount = 0
@@ -35,17 +35,55 @@ const DesktopTopNavWithRoleToggle = ({
   const userMenuRef = useRef(null);
   const roleToggleRef = useRef(null);
 
-  // Get role-specific navigation items
-  const navigationItems = getNavigationItems({
-    currentUser,
-    unreadCount,
-    pendingInvoices,
-    actionItemsCount,
-    isMobile: false,
-    userRole // Pass current role to get appropriate nav items
-  });
+  // 🆕 ROLE-SPECIFIC NAVIGATION ITEMS
+  const getNavigationItems = (role) => {
+    if (role === 'seller') {
+      return [
+        {
+          title: 'Dashboard',
+          url: '/dashboard',
+          icon: LayoutDashboard,
+          badge: pendingInvoices || 0
+        },
+        {
+          title: 'Browse',
+          url: '/browse',
+          icon: Map,
+          badge: 0
+        },
+        {
+          title: 'Messages',
+          url: '/messages',
+          icon: MessageSquare,
+          badge: unreadCount || 0
+        }
+      ];
+    } else {
+      // Buyer navigation
+      return [
+        {
+          title: 'Bookings',
+          url: '/bookings',
+          icon: Calendar,
+          badge: actionItemsCount || 0
+        },
+        {
+          title: 'Browse',
+          url: '/browse',
+          icon: Map,
+          badge: 0
+        },
+        {
+          title: 'Messages',
+          url: '/messages',
+          icon: MessageSquare,
+          badge: unreadCount || 0
+        }
+      ];
+    }
+  };
 
-  const primaryActions = getPrimaryActions(userRole);
+  const navigationItems = getNavigationItems(userRole);
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -70,35 +108,65 @@ const DesktopTopNavWithRoleToggle = ({
     }
   };
 
+  // 🆕 UPDATED ROLE SWITCH WITH AUTO-REDIRECT
   const handleRoleSwitch = (newRole) => {
-    if (onRoleChange) {
-      onRoleChange(newRole);
-    }
+    if (isUpdatingRole || !onRoleChange) return;
+    
+    console.log(`🔄 Switching role from ${userRole} to ${newRole}`);
+    
+    // Call the role change handler (from Layout.tsx)
+    onRoleChange(newRole);
+    
+    // Auto-redirect based on role
+    setTimeout(() => {
+      if (newRole === 'seller') {
+        console.log('🧭 Redirecting seller to /dashboard');
+        navigate('/dashboard');
+      } else if (newRole === 'buyer') {
+        console.log('🧭 Redirecting buyer to /browse');
+        navigate('/browse');
+      }
+    }, 100); // Small delay to ensure role state updates first
+    
     setRoleToggleOpen(false);
   };
 
-  // Core navigation items (always visible)
-  const coreNavItems = navigationItems.filter(item => 
-    ['Dashboard', 'Browse Map', 'Messages'].includes(item.title)
-  );
+  const formatBadgeCount = (count) => {
+    if (count > 99) return '99+';
+    return count.toString();
+  };
 
-  // Get role-specific title and description
+  // Get role-specific styling and info
   const getRoleInfo = () => {
     if (userRole === 'seller') {
       return {
-        title: 'Property Owner',
+        title: 'Space Owner',
         description: 'Manage your listings',
         icon: Home,
-        primaryColor: 'text-cyan-400',
-        bgColor: 'bg-cyan-400/10'
+        primaryColor: 'text-emerald-600',
+        bgColor: 'bg-emerald-50',
+        buttonBg: 'bg-emerald-600',
+        buttonHover: 'hover:bg-emerald-700',
+        quickAction: {
+          url: '/list-space',
+          text: 'List Property',
+          icon: Building2
+        }
       };
     } else {
       return {
         title: 'Advertiser',
-        description: 'Find ad spaces',
+        description: 'Book ad spaces',
         icon: Megaphone,
-        primaryColor: 'text-lime-400',
-        bgColor: 'bg-lime-400/10'
+        primaryColor: 'text-blue-600',
+        bgColor: 'bg-blue-50',
+        buttonBg: 'bg-blue-600',
+        buttonHover: 'hover:bg-blue-700',
+        quickAction: {
+          url: '/browse',
+          text: 'Find Spaces',
+          icon: Search
+        }
       };
     }
   };
@@ -107,47 +175,47 @@ const DesktopTopNavWithRoleToggle = ({
 
   return (
     <>
-      {/* ✅ Enhanced Navigation with Role Toggle */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-gray-900 z-50 border-b border-gray-800/50">
+      {/* Navigation Header */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-gray-50 border-b border-gray-200 z-50">
         <div className="flex items-center justify-between h-full px-4 lg:px-6">
           
-          {/* Left Section: Logo + Core Navigation */}
+          {/* Left Section: Logo + Navigation */}
           <div className="flex items-center gap-6">
             {/* Logo */}
-            <Link to="/dashboard" className="flex items-center gap-2 group">
-              <div className="w-8 h-8 bg-lime-400 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 group-hover:shadow-xl transition-all duration-200">
-                <Crown className="text-gray-900 w-4 h-4 font-bold" />
-              </div>
-              <h2 className="font-bold text-xl text-white hidden sm:block group-hover:text-lime-400 transition-colors duration-200">
-                Elaview
-              </h2>
+            <Link to={userRole === 'seller' ? '/dashboard' : '/browse'} className="flex items-center gap-2 group">
+              <img 
+                src={elaviewLogo}
+                alt="Elaview Logo" 
+                className="w-20 h-20 object-contain"
+              />
             </Link>
 
-            {/* Core Navigation */}
+            {/* 🆕 ROLE-SPECIFIC NAVIGATION */}
             <nav className="hidden lg:flex items-center gap-1">
-              {coreNavItems.map((item) => {
+              {navigationItems.map((item) => {
                 const isActive = location.pathname === item.url;
                 return (
                   <Link
                     key={item.title}
                     to={item.url}
-                    className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
+                    className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                       isActive
-                        ? 'text-lime-400 bg-lime-400/10 shadow-lg shadow-lime-400/20'
-                        : 'text-gray-300 hover:text-white hover:bg-gray-800/50'
+                        ? 'text-slate-800 bg-slate-100 border border-slate-200'
+                        : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
                     }`}
                   >
                     <item.icon className="w-4 h-4" />
                     <span className="hidden xl:inline">{item.title}</span>
                     {item.badge > 0 && (
-                      <Badge className={`${item.badgeColor || 'bg-red-500'} text-white text-xs px-1.5 py-0.5 rounded-full min-w-[16px] h-4 flex items-center justify-center animate-pulse`}>
+                      <Badge className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[16px] h-4 flex items-center justify-center">
                         {formatBadgeCount(item.badge)}
                       </Badge>
                     )}
+                    {/* Active indicator */}
                     {isActive && (
                       <motion.div
                         layoutId="activeIndicator"
-                        className="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-lime-400 rounded-full"
+                        className="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-slate-800 rounded-full"
                         transition={{ type: "spring", stiffness: 400, damping: 30 }}
                       />
                     )}
@@ -157,21 +225,19 @@ const DesktopTopNavWithRoleToggle = ({
             </nav>
           </div>
 
-          {/* Center Section: Enhanced Search */}
-          <div className="flex-1 max-w-lg mx-4 lg:mx-8">
-            <div className={`relative group transition-all duration-300 ${
-              searchFocused ? 'transform scale-[1.02]' : ''
-            }`}>
-              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-all duration-200 ${
-                searchFocused ? 'text-lime-400 scale-110' : 'text-gray-400'
+          {/* Center Section: Search (Optional - can be removed if not needed) */}
+          <div className="flex-1 max-w-md mx-4 lg:mx-8">
+            <div className="relative group">
+              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${
+                searchFocused ? 'text-slate-600' : 'text-slate-400'
               }`} />
               <Input
                 type="search"
                 placeholder={userRole === 'seller' ? "Search properties, bookings..." : "Search ad spaces, campaigns..."}
-                className={`w-full pl-10 pr-20 py-3 rounded-xl bg-gray-800/50 border-gray-700/50 text-white placeholder-gray-400 transition-all duration-300 ${
+                className={`w-full pl-10 pr-4 py-2.5 rounded-lg bg-white border border-gray-300 text-slate-800 placeholder-slate-400 transition-all duration-200 ${
                   searchFocused 
-                    ? 'border-lime-400/50 ring-2 ring-lime-400/20 bg-gray-800/80 shadow-lg shadow-lime-400/10' 
-                    : 'hover:bg-gray-800/70 focus:bg-gray-800/80 hover:border-gray-600'
+                    ? 'border-slate-400 ring-2 ring-slate-200' 
+                    : 'hover:border-slate-400 focus:border-slate-400'
                 }`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -179,65 +245,59 @@ const DesktopTopNavWithRoleToggle = ({
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setSearchFocused(false)}
               />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                <Button
-                  onClick={handleSearch}
-                  size="sm"
-                  className="w-7 h-7 p-0 rounded-lg bg-lime-400/20 hover:bg-lime-400/30 border-0 transition-all duration-200 text-lime-400"
-                >
-                  <Search className="w-3 h-3" />
-                </Button>
-                <Link
-                  to="/search"
-                  className="hidden sm:flex items-center gap-1 text-xs text-gray-400 hover:text-lime-400 transition-colors px-2 py-1 rounded-md hover:bg-lime-400/10"
-                >
-                  <Filter className="w-3 h-3" />
-                  <span className="hidden md:inline">Filters</span>
-                </Link>
-              </div>
             </div>
           </div>
 
-          {/* ✅ Right Section: Role Toggle + Actions + User */}
+          {/* Right Section: Role Toggle + Actions + User */}
           <div className="flex items-center gap-2">
             
-            {/* ✅ NEW: Airbnb-Style Role Toggle */}
+            {/* 🆕 ENHANCED ROLE TOGGLE WITH LOADING STATE */}
             {canSwitchRoles && (
               <div className="relative hidden md:block" ref={roleToggleRef}>
                 <Button
-                  onClick={() => setRoleToggleOpen(!roleToggleOpen)}
+                  onClick={() => !isUpdatingRole && setRoleToggleOpen(!roleToggleOpen)}
+                  disabled={isUpdatingRole}
                   size="sm"
                   variant="ghost"
-                  className={`relative flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 ${
-                    roleToggleOpen 
-                      ? `${roleInfo.bgColor} ${roleInfo.primaryColor} shadow-lg` 
-                      : 'text-gray-300 hover:text-white hover:bg-gray-800/50'
+                  className={`relative flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 ${
+                    isUpdatingRole
+                      ? 'opacity-50 cursor-not-allowed'
+                      : roleToggleOpen 
+                        ? `${roleInfo.bgColor} ${roleInfo.primaryColor} border border-gray-200` 
+                        : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
                   }`}
                 >
+                  {isUpdatingRole && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  )}
                   <div className="flex items-center gap-2">
                     <roleInfo.icon className="w-4 h-4" />
                     <div className="text-left">
-                      <div className="text-sm font-semibold">{roleInfo.title}</div>
+                      <div className="text-sm font-semibold">
+                        {isUpdatingRole ? 'Switching...' : roleInfo.title}
+                      </div>
                       <div className="text-xs opacity-75">{roleInfo.description}</div>
                     </div>
                   </div>
-                  <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${roleToggleOpen ? 'rotate-180' : ''}`} />
+                  {!isUpdatingRole && (
+                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${roleToggleOpen ? 'rotate-180' : ''}`} />
+                  )}
                 </Button>
 
                 {/* Role Toggle Dropdown */}
                 <AnimatePresence>
-                  {roleToggleOpen && (
+                  {roleToggleOpen && !isUpdatingRole && (
                     <motion.div
                       initial={{ opacity: 0, y: -8, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute top-full right-0 mt-2 w-80 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-xl"
+                      className="absolute top-full right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden"
                     >
                       {/* Header */}
-                      <div className="px-4 py-3 border-b border-gray-700 bg-gray-800/50">
-                        <h3 className="font-semibold text-sm text-white">Switch Role</h3>
-                        <p className="text-xs text-gray-400">Choose your primary activity</p>
+                      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                        <h3 className="font-semibold text-sm text-slate-800">Switch Role</h3>
+                        <p className="text-xs text-slate-600">Choose your primary activity</p>
                       </div>
                       
                       {/* Role Options */}
@@ -245,35 +305,35 @@ const DesktopTopNavWithRoleToggle = ({
                         {/* Advertiser/Buyer Option */}
                         <motion.button
                           onClick={() => handleRoleSwitch('buyer')}
-                          className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-200 ${
+                          className={`w-full flex items-center gap-4 p-4 rounded-lg transition-all duration-200 ${
                             userRole === 'buyer'
-                              ? 'bg-lime-400/20 border-2 border-lime-400/50 shadow-lg'
-                              : 'hover:bg-gray-700/30 border-2 border-transparent'
+                              ? 'bg-blue-50 border-2 border-blue-200'
+                              : 'hover:bg-gray-50 border-2 border-transparent'
                           }`}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
                         >
-                          <div className={`p-3 rounded-xl ${
+                          <div className={`p-3 rounded-lg ${
                             userRole === 'buyer' 
-                              ? 'bg-lime-400 text-gray-900' 
-                              : 'bg-gray-700 text-gray-300'
+                              ? 'bg-blue-600 text-white' 
+                              : 'bg-gray-100 text-slate-600'
                           }`}>
                             <Megaphone className="w-5 h-5" />
                           </div>
                           <div className="flex-1 text-left">
-                            <div className="font-semibold text-white flex items-center gap-2">
+                            <div className="font-semibold text-slate-800 flex items-center gap-2">
                               Advertiser
                               {userRole === 'buyer' && (
-                                <div className="w-2 h-2 bg-lime-400 rounded-full animate-pulse" />
+                                <div className="w-2 h-2 bg-blue-600 rounded-full" />
                               )}
                             </div>
-                            <div className="text-sm text-gray-400">Find and book ad spaces</div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {bookingsCount} active campaigns
+                            <div className="text-sm text-slate-600">Find and book ad spaces</div>
+                            <div className="text-xs text-slate-500 mt-1">
+                              Browse spaces • {bookingsCount} active campaigns
                             </div>
                           </div>
                           {userRole === 'buyer' && (
-                            <div className="text-lime-400">
+                            <div className="text-blue-600">
                               <ToggleRight className="w-5 h-5" />
                             </div>
                           )}
@@ -282,35 +342,35 @@ const DesktopTopNavWithRoleToggle = ({
                         {/* Property Owner/Seller Option */}
                         <motion.button
                           onClick={() => handleRoleSwitch('seller')}
-                          className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-200 ${
+                          className={`w-full flex items-center gap-4 p-4 rounded-lg transition-all duration-200 ${
                             userRole === 'seller'
-                              ? 'bg-cyan-400/20 border-2 border-cyan-400/50 shadow-lg'
-                              : 'hover:bg-gray-700/30 border-2 border-transparent'
+                              ? 'bg-emerald-50 border-2 border-emerald-200'
+                              : 'hover:bg-gray-50 border-2 border-transparent'
                           }`}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
                         >
-                          <div className={`p-3 rounded-xl ${
+                          <div className={`p-3 rounded-lg ${
                             userRole === 'seller' 
-                              ? 'bg-cyan-400 text-gray-900' 
-                              : 'bg-gray-700 text-gray-300'
+                              ? 'bg-emerald-600 text-white' 
+                              : 'bg-gray-100 text-slate-600'
                           }`}>
                             <Home className="w-5 h-5" />
                           </div>
                           <div className="flex-1 text-left">
-                            <div className="font-semibold text-white flex items-center gap-2">
+                            <div className="font-semibold text-slate-800 flex items-center gap-2">
                               Property Owner
                               {userRole === 'seller' && (
-                                <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
+                                <div className="w-2 h-2 bg-emerald-600 rounded-full" />
                               )}
                             </div>
-                            <div className="text-sm text-gray-400">List and manage properties</div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {propertiesCount} active properties
+                            <div className="text-sm text-slate-600">List and manage properties</div>
+                            <div className="text-xs text-slate-500 mt-1">
+                              Dashboard • {propertiesCount} active properties
                             </div>
                           </div>
                           {userRole === 'seller' && (
-                            <div className="text-cyan-400">
+                            <div className="text-emerald-600">
                               <ToggleRight className="w-5 h-5" />
                             </div>
                           )}
@@ -318,27 +378,14 @@ const DesktopTopNavWithRoleToggle = ({
                       </div>
 
                       {/* Quick Action for Current Role */}
-                      <div className="p-3 border-t border-gray-700 bg-gray-800/30">
+                      <div className="p-3 border-t border-gray-200 bg-gray-50">
                         <Link
-                          to={userRole === 'buyer' ? '/map' : '/create-property'}
+                          to={roleInfo.quickAction.url}
                           onClick={() => setRoleToggleOpen(false)}
-                          className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
-                            userRole === 'buyer'
-                              ? 'bg-lime-400 text-gray-900 hover:bg-lime-500 shadow-lg'
-                              : 'bg-cyan-400 text-gray-900 hover:bg-cyan-500 shadow-lg'
-                          }`}
+                          className={`flex items-center justify-center gap-2 w-full py-3 rounded-lg font-semibold text-sm transition-all duration-200 text-white ${roleInfo.buttonBg} ${roleInfo.buttonHover}`}
                         >
-                          {userRole === 'buyer' ? (
-                            <>
-                              <Search className="w-4 h-4" />
-                              Find Ad Spaces
-                            </>
-                          ) : (
-                            <>
-                              <Building2 className="w-4 h-4" />
-                              List Property
-                            </>
-                          )}
+                          <roleInfo.quickAction.icon className="w-4 h-4" />
+                          {roleInfo.quickAction.text}
                         </Link>
                       </div>
                     </motion.div>
@@ -351,11 +398,11 @@ const DesktopTopNavWithRoleToggle = ({
             <Button
               size="sm"
               variant="ghost"
-              className="relative w-10 h-10 p-0 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all duration-200"
+              className="relative w-10 h-10 p-0 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all duration-200"
             >
               <Bell className="w-4 h-4" />
               {(unreadCount > 0 || pendingInvoices > 0) && (
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
               )}
             </Button>
 
@@ -364,23 +411,23 @@ const DesktopTopNavWithRoleToggle = ({
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 px-2 py-2 rounded-xl hover:bg-gray-800/50 transition-all duration-200 group"
+                  className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-slate-50 transition-all duration-200 group"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-r from-lime-400 to-cyan-400 rounded-lg flex items-center justify-center ring-2 ring-gray-800 group-hover:ring-lime-400/30 transition-all duration-200">
-                    <UserIcon className="w-4 h-4 text-gray-900" />
+                  <div className="w-8 h-8 bg-gradient-to-r from-slate-600 to-slate-700 rounded-lg flex items-center justify-center ring-2 ring-white group-hover:ring-slate-200 transition-all duration-200">
+                    <User className="w-4 h-4 text-white" />
                   </div>
                   <div className="hidden sm:block text-left">
-                    <p className="font-medium text-xs text-white truncate max-w-24 group-hover:text-lime-400 transition-colors">
+                    <p className="font-medium text-xs text-slate-800 truncate max-w-24 group-hover:text-slate-600 transition-colors">
                       {currentUser.firstName}
                     </p>
-                    <p className="text-xs text-gray-400 capitalize">
-                      {userRole === 'seller' ? 'Property Owner' : 'Advertiser'}
+                    <p className="text-xs text-slate-500 capitalize">
+                      {userRole === 'seller' ? 'Space Owner' : 'Advertiser'}
                     </p>
                   </div>
-                  <ChevronDown className={`w-3 h-3 text-gray-400 transition-all duration-200 ${userMenuOpen ? 'rotate-180 text-lime-400' : 'group-hover:text-white'}`} />
+                  <ChevronDown className={`w-3 h-3 text-slate-400 transition-all duration-200 ${userMenuOpen ? 'rotate-180 text-slate-600' : 'group-hover:text-slate-600'}`} />
                 </button>
 
-                {/* User Dropdown (same as before) */}
+                {/* User Dropdown */}
                 <AnimatePresence>
                   {userMenuOpen && (
                     <motion.div
@@ -388,40 +435,40 @@ const DesktopTopNavWithRoleToggle = ({
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute top-full right-0 mt-2 w-64 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-xl"
+                      className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden"
                     >
-                      <div className="px-4 py-4 border-b border-gray-700 bg-gradient-to-r from-lime-400/5 to-cyan-400/5">
-                        <p className="font-semibold text-sm text-white">
+                      <div className="px-4 py-4 border-b border-gray-200 bg-gray-50">
+                        <p className="font-semibold text-sm text-slate-800">
                           {currentUser.firstName} {currentUser.lastName}
                         </p>
-                        <p className="text-xs text-gray-400 truncate mt-1">
+                        <p className="text-xs text-slate-600 truncate mt-1">
                           {currentUser.emailAddresses?.[0]?.emailAddress}
                         </p>
-                        <Badge className={`text-xs mt-2 ${
+                        <Badge className={`text-xs mt-2 text-white ${
                           userRole === 'seller' 
-                            ? 'bg-cyan-400 text-gray-900' 
-                            : 'bg-lime-400 text-gray-900'
+                            ? 'bg-emerald-600' 
+                            : 'bg-blue-600'
                         }`}>
-                          {userRole === 'seller' ? 'Property Owner' : 'Advertiser'}
+                          {userRole === 'seller' ? 'Space Owner' : 'Advertiser'}
                         </Badge>
                       </div>
                       <div className="p-2">
                         <Link
                           to="/profile"
-                          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-700/50 transition-all duration-200 group"
+                          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
                         >
-                          <UserIcon className="w-4 h-4 group-hover:text-lime-400 transition-colors" />
+                          <User className="w-4 h-4 group-hover:text-slate-700 transition-colors" />
                           Profile Settings
                         </Link>
                         <Link
                           to="/settings"
-                          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-700/50 transition-all duration-200 group"
+                          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
                         >
-                          <Settings className="w-4 h-4 group-hover:text-lime-400 transition-colors" />
+                          <Settings className="w-4 h-4 group-hover:text-slate-700 transition-colors" />
                           Preferences
                         </Link>
-                        <div className="border-t border-gray-700 my-2" />
-                        <button className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all duration-200 group">
+                        <div className="border-t border-gray-200 my-2" />
+                        <button className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 group">
                           <LogOut className="w-4 h-4" />
                           Sign Out
                         </button>
@@ -435,22 +482,32 @@ const DesktopTopNavWithRoleToggle = ({
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all duration-200"
+              className="lg:hidden p-2.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all duration-200"
             >
               {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
           </div>
         </div>
+
+        {/* 🆕 LOADING OVERLAY FOR ROLE SWITCHING */}
+        {isUpdatingRole && (
+          <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-40">
+            <div className="flex items-center space-x-2 text-blue-600">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              <span className="text-sm font-medium">Switching roles...</span>
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* Mobile Menu (enhanced with role switching) */}
+      {/* Mobile Menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-gray-900/95 backdrop-blur-xl z-40 lg:hidden"
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
             onClick={() => setMobileMenuOpen(false)}
           >
             <motion.div
@@ -458,21 +515,21 @@ const DesktopTopNavWithRoleToggle = ({
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="w-80 h-full bg-gray-800 border-r border-gray-700 shadow-2xl p-6 overflow-y-auto"
+              className="w-80 h-full bg-white border-r border-gray-200 shadow-xl p-6 overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="space-y-6">
-                {/* Role Switcher for Mobile */}
-                {canSwitchRoles && (
+                {/* Mobile Role Switcher */}
+                {canSwitchRoles && !isUpdatingRole && (
                   <div className="space-y-3">
-                    <h3 className="font-semibold text-sm text-gray-400 uppercase tracking-wide">Switch Role</h3>
+                    <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wide">Switch Role</h3>
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => handleRoleSwitch('buyer')}
-                        className={`p-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                        className={`p-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                           userRole === 'buyer'
-                            ? 'bg-lime-400 text-gray-900 shadow-lg'
-                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-slate-600 hover:bg-gray-200'
                         }`}
                       >
                         <Megaphone className="w-4 h-4 mx-auto mb-1" />
@@ -480,40 +537,22 @@ const DesktopTopNavWithRoleToggle = ({
                       </button>
                       <button
                         onClick={() => handleRoleSwitch('seller')}
-                        className={`p-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                        className={`p-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                           userRole === 'seller'
-                            ? 'bg-cyan-400 text-gray-900 shadow-lg'
-                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-gray-100 text-slate-600 hover:bg-gray-200'
                         }`}
                       >
                         <Home className="w-4 h-4 mx-auto mb-1" />
-                        Owner
+                        Space Owner
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* Mobile Search */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    type="search"
-                    placeholder={userRole === 'seller' ? "Search properties..." : "Search ad spaces..."}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-700/50 border-gray-600 text-white placeholder-gray-400"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSearch();
-                        setMobileMenuOpen(false);
-                      }
-                    }}
-                  />
-                </div>
-
                 {/* Navigation Items */}
                 <div className="space-y-1">
-                  <h3 className="font-semibold text-sm text-gray-400 uppercase tracking-wide mb-3">Navigation</h3>
+                  <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wide mb-3">Navigation</h3>
                   {navigationItems.map((item) => {
                     const isActive = location.pathname === item.url;
                     return (
@@ -521,16 +560,16 @@ const DesktopTopNavWithRoleToggle = ({
                         key={item.title}
                         to={item.url}
                         onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
                           isActive
-                            ? 'bg-lime-400/10 text-lime-400 shadow-lg shadow-lime-400/20'
-                            : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+                            ? 'bg-slate-100 text-slate-800 border border-slate-200'
+                            : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
                         }`}
                       >
                         <item.icon className="w-5 h-5" />
                         <span className="flex-1 font-medium">{item.title}</span>
                         {item.badge > 0 && (
-                          <Badge className={`${item.badgeColor || 'bg-red-500'} text-white text-xs`}>
+                          <Badge className="bg-red-500 text-white text-xs">
                             {formatBadgeCount(item.badge)}
                           </Badge>
                         )}
@@ -542,25 +581,12 @@ const DesktopTopNavWithRoleToggle = ({
                 {/* Primary Action */}
                 <div className="space-y-3">
                   <Link
-                    to={userRole === 'buyer' ? '/map' : '/create-property'}
+                    to={roleInfo.quickAction.url}
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <button className={`w-full rounded-xl py-3 font-medium flex items-center justify-center gap-2 text-sm transition-all duration-200 ${
-                      userRole === 'buyer'
-                        ? 'bg-lime-400 text-gray-900 hover:bg-lime-500 shadow-lg'
-                        : 'bg-cyan-400 text-gray-900 hover:bg-cyan-500 shadow-lg'
-                    }`}>
-                      {userRole === 'buyer' ? (
-                        <>
-                          <Search className="h-4 w-4" />
-                          Find Ad Spaces
-                        </>
-                      ) : (
-                        <>
-                          <Building2 className="h-4 w-4" />
-                          List Property
-                        </>
-                      )}
+                    <button className={`w-full rounded-lg py-3 font-medium flex items-center justify-center gap-2 text-sm transition-all duration-200 text-white ${roleInfo.buttonBg} ${roleInfo.buttonHover}`}>
+                      <roleInfo.quickAction.icon className="h-4 w-4" />
+                      {roleInfo.quickAction.text}
                     </button>
                   </Link>
                 </div>
@@ -576,4 +602,4 @@ const DesktopTopNavWithRoleToggle = ({
   );
 };
 
-export default DesktopTopNavWithRoleToggle;
+export default DesktopTopNavV2;

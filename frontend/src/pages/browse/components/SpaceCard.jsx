@@ -37,17 +37,17 @@ export default function SpaceCard({
     >
       <Card 
         onClick={() => onCardClick(space)}
-        className={`cursor-pointer transition-all duration-300 group overflow-hidden rounded-2xl bg-gray-800/60 backdrop-blur-lg border-gray-700/50 hover:bg-gray-700/60 hover:border-lime-400/30 hover:shadow-xl hover:shadow-lime-400/10 ${
-          isAnimating ? 'ring-2 ring-lime-400 shadow-xl shadow-lime-400/20' : ''
+        className={`cursor-pointer transition-all duration-300 group overflow-hidden rounded-xl bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:shadow-lg ${
+          isAnimating ? 'ring-2 ring-blue-400 shadow-lg' : ''
         }`}
       >
         <CardContent className="p-0">
           {/* Square Image Section */}
-          <div className="relative aspect-square overflow-hidden">
+          <div className="relative h-60">
             <img 
               src={space.images || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400'} 
               alt={getAreaName(space)} 
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
               onError={(e) => {
                 e.target.src = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400';
               }}
@@ -55,7 +55,7 @@ export default function SpaceCard({
             
             {/* Overlay Elements */}
             <div className="absolute top-3 left-3">
-              <Badge className="bg-lime-400 text-gray-900 flex items-center gap-1 text-xs">
+              <Badge className="bg-blue-600 text-white flex items-center gap-1 text-xs font-medium shadow-sm">
                 <IconComponent className="w-3 h-3" />
                 {getAreaType(space)}
               </Badge>
@@ -67,10 +67,10 @@ export default function SpaceCard({
                   e.stopPropagation();
                   toggleSavedSpace(space.id);
                 }}
-                className="p-2 bg-gray-900/80 hover:bg-gray-800 rounded-full transition-colors"
+                className="p-2 bg-white/90 hover:bg-white rounded-full transition-colors shadow-sm backdrop-blur-sm border border-gray-200"
               >
                 <Heart className={`w-4 h-4 ${
-                  savedSpaces.has(space.id) ? 'fill-red-500 text-red-500' : 'text-white'
+                  savedSpaces.has(space.id) ? 'fill-red-500 text-red-500' : 'text-slate-600'
                 }`} />
               </button>
               
@@ -82,22 +82,22 @@ export default function SpaceCard({
                     addToCart(space);
                   }
                 }}
-                className={`p-2 bg-gray-900/80 hover:bg-gray-800 rounded-full transition-colors ${
-                  isInCart(space.id) ? 'bg-lime-400/80 text-gray-900' : ''
+                className={`p-2 bg-white/90 hover:bg-white rounded-full transition-colors shadow-sm backdrop-blur-sm border border-gray-200 ${
+                  isInCart(space.id) ? 'bg-blue-50 border-blue-200' : ''
                 }`}
                 disabled={isInCart(space.id)}
               >
                 {isInCart(space.id) ? (
-                  <CheckCircle className="w-4 h-4" />
+                  <CheckCircle className="w-4 h-4 text-blue-600" />
                 ) : (
-                  <Plus className="w-4 h-4 text-white" />
+                  <Plus className="w-4 h-4 text-slate-600" />
                 )}
               </button>
             </div>
 
             {trust?.verified && (
               <div className="absolute bottom-3 left-3">
-                <Badge className="bg-green-500 text-white border-0 flex items-center gap-1 text-xs">
+                <Badge className="bg-emerald-600 text-white border-0 flex items-center gap-1 text-xs shadow-sm">
                   <CheckCircle className="w-3 h-3" />
                   Verified
                 </Badge>
@@ -105,7 +105,7 @@ export default function SpaceCard({
             )}
 
             <div className="absolute bottom-3 right-3">
-              <Badge className="bg-gray-900/90 text-lime-400 border-0 font-bold">
+              <Badge className="bg-slate-800 text-white border-0 font-bold shadow-sm">
                 {getAreaPrice(space)}
               </Badge>
             </div>
@@ -115,33 +115,33 @@ export default function SpaceCard({
           <div className="p-4 space-y-2">
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-base text-white group-hover:text-lime-400 transition-colors duration-300 truncate">
+                <h3 className="font-bold text-base text-slate-800 group-hover:text-blue-600 transition-colors duration-300 truncate">
                   {getAreaName(space)}
                 </h3>
-                <p className="text-xs text-gray-400 font-medium truncate">
+                <p className="text-xs text-slate-600 font-medium truncate">
                   at {space.propertyName}
                 </p>
               </div>
               {trust?.rating && (
-                <div className="flex items-center text-yellow-400 ml-2">
+                <div className="flex items-center text-amber-500 ml-2">
                   <Star className="w-3 h-3 mr-1 fill-current" />
                   <span className="text-xs font-medium">{trust.rating}</span>
                 </div>
               )}
             </div>
             
-            <p className="text-xs text-gray-400 flex items-center truncate">
+            <p className="text-xs text-slate-500 flex items-center truncate">
               <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
               {space.propertyAddress}
             </p>
 
             {/* Performance Metrics */}
             <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center text-emerald-400">
+              <div className="flex items-center text-emerald-600">
                 <Users className="w-3 h-3 mr-1" />
                 <span>{(insights.footTraffic/1000).toFixed(0)}K/day</span>
               </div>
-              <div className="flex items-center text-cyan-400">
+              <div className="flex items-center text-blue-600">
                 <TrendingUp className="w-3 h-3 mr-1" />
                 <span>+{insights.avgCampaignLift}%</span>
               </div>
@@ -149,9 +149,9 @@ export default function SpaceCard({
 
             {/* Action Area */}
             <div className="flex items-center justify-between pt-2">
-              <div className="flex items-center text-lime-400">
+              <div className="flex items-center text-emerald-600">
                 <Eye className="w-3 h-3 mr-1" />
-                <span className="text-xs">Available</span>
+                <span className="text-xs font-medium">Available</span>
               </div>
               <Button 
                 onClick={(e) => {
@@ -159,7 +159,7 @@ export default function SpaceCard({
                   onSpaceClick(space);
                 }}
                 size="sm"
-                className="bg-lime-400 text-gray-900 hover:bg-lime-500 text-xs px-3 py-1"
+                className="bg-blue-600 text-white hover:bg-blue-700 text-xs px-3 py-1 shadow-sm border-0"
               >
                 Details
               </Button>

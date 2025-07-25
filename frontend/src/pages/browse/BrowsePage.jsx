@@ -1,5 +1,5 @@
-// src/pages/browse/BrowsePage.jsx - Final: All components extracted
-// ✅ COMPLETED: Fully refactored with extracted components - 60% size reduction!
+// src/pages/browse/BrowsePage.jsx - Updated with Clean Styling
+// ✅ UPDATED: Clean styling to match navigation component
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
@@ -8,7 +8,7 @@ import { Navigation } from "lucide-react";
 import GoogleMap from "@/pages/browse/components/GoogleMap";
 import { useUser } from '@clerk/clerk-react';
 
-// ✅ NEW: Import all components
+// ✅ Import all components
 import CartModal from './components/CartModal';
 import FiltersModal from './components/FiltersModal';
 import SpaceDetailsModal from './components/SpaceDetailsModal';
@@ -20,7 +20,7 @@ import LoadingState from './components/LoadingState';
 import ErrorState from './components/ErrorState';
 import EmptyState from './components/EmptyState';
 
-// ✅ NEW: Import utility functions from browse/utils
+// ✅ Import utility functions from browse/utils
 import { getDistanceInKm } from './utils/distance';
 import { getPropertyCoords, getPropertyAddress, getPropertyName } from './utils/propertyHelpers';
 import { getNumericPrice } from './utils/areaHelpers';
@@ -36,19 +36,19 @@ import {
 export default function BrowsePage() {
   const navigate = useNavigate();
   
-  // ✅ UPDATED: Core state with dynamic map center and zoom
+  // ✅ Core state with dynamic map center and zoom
   const [properties, setProperties] = useState([]);
   const [allSpaces, setAllSpaces] = useState([]);
   const [selectedSpace, setSelectedSpace] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // ✅ UPDATED: Dynamic map center and zoom (can be changed by location button)
+  // ✅ Dynamic map center and zoom (can be changed by location button)
   const [mapCenter, setMapCenter] = useState(DEFAULT_MAP_CENTER);
   const [mapZoom, setMapZoom] = useState(DEFAULT_MAP_ZOOM);
   const [userLocation, setUserLocation] = useState(null);
   
-  // ✅ NEW: Pagination state
+  // ✅ Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   
   // Cart state
@@ -87,7 +87,7 @@ export default function BrowsePage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // ✅ FIXED: API call to your backend
+  // ✅ API call to backend
   const loadPropertiesData = async () => {
     if (!isMountedRef.current) return;
     
@@ -178,7 +178,7 @@ export default function BrowsePage() {
     };
   }, []);
 
-  // ✅ FIXED: User location detection (NO auto-centering)
+  // ✅ User location detection (NO auto-centering)
   useEffect(() => {
     if (!isMountedRef.current) return;
     
@@ -203,7 +203,7 @@ export default function BrowsePage() {
     }
   }, []);
 
-  // ✅ NEW: Advanced filtering for spaces with pagination
+  // ✅ Advanced filtering for spaces with pagination
   const { filteredSpaces, totalPages, paginatedSpaces } = useMemo(() => {
     let filtered = allSpaces;
 
@@ -281,7 +281,7 @@ export default function BrowsePage() {
     return cart.some(item => item.spaceId === spaceId);
   };
 
-  // ✅ FIXED: Event handlers with NO automatic map movement
+  // ✅ Event handlers with NO automatic map movement
   const handleSpaceClick = (space) => {
     if (!isMountedRef.current) return;
     
@@ -352,7 +352,7 @@ export default function BrowsePage() {
     });
   };
 
-  // ✅ FIXED: Actually center map on user location
+  // ✅ Actually center map on user location
   const handleCenterOnLocation = () => {
     if (userLocation) {
       console.log('📍 Centering map on user location:', userLocation);
@@ -448,11 +448,11 @@ export default function BrowsePage() {
   }, [filters]);
 
   return (
-    <div className="h-screen overflow-hidden bg-gray-900 text-white">
+    <div className="h-screen overflow-hidden bg-gray-500 text-slate-800">
       <div className="flex h-full">
         
-        {/* ✅ LEFT CONTAINER: FilterHeader + Content (60%) */}
-        <div className="w-[60%] h-full flex flex-col">
+        {/* ✅ LEFT CONTAINER: FilterHeader + Content (55%) */}
+        <div className="w-[55%] h-full flex flex-col">
           
           {/* ✅ HEADER: Fixed at top */}
           <FilterHeader 
@@ -469,7 +469,7 @@ export default function BrowsePage() {
           <div className="flex-1 flex flex-col min-h-0">
             <div className="flex-1 overflow-y-auto scrollbar-hide">
               <div className="p-2">
-                {/* ✅ REPLACED: State Components */}
+                {/* ✅ State Components */}
                 {error ? (
                   <ErrorState error={error} onRetry={loadPropertiesData} />
                 ) : isLoading ? (
@@ -501,9 +501,9 @@ export default function BrowsePage() {
           </div>
         </div>
   
-        {/* ✅ RIGHT CONTAINER: Fixed Map (40%) */}
-        <div className="w-[40%] h-full p-4 fixed right-0">
-          <div className="relative w-full h-[calc(100%-75px)] bg-gray-800 rounded-2xl overflow-hidden">
+        {/* ✅ RIGHT CONTAINER: Fixed Map (45%) */}
+        <div className="w-[45%] h-full p-4 fixed right-0">
+          <div className="relative w-full h-[calc(100%-75px)] bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-lg">
             <GoogleMap
               properties={properties.filter(property => 
                 property.latitude && property.longitude
@@ -521,7 +521,7 @@ export default function BrowsePage() {
             <div className="absolute top-4 right-4 z-20">
               <Button 
                 size="sm" 
-                className="bg-gray-800/90 backdrop-blur-lg border border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white rounded-xl"
+                className="bg-white hover:bg-gray-50 border border-gray-200 text-slate-600 hover:text-slate-800 rounded-lg shadow-sm"
                 onClick={handleCenterOnLocation}
                 title="Center map on your location"
               >
@@ -531,16 +531,16 @@ export default function BrowsePage() {
   
             {/* Map Legend */}
             <div className="absolute bottom-4 left-4 z-20">
-              <div className="bg-gray-800/90 backdrop-blur-lg rounded-xl p-3 border border-gray-700">
-                <p className="text-xs text-gray-400 mb-2">Map Legend</p>
+              <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                <p className="text-xs text-slate-600 mb-2 font-medium">Map Legend</p>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-xs">
-                    <div className="w-3 h-3 bg-lime-400 rounded-full"></div>
-                    <span className="text-gray-300">Ad Spaces</span>
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <span className="text-slate-600">Ad Spaces</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
-                    <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                    <span className="text-gray-300">Properties</span>
+                    <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+                    <span className="text-slate-600">Properties</span>
                   </div>
                 </div>
               </div>
@@ -549,7 +549,7 @@ export default function BrowsePage() {
         </div>
       </div>
   
-      {/* ✅ Modal Components - unchanged */}
+      {/* ✅ Modal Components */}
       <CartModal 
         showCart={showCart}
         setShowCart={setShowCart}
