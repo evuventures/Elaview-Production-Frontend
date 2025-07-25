@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import GoogleMap from '@/components/browse/maps/GoogleMap';
+import GoogleMap from '@/pages/browse/components/GoogleMap';
 import MobileBottomSheet from './MobileBottomSheet';
 import { getNavigationItems } from '@/lib/navigation';
 import { Property } from '@/api/entities';

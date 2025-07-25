@@ -1,9 +1,10 @@
-// src/components/layout/DesktopTopNavV2.jsx - Seamless Dark Integration
+// Enhanced Navigation with Airbnb-Style Role Toggle
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Search, Crown, Sparkles, User as UserIcon, ChevronDown, 
-  Bell, Settings, LogOut, Menu, X, Zap, Filter, ArrowRight
+  Bell, Settings, LogOut, Menu, X, Zap, Filter, ArrowRight,
+  Megaphone, Home, ToggleLeft, ToggleRight, Building2
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,26 +13,39 @@ import ThemeToggle from '@/components/ui/ThemeToggle';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getNavigationItems, getPrimaryActions, formatBadgeCount } from '@/lib/navigation';
 
-const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, currentUser }) => {
+const DesktopTopNavWithRoleToggle = ({ 
+  unreadCount, 
+  pendingInvoices, 
+  actionItemsCount, 
+  currentUser,
+  // ✅ NEW: Role management props
+  userRole = 'buyer', // 'buyer' | 'seller'
+  onRoleChange,
+  canSwitchRoles = true,
+  bookingsCount = 0,
+  propertiesCount = 0
+}) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+  const [roleToggleOpen, setRoleToggleOpen] = useState(false);
   const userMenuRef = useRef(null);
-  const quickActionsRef = useRef(null);
+  const roleToggleRef = useRef(null);
 
+  // Get role-specific navigation items
   const navigationItems = getNavigationItems({
     currentUser,
     unreadCount,
     pendingInvoices,
     actionItemsCount,
-    isMobile: false
+    isMobile: false,
+    userRole // Pass current role to get appropriate nav items
   });
 
-  const primaryActions = getPrimaryActions();
+  const primaryActions = getPrimaryActions(userRole);
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -39,8 +53,8 @@ const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, curre
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
         setUserMenuOpen(false);
       }
-      if (quickActionsRef.current && !quickActionsRef.current.contains(event.target)) {
-        setQuickActionsOpen(false);
+      if (roleToggleRef.current && !roleToggleRef.current.contains(event.target)) {
+        setRoleToggleOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -56,26 +70,50 @@ const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, curre
     }
   };
 
-  // Separate navigation into primary (always visible) and contextual groups
-  const dashboardItems = navigationItems.filter(item => 
+  const handleRoleSwitch = (newRole) => {
+    if (onRoleChange) {
+      onRoleChange(newRole);
+    }
+    setRoleToggleOpen(false);
+  };
+
+  // Core navigation items (always visible)
+  const coreNavItems = navigationItems.filter(item => 
     ['Dashboard', 'Browse Map', 'Messages'].includes(item.title)
   );
-  const workflowItems = navigationItems.filter(item => 
-    !dashboardItems.some(d => d.title === item.title)
-  );
 
-  // Calculate total badge count for quick actions
-  const totalBadges = navigationItems.reduce((sum, item) => sum + (item.badge || 0), 0);
+  // Get role-specific title and description
+  const getRoleInfo = () => {
+    if (userRole === 'seller') {
+      return {
+        title: 'Property Owner',
+        description: 'Manage your listings',
+        icon: Home,
+        primaryColor: 'text-cyan-400',
+        bgColor: 'bg-cyan-400/10'
+      };
+    } else {
+      return {
+        title: 'Advertiser',
+        description: 'Find ad spaces',
+        icon: Megaphone,
+        primaryColor: 'text-lime-400',
+        bgColor: 'bg-lime-400/10'
+      };
+    }
+  };
+
+  const roleInfo = getRoleInfo();
 
   return (
     <>
-      {/* ✅ Seamless Dark Navigation Bar - Same Background as Dashboard */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-gray-900 z-50">
+      {/* ✅ Enhanced Navigation with Role Toggle */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-gray-900 z-50 border-b border-gray-800/50">
         <div className="flex items-center justify-between h-full px-4 lg:px-6">
           
           {/* Left Section: Logo + Core Navigation */}
           <div className="flex items-center gap-6">
-            {/* ✅ Logo - Lime Green Accent to Match Dashboard */}
+            {/* Logo */}
             <Link to="/dashboard" className="flex items-center gap-2 group">
               <div className="w-8 h-8 bg-lime-400 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 group-hover:shadow-xl transition-all duration-200">
                 <Crown className="text-gray-900 w-4 h-4 font-bold" />
@@ -85,9 +123,9 @@ const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, curre
               </h2>
             </Link>
 
-            {/* ✅ Core Navigation - Seamless Dark Styling */}
+            {/* Core Navigation */}
             <nav className="hidden lg:flex items-center gap-1">
-              {dashboardItems.map((item) => {
+              {coreNavItems.map((item) => {
                 const isActive = location.pathname === item.url;
                 return (
                   <Link
@@ -119,7 +157,7 @@ const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, curre
             </nav>
           </div>
 
-          {/* ✅ Center Section: Enhanced Dark Search */}
+          {/* Center Section: Enhanced Search */}
           <div className="flex-1 max-w-lg mx-4 lg:mx-8">
             <div className={`relative group transition-all duration-300 ${
               searchFocused ? 'transform scale-[1.02]' : ''
@@ -129,7 +167,7 @@ const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, curre
               }`} />
               <Input
                 type="search"
-                placeholder="Search properties, campaigns, areas..."
+                placeholder={userRole === 'seller' ? "Search properties, bookings..." : "Search ad spaces, campaigns..."}
                 className={`w-full pl-10 pr-20 py-3 rounded-xl bg-gray-800/50 border-gray-700/50 text-white placeholder-gray-400 transition-all duration-300 ${
                   searchFocused 
                     ? 'border-lime-400/50 ring-2 ring-lime-400/20 bg-gray-800/80 shadow-lg shadow-lime-400/10' 
@@ -160,106 +198,156 @@ const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, curre
             </div>
           </div>
 
-          {/* ✅ Right Section: Dark Theme Actions + User */}
+          {/* ✅ Right Section: Role Toggle + Actions + User */}
           <div className="flex items-center gap-2">
             
-            {/* ✅ Quick Actions Button - Dark Styled */}
-            <div className="relative hidden md:block" ref={quickActionsRef}>
-              <Button
-                onClick={() => setQuickActionsOpen(!quickActionsOpen)}
-                size="sm"
-                variant="ghost"
-                className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 ${
-                  quickActionsOpen 
-                    ? 'bg-lime-400/10 text-lime-400 shadow-lg shadow-lime-400/20' 
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800/50'
-                }`}
-              >
-                <Zap className="w-4 h-4" />
-                <span className="hidden lg:inline text-sm font-medium">Quick Actions</span>
-                {totalBadges > 0 && (
-                  <Badge className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[18px] h-4 animate-pulse">
-                    {formatBadgeCount(totalBadges)}
-                  </Badge>
-                )}
-                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${quickActionsOpen ? 'rotate-180' : ''}`} />
-              </Button>
-
-              {/* ✅ Quick Actions Dropdown - Dark Theme */}
-              <AnimatePresence>
-                {quickActionsOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute top-full right-0 mt-2 w-80 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-xl"
-                  >
-                    {/* Quick Actions Header */}
-                    <div className="px-4 py-3 border-b border-gray-700 bg-gray-800/50">
-                      <h3 className="font-semibold text-sm text-white">Quick Actions</h3>
-                      <p className="text-xs text-gray-400">Frequently used features</p>
+            {/* ✅ NEW: Airbnb-Style Role Toggle */}
+            {canSwitchRoles && (
+              <div className="relative hidden md:block" ref={roleToggleRef}>
+                <Button
+                  onClick={() => setRoleToggleOpen(!roleToggleOpen)}
+                  size="sm"
+                  variant="ghost"
+                  className={`relative flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 ${
+                    roleToggleOpen 
+                      ? `${roleInfo.bgColor} ${roleInfo.primaryColor} shadow-lg` 
+                      : 'text-gray-300 hover:text-white hover:bg-gray-800/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <roleInfo.icon className="w-4 h-4" />
+                    <div className="text-left">
+                      <div className="text-sm font-semibold">{roleInfo.title}</div>
+                      <div className="text-xs opacity-75">{roleInfo.description}</div>
                     </div>
-                    
-                    {/* Primary Actions */}
-                    <div className="p-3">
-                      {primaryActions.map((action) => (
-                        <Link
-                          key={action.title}
-                          to={action.url}
-                          onClick={() => setQuickActionsOpen(false)}
-                          className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-gray-700/50 transition-all duration-200 group"
+                  </div>
+                  <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${roleToggleOpen ? 'rotate-180' : ''}`} />
+                </Button>
+
+                {/* Role Toggle Dropdown */}
+                <AnimatePresence>
+                  {roleToggleOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute top-full right-0 mt-2 w-80 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-xl"
+                    >
+                      {/* Header */}
+                      <div className="px-4 py-3 border-b border-gray-700 bg-gray-800/50">
+                        <h3 className="font-semibold text-sm text-white">Switch Role</h3>
+                        <p className="text-xs text-gray-400">Choose your primary activity</p>
+                      </div>
+                      
+                      {/* Role Options */}
+                      <div className="p-3 space-y-2">
+                        {/* Advertiser/Buyer Option */}
+                        <motion.button
+                          onClick={() => handleRoleSwitch('buyer')}
+                          className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-200 ${
+                            userRole === 'buyer'
+                              ? 'bg-lime-400/20 border-2 border-lime-400/50 shadow-lg'
+                              : 'hover:bg-gray-700/30 border-2 border-transparent'
+                          }`}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                         >
-                          <div className={`p-2.5 rounded-lg transition-all duration-200 ${
-                            action.type === 'primary' 
-                              ? 'bg-lime-400 text-gray-900 group-hover:bg-lime-300 shadow-lg' 
-                              : 'bg-gray-700 text-gray-300 group-hover:bg-lime-400/20 group-hover:text-lime-400'
+                          <div className={`p-3 rounded-xl ${
+                            userRole === 'buyer' 
+                              ? 'bg-lime-400 text-gray-900' 
+                              : 'bg-gray-700 text-gray-300'
                           }`}>
-                            <action.icon className="w-4 h-4" />
+                            <Megaphone className="w-5 h-5" />
                           </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-sm text-white group-hover:text-lime-400 transition-colors">{action.title}</p>
-                            <p className="text-xs text-gray-400">
-                              {action.type === 'primary' ? 'Create new campaign' : 'Add property listing'}
-                            </p>
-                          </div>
-                          <ArrowRight className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 group-hover:text-lime-400 transition-all duration-200" />
-                        </Link>
-                      ))}
-                    </div>
-
-                    {/* Workflow Items */}
-                    {workflowItems.length > 0 && (
-                      <>
-                        <div className="px-4 py-2 border-t border-gray-700 bg-gray-800/30">
-                          <h4 className="font-medium text-xs text-gray-400 uppercase tracking-wide">Workflow</h4>
-                        </div>
-                        <div className="p-2 max-h-48 overflow-y-auto">
-                          {workflowItems.map((item) => (
-                            <Link
-                              key={item.title}
-                              to={item.url}
-                              onClick={() => setQuickActionsOpen(false)}
-                              className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-700/50 transition-colors group"
-                            >
-                              <item.icon className="w-4 h-4 text-gray-400 group-hover:text-lime-400 transition-colors" />
-                              <span className="flex-1 text-sm text-gray-300 group-hover:text-white transition-colors">{item.title}</span>
-                              {item.badge > 0 && (
-                                <Badge className={`${item.badgeColor || 'bg-red-500'} text-white text-xs px-1.5 py-0.5 rounded-full`}>
-                                  {formatBadgeCount(item.badge)}
-                                </Badge>
+                          <div className="flex-1 text-left">
+                            <div className="font-semibold text-white flex items-center gap-2">
+                              Advertiser
+                              {userRole === 'buyer' && (
+                                <div className="w-2 h-2 bg-lime-400 rounded-full animate-pulse" />
                               )}
-                            </Link>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                            </div>
+                            <div className="text-sm text-gray-400">Find and book ad spaces</div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {bookingsCount} active campaigns
+                            </div>
+                          </div>
+                          {userRole === 'buyer' && (
+                            <div className="text-lime-400">
+                              <ToggleRight className="w-5 h-5" />
+                            </div>
+                          )}
+                        </motion.button>
 
-            {/* ✅ Notifications - Dark Theme */}
+                        {/* Property Owner/Seller Option */}
+                        <motion.button
+                          onClick={() => handleRoleSwitch('seller')}
+                          className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-200 ${
+                            userRole === 'seller'
+                              ? 'bg-cyan-400/20 border-2 border-cyan-400/50 shadow-lg'
+                              : 'hover:bg-gray-700/30 border-2 border-transparent'
+                          }`}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <div className={`p-3 rounded-xl ${
+                            userRole === 'seller' 
+                              ? 'bg-cyan-400 text-gray-900' 
+                              : 'bg-gray-700 text-gray-300'
+                          }`}>
+                            <Home className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <div className="font-semibold text-white flex items-center gap-2">
+                              Property Owner
+                              {userRole === 'seller' && (
+                                <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-400">List and manage properties</div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {propertiesCount} active properties
+                            </div>
+                          </div>
+                          {userRole === 'seller' && (
+                            <div className="text-cyan-400">
+                              <ToggleRight className="w-5 h-5" />
+                            </div>
+                          )}
+                        </motion.button>
+                      </div>
+
+                      {/* Quick Action for Current Role */}
+                      <div className="p-3 border-t border-gray-700 bg-gray-800/30">
+                        <Link
+                          to={userRole === 'buyer' ? '/map' : '/create-property'}
+                          onClick={() => setRoleToggleOpen(false)}
+                          className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
+                            userRole === 'buyer'
+                              ? 'bg-lime-400 text-gray-900 hover:bg-lime-500 shadow-lg'
+                              : 'bg-cyan-400 text-gray-900 hover:bg-cyan-500 shadow-lg'
+                          }`}
+                        >
+                          {userRole === 'buyer' ? (
+                            <>
+                              <Search className="w-4 h-4" />
+                              Find Ad Spaces
+                            </>
+                          ) : (
+                            <>
+                              <Building2 className="w-4 h-4" />
+                              List Property
+                            </>
+                          )}
+                        </Link>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+
+            {/* Notifications */}
             <Button
               size="sm"
               variant="ghost"
@@ -271,12 +359,7 @@ const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, curre
               )}
             </Button>
 
-            {/* ✅ Theme Toggle - Hidden for now since we're dark-first */}
-            <div className="hidden">
-              <ThemeToggle />
-            </div>
-
-            {/* ✅ User Menu - Enhanced Dark Theme */}
+            {/* User Menu */}
             {currentUser && (
               <div className="relative" ref={userMenuRef}>
                 <button
@@ -291,13 +374,13 @@ const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, curre
                       {currentUser.firstName}
                     </p>
                     <p className="text-xs text-gray-400 capitalize">
-                      {currentUser.publicMetadata?.role || 'Member'}
+                      {userRole === 'seller' ? 'Property Owner' : 'Advertiser'}
                     </p>
                   </div>
                   <ChevronDown className={`w-3 h-3 text-gray-400 transition-all duration-200 ${userMenuOpen ? 'rotate-180 text-lime-400' : 'group-hover:text-white'}`} />
                 </button>
 
-                {/* ✅ Enhanced User Dropdown - Dark Theme */}
+                {/* User Dropdown (same as before) */}
                 <AnimatePresence>
                   {userMenuOpen && (
                     <motion.div
@@ -314,11 +397,13 @@ const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, curre
                         <p className="text-xs text-gray-400 truncate mt-1">
                           {currentUser.emailAddresses?.[0]?.emailAddress}
                         </p>
-                        {currentUser.publicMetadata?.role === 'admin' && (
-                          <Badge className="bg-purple-500 text-white text-xs mt-2">
-                            Admin
-                          </Badge>
-                        )}
+                        <Badge className={`text-xs mt-2 ${
+                          userRole === 'seller' 
+                            ? 'bg-cyan-400 text-gray-900' 
+                            : 'bg-lime-400 text-gray-900'
+                        }`}>
+                          {userRole === 'seller' ? 'Property Owner' : 'Advertiser'}
+                        </Badge>
                       </div>
                       <div className="p-2">
                         <Link
@@ -347,7 +432,7 @@ const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, curre
               </div>
             )}
 
-            {/* ✅ Mobile Menu Button - Dark Theme */}
+            {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all duration-200"
@@ -358,7 +443,7 @@ const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, curre
         </div>
       </header>
 
-      {/* ✅ Mobile Menu - Enhanced Dark Theme */}
+      {/* Mobile Menu (enhanced with role switching) */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
@@ -377,12 +462,43 @@ const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, curre
               onClick={(e) => e.stopPropagation()}
             >
               <div className="space-y-6">
+                {/* Role Switcher for Mobile */}
+                {canSwitchRoles && (
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-sm text-gray-400 uppercase tracking-wide">Switch Role</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => handleRoleSwitch('buyer')}
+                        className={`p-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                          userRole === 'buyer'
+                            ? 'bg-lime-400 text-gray-900 shadow-lg'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        }`}
+                      >
+                        <Megaphone className="w-4 h-4 mx-auto mb-1" />
+                        Advertiser
+                      </button>
+                      <button
+                        onClick={() => handleRoleSwitch('seller')}
+                        className={`p-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                          userRole === 'seller'
+                            ? 'bg-cyan-400 text-gray-900 shadow-lg'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        }`}
+                      >
+                        <Home className="w-4 h-4 mx-auto mb-1" />
+                        Owner
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Mobile Search */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     type="search"
-                    placeholder="Search..."
+                    placeholder={userRole === 'seller' ? "Search properties..." : "Search ad spaces..."}
                     className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-700/50 border-gray-600 text-white placeholder-gray-400"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -423,26 +539,30 @@ const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, curre
                   })}
                 </div>
 
-                {/* Primary Actions */}
+                {/* Primary Action */}
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-sm text-gray-400 uppercase tracking-wide mb-3">Actions</h3>
-                  {primaryActions.map((action) => (
-                    <Link
-                      key={action.title}
-                      to={action.url}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <button className={`w-full rounded-xl py-3 font-medium flex items-center justify-center gap-2 text-sm transition-all duration-200 ${
-                        action.type === 'primary'
-                          ? 'bg-lime-400 text-gray-900 hover:bg-lime-500 shadow-lg'
-                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
-                      }`}>
-                        <action.icon className="h-4 w-4" />
-                        {action.title}
-                        {action.type === 'primary' && <Sparkles className="h-3 w-3" />}
-                      </button>
-                    </Link>
-                  ))}
+                  <Link
+                    to={userRole === 'buyer' ? '/map' : '/create-property'}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <button className={`w-full rounded-xl py-3 font-medium flex items-center justify-center gap-2 text-sm transition-all duration-200 ${
+                      userRole === 'buyer'
+                        ? 'bg-lime-400 text-gray-900 hover:bg-lime-500 shadow-lg'
+                        : 'bg-cyan-400 text-gray-900 hover:bg-cyan-500 shadow-lg'
+                    }`}>
+                      {userRole === 'buyer' ? (
+                        <>
+                          <Search className="h-4 w-4" />
+                          Find Ad Spaces
+                        </>
+                      ) : (
+                        <>
+                          <Building2 className="h-4 w-4" />
+                          List Property
+                        </>
+                      )}
+                    </button>
+                  </Link>
                 </div>
               </div>
             </motion.div>
@@ -450,10 +570,10 @@ const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, curre
         )}
       </AnimatePresence>
 
-      {/* ✅ Content Spacer - Adjusted for new height */}
+      {/* Content Spacer */}
       <div className="h-16" />
     </>
   );
 };
 
-export default DesktopTopNavV2;
+export default DesktopTopNavWithRoleToggle;

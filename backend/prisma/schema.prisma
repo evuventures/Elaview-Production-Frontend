@@ -1,3 +1,4 @@
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -5,6 +6,32 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ✅ NEW: Creative Assets Model
+model creatives {
+  id        String   @id @default(cuid())
+  name      String   // Original filename
+  type      String   // 'image', 'video', 'document'
+  url       String   // Cloudinary secure_url
+  publicId  String   // Cloudinary public_id (for deletions/transformations)
+  size      Int      // File size in bytes
+  format    String?  // File format (jpg, mp4, pdf, etc.)
+  width     Int?     // For images/videos
+  height    Int?     // For images/videos
+  status    String   @default("pending") // 'pending', 'approved', 'rejected'
+  notes     String?  // Admin/reviewer notes
+  
+  // Relations
+  userId    String   // Who uploaded it
+  user      users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookingId String?  // Optional: which booking this is for
+  booking   bookings? @relation(fields: [bookingId], references: [id])
+  campaignId String? // Optional: which campaign this is for
+  campaign  campaigns? @relation(fields: [campaignId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model advertising_areas {
@@ -58,6 +85,7 @@ model bookings {
   properties        properties?         @relation(fields: [propertyId], references: [id])
   invoices          invoices[]
   payment_reminders payment_reminders[]
+  creatives         creatives[]         // ✅ NEW: Creatives for this booking
 
   conversation  conversations[] @relation("BookingConversations")
 }
@@ -108,6 +136,7 @@ model campaigns {
   users                  users          @relation(fields: [advertiserId], references: [id], onDelete: Cascade)
   properties             properties?    @relation(fields: [propertyId], references: [id])
   invoices               invoices[]
+  creatives              creatives[]    // ✅ NEW: Creatives for this campaign
 
   conversation  conversations[] @relation("CampaignConversations")
 }
@@ -185,7 +214,7 @@ model conversations {
   description    String?
   isActive       Boolean          @default(true)
   isArchived     Boolean          @default(false)
-  lastMessageId  String?
+  lastMessageId  String?          @unique // ✅ FIXED: Added @unique
   propertyId     String?
   bookingId      String?
   campaignId     String?
@@ -351,7 +380,6 @@ model property_approvals {
   users        users?         @relation(fields: [reviewerId], references: [id])
 }
 
-
 model users {
   id                         String               @id
   clerkId                    String               @unique
@@ -375,6 +403,7 @@ model users {
   payment_settings           payment_settings?
   properties                 properties[]
   property_approvals         property_approvals[]
+  creatives                  creatives[]          // ✅ NEW: User's creative assets
   
   // UPDATED MESSAGING RELATIONSHIPS
   sentMessages               messages[]           @relation("MessageSender")
