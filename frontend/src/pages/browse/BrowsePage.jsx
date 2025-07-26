@@ -444,7 +444,7 @@ export default function BrowsePage() {
   // ✅ MOBILE LAYOUT: Full-screen map only (uses existing MobileNav component)
   if (isMobile) {
     return (
-      <div className="fixed inset-0 overflow-hidden bg-slate-50">
+      <div className="fixed inset-0 overflow-hidden bg-gradient-to-br from-slate-50 via-slate-50 to-teal-50/30">
         {/* ✅ MOBILE: Full-screen Map Container */}
         <div className="w-full h-full relative">
           <div className="w-full h-full bg-white overflow-hidden touch-none">
@@ -462,7 +462,7 @@ export default function BrowsePage() {
             />
 
             {/* ✅ Mobile Map Controls - Fixed position (stays in same spot regardless of map movement) */}
-            <div className="fixed top-4 right-4 z-20 flex flex-col gap-2">
+            <div className="fixed top-[5rem] right-4 z-20 flex flex-col gap-2">
               <Button 
                 size="sm" 
                 variant="outline"
@@ -491,24 +491,24 @@ export default function BrowsePage() {
               </Button>
             </div>
 
-            {/* ✅ Mobile Map Info Card - Fixed position (stays in same spot regardless of map movement) */}
-            {!isLoading && !error && (
-              <div className="fixed top-4 left-4 z-20">
-                <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg px-3 py-2 shadow-lg">
-                  <div className="text-center">
-                    <p className="text-lg font-semibold text-teal-600">
-                      {filteredSpaces.length}
-                    </p>
-                    <p className="text-xs text-slate-600">
-                      {filteredSpaces.length === 1 ? 'Space' : 'Spaces'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+           {/* ✅ Mobile Map Info Card - Left positioned */}
+{!isLoading && !error && (
+  <div className="fixed top-20 left-4 z-20">  {/* 👈 Changed from center to left */}
+    <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg px-4 py-3 shadow-lg min-w-[120px] max-w-[200px]">
+      <div className="text-center">
+        <p className="text-xl font-semibold text-teal-600">
+          {filteredSpaces.length}
+        </p>
+        <p className="text-sm text-slate-600 leading-tight">
+          {filteredSpaces.length === 1 ? 'Space' : 'Spaces'}
+        </p>
+      </div>
+    </div>
+  </div>
+)}
 
             {/* ✅ Mobile Map Legend - Bottom Left (positioned just above MobileNav) */}
-            <div className="absolute bottom-[5.5rem] left-4 z-20">
+            {/* <div className="absolute bottom-[5.5rem] left-4 z-20">
               <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg">
                 <h4 className="font-medium text-xs text-slate-800 mb-2">Legend</h4>
                 <div className="space-y-1">
@@ -528,7 +528,7 @@ export default function BrowsePage() {
                   )}
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* ✅ Mobile Loading State - Fixed position overlay */}
             {isLoading && (
@@ -588,15 +588,15 @@ export default function BrowsePage() {
 
   // ✅ DESKTOP LAYOUT: Original side-by-side layout
   return (
-    <div className="h-screen overflow-hidden bg-slate-50">
+    <div className="h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-slate-50 to-teal-50/30">
       <div className="flex h-full">
         
-        {/* ✅ LEFT CONTAINER: Content (55%) - Elaview Design System */}
-        <div className="w-[55%] h-full flex flex-col bg-slate-25">
+        {/* ✅ LEFT CONTAINER: Content (55%) - Enhanced background */}
+        <div className="w-[55%] h-full flex flex-col bg-gradient-to-b from-white/40 to-slate-50/60 backdrop-blur-sm">
   
-          {/* ✅ CONTENT: Scrollable area with Elaview styling */}
-          <div className="flex-1 flex flex-col min-h-0">
-            <div className="flex-1 overflow-y-auto scrollbar-hide">
+          {/* ✅ CONTENT: Scrollable area with enhanced glass effect */}
+          <div className="flex-1 flex flex-col min-h-0 bg-white/30 backdrop-blur-sm rounded-2xl m-4 shadow-soft border border-white/40">
+            <div className="flex-1 overflow-y-auto scrollbar-hide rounded-t-2xl">
               <div className="p-6">
                 {/* ✅ Combined Header with Controls */}
                 {!isLoading && !error && (
@@ -691,9 +691,9 @@ export default function BrowsePage() {
               </div>
             </div>
   
-            {/* ✅ PAGINATION: Fixed at bottom with Elaview styling */}
+            {/* ✅ PAGINATION: Fixed at bottom with enhanced styling */}
             {!isLoading && !error && totalPages > 1 && (
-              <div className="bg-white border-t border-slate-200 shadow-soft px-6 py-4">
+              <div className="bg-white/80 backdrop-blur-sm border-t border-slate-200/60 shadow-soft px-6 py-4 rounded-b-2xl mx-4 mb-4">
                 <PaginationControls 
                   currentPage={currentPage}
                   setCurrentPage={setCurrentPage}
@@ -705,8 +705,8 @@ export default function BrowsePage() {
           </div>
         </div>
   
-        {/* ✅ RIGHT CONTAINER: Fixed Map (45%) - Desktop Only */}
-        <div className="w-[45%] h-full p-4 fixed right-0">
+        {/* ✅ RIGHT CONTAINER: Fixed Map (45%) - Enhanced background */}
+        <div className="w-[45%] h-full p-4 fixed right-0 bg-gradient-to-bl from-white/20 to-transparent">
           <div className="relative w-full h-[calc(100%-75px)] bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-lg">
             <GoogleMap
               properties={properties.filter(property => 

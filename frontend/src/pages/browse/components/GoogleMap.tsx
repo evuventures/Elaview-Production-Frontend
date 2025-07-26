@@ -1,5 +1,6 @@
 // src/components/browse/maps/GoogleMap.tsx
 // ✅ CLEAN: Simplified GoogleMap with Elaview design system - Deep Teal
+// ✅ MOBILE: Disabled default Google Maps controls on mobile
 
 import React, { useEffect, useRef, useState } from 'react';
 import { X, MapPin } from 'lucide-react';
@@ -269,11 +270,24 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   const clickMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
   
+  // ✅ NEW: Mobile detection state
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
   // ✅ Simplified dropdown state
   const [activeDropdown, setActiveDropdown] = useState<{
     spaces: AdvertisingArea[];
     position: LatLng;
   } | null>(null);
+
+  // ✅ NEW: Mobile detection useEffect
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // ✅ Clean up function
   const cleanupMarkers = (markerArray: google.maps.marker.AdvancedMarkerElement[]) => {
@@ -341,18 +355,19 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
 
         const { Map } = await window.google.maps.importLibrary("maps");
         
+        // ✅ FIXED: Conditional UI controls based on mobile state
         const map = new Map(mapRef.current, {
           center,
           zoom,
           mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID',
           gestureHandling: 'greedy',
-          disableDefaultUI: false,
-          zoomControl: true,
-          mapTypeControl: false,
-          scaleControl: false,
-          streetViewControl: false,
-          rotateControl: false,
-          fullscreenControl: true,
+          disableDefaultUI: isMobile,           // ✅ Disable all UI on mobile
+          zoomControl: !isMobile,               // ✅ Hide zoom +/- on mobile
+          mapTypeControl: false,                // Always off
+          scaleControl: false,                  // Always off
+          streetViewControl: false,             // Always off
+          rotateControl: false,                 // Always off
+          fullscreenControl: !isMobile,         // ✅ Hide fullscreen on mobile
           clickableIcons: false,
           backgroundColor: '#f8fafc',
           styles: [
@@ -387,7 +402,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
     };
 
     initMap();
-  }, []);
+  }, [isMobile]); // ✅ NEW: Re-create map when mobile state changes
 
   // ✅ Update map center and zoom when props change
   useEffect(() => {

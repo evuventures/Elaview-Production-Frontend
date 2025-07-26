@@ -50,7 +50,16 @@ export const getAreaType = (area) => {
 export const getAreaPrice = (area) => {
   if (area.baseRate) {
     const rateType = area.rateType || 'MONTHLY';
-    const suffix = rateType.toLowerCase().replace('ly', '').replace('y', 'y');
+    
+    // ✅ FIXED: Proper rate type mapping
+    const rateTypeMap = {
+      'DAILY': 'day',
+      'WEEKLY': 'week', 
+      'MONTHLY': 'month',
+      'YEARLY': 'year'
+    };
+    
+    const suffix = rateTypeMap[rateType.toUpperCase()] || 'month';
     return `$${area.baseRate}/${suffix}`;
   }
   if (area.pricing) {

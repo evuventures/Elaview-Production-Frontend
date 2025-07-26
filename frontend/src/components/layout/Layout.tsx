@@ -53,7 +53,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
       try {
         console.log('📋 Fetching user data from backend...');
         const token = await getToken();
-        const response = await fetch('http://localhost:5000/api/users/profile', {
+        const response = await fetch('https://elaview-backend.up.railway.app/api/users/profile', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -198,12 +198,12 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
         return () => clearInterval(interval);
       }, [isLoaded, isSignedIn, currentUser]);
 
-    // ✅ Elaview loading state
+    // ✅ Elaview loading state with fallback background
     if (!isLoaded || isLoading) {
       return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-teal-50/30 flex items-center justify-center">
           <div className="text-center">
-            <div className="loading-spinner w-8 h-8 text-mocha-500 mx-auto mb-3"></div>
+            <div className="loading-spinner w-8 h-8 text-teal-500 mx-auto mb-3"></div>
             <p className="body-medium text-slate-600">Loading Elaview...</p>
           </div>
         </div>
@@ -211,13 +211,15 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     }
     
     return (
-        <div className="min-h-screen flex flex-col font-sans bg-slate-50 text-slate-900 relative">
-            {/* ✅ Elaview Background Effects - Subtle and Professional */}
-            <div className="fixed inset-0 pointer-events-none opacity-40">
-              <div className="absolute inset-0 bg-gradient-to-br from-mocha-50 via-transparent to-slate-100"></div>
-              <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-mocha-100/30 to-transparent rounded-full blur-3xl"></div>
-              <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-slate-100/50 to-transparent rounded-full blur-3xl"></div>
-            </div>
+        <div className="min-h-screen flex flex-col font-sans text-slate-900 relative">
+            {/* ✅ Subtle Background Effects - Only for non-browse pages */}
+            {location.pathname !== '/browse' && (
+              <div className="fixed inset-0 pointer-events-none opacity-30 z-0">
+                <div className="absolute inset-0 bg-gradient-to-br from-teal-50/50 via-transparent to-slate-100/50"></div>
+                <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-teal-100/20 to-transparent rounded-full blur-3xl"></div>
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-slate-100/30 to-transparent rounded-full blur-3xl"></div>
+              </div>
+            )}
             
             <div className="relative z-[9999]">
               {/* ✅ Enhanced Top Navigation with Elaview styling */}
@@ -245,7 +247,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                           userRole === 'seller' 
                             ? 'bg-success-100 text-success-800' 
-                            : 'bg-mocha-100 text-mocha-800'
+                            : 'bg-teal-100 text-teal-800'
                         }`}>
                           {userRole === 'seller' ? 'Space Owner' : 'Advertiser'}
                         </span>
@@ -286,11 +288,11 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                           transition={pageTransition}
                           className="w-full"
                       >
-                          {/* ✅ Role Update Notification with Elaview styling */}
+                          {/* ✅ Role Update Notification with correct styling */}
                           {isUpdatingRole && (
                             <div className="fixed top-20 right-4 z-50 animate-fade-in">
-                              <div className="card card-compact bg-white border-mocha-200 shadow-soft-lg flex items-center gap-3">
-                                <div className="loading-spinner w-4 h-4 text-mocha-500"></div>
+                              <div className="card card-compact bg-white border-teal-200 shadow-soft-lg flex items-center gap-3">
+                                <div className="loading-spinner w-4 h-4 text-teal-500"></div>
                                 <span className="body-small font-medium text-slate-700">Switching role...</span>
                               </div>
                             </div>
