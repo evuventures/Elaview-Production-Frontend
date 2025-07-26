@@ -1,0 +1,8 @@
+[build]
+builder = "nixpacks"
+
+[build.nixpacks]
+pkgs = ["nodejs_20", "npm-10_x"]
+
+[deploy]
+startCommand = "npx serve -s dist -l $PORT"
