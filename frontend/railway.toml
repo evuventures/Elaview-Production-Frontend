@@ -6,4 +6,4 @@ buildCommand = "rm -rf node_modules/.cache && npm install && npm run build"
 pkgs = ["nodejs_20", "npm-10_x"]
 
 [deploy]
-startCommand = "npx serve -s dist -l $PORT"
+startCommand = "npx serve -s dist -l $PORT -H 0.0.0.0"
