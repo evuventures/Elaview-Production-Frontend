@@ -1,5 +1,6 @@
 [build]
 builder = "nixpacks"
+buildCommand = "rm -rf node_modules/.cache && npm install && npm run build"
 
 [build.nixpacks]
 pkgs = ["nodejs_20", "npm-10_x"]
