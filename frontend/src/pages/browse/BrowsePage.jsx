@@ -26,12 +26,14 @@ import { getPropertyCoords, getPropertyAddress, getPropertyName } from './utils/
 import { getNumericPrice } from './utils/areaHelpers';
 import { applyPriceFilter, applySpaceTypeFilter, applyAudienceFilter, applyFeaturesFilter } from './utils/filterHelpers';
 import { 
-  API_BASE_URL, 
   CARDS_PER_PAGE, 
   DEFAULT_MAP_CENTER, 
   DEFAULT_MAP_ZOOM, 
   LOCATION_ZOOM 
 } from './utils/mapConstants';
+
+// ✅ Import the working API client
+import apiClient from '@/api/apiClient';
 
 export default function BrowsePage() {
   const navigate = useNavigate();
@@ -87,7 +89,7 @@ export default function BrowsePage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // ✅ API call to backend
+  // ✅ API call to backend using the working apiClient
   const loadPropertiesData = async () => {
     if (!isMountedRef.current) return;
     
@@ -97,24 +99,16 @@ export default function BrowsePage() {
     try {
       console.log('🗺️ Loading properties from API...');
       
-      const response = await fetch(`${API_BASE_URL}/api/spaces`);
-      
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
+      // Use the working apiClient.getSpaces() method that connects to Railway
+      const response = await apiClient.getSpaces();
       
       if (!isMountedRef.current) {
         console.log('🗺️ Component unmounted during loading, aborting');
         return;
       }
 
-      if (!data.success || !data.data) {
-        throw new Error('Invalid API response format');
-      }
-
-      const propertiesData = data.data;
+      // Handle response format (check if it has success/data structure)
+      const propertiesData = response.success ? response.data : response;
       console.log(`🏢 API returned ${propertiesData.length} properties`);
 
       // Filter properties that have coordinates AND advertising areas
@@ -468,7 +462,7 @@ export default function BrowsePage() {
             />
 
             {/* ✅ Mobile Map Controls - Fixed position (stays in same spot regardless of map movement) */}
-            <div className="absolute top-[5.5rem] right-4 z-20 flex flex-col gap-2">
+            <div className="fixed top-4 right-4 z-20 flex flex-col gap-2">
               <Button 
                 size="sm" 
                 variant="outline"
@@ -514,7 +508,7 @@ export default function BrowsePage() {
             )}
 
             {/* ✅ Mobile Map Legend - Bottom Left (positioned just above MobileNav) */}
-            <div className="absolute top-[5.5rem] left-4 z-20">
+            <div className="absolute bottom-[5.5rem] left-4 z-20">
               <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg">
                 <h4 className="font-medium text-xs text-slate-800 mb-2">Legend</h4>
                 <div className="space-y-1">
