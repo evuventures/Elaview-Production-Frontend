@@ -450,10 +450,10 @@ export default function BrowsePage() {
   // ✅ MOBILE LAYOUT: Full-screen map only (uses existing MobileNav component)
   if (isMobile) {
     return (
-      <div className="h-screen overflow-hidden bg-slate-50">
+      <div className="fixed inset-0 overflow-hidden bg-slate-50">
         {/* ✅ MOBILE: Full-screen Map Container */}
         <div className="w-full h-full relative">
-          <div className="w-full h-full bg-white overflow-hidden">
+          <div className="w-full h-full bg-white overflow-hidden touch-none">
             <GoogleMap
               properties={properties.filter(property => 
                 property.latitude && property.longitude
@@ -467,8 +467,8 @@ export default function BrowsePage() {
               showAreaMarkers={true}
             />
 
-            {/* ✅ Mobile Map Controls - Top Right */}
-            <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
+            {/* ✅ Mobile Map Controls - Fixed position (stays in same spot regardless of map movement) */}
+            <div className="absolute top-[5.5rem] right-4 z-20 flex flex-col gap-2">
               <Button 
                 size="sm" 
                 variant="outline"
@@ -497,9 +497,9 @@ export default function BrowsePage() {
               </Button>
             </div>
 
-            {/* ✅ Mobile Map Info Card - Top Left */}
+            {/* ✅ Mobile Map Info Card - Fixed position (stays in same spot regardless of map movement) */}
             {!isLoading && !error && (
-              <div className="absolute top-4 left-4 z-20">
+              <div className="fixed top-4 left-4 z-20">
                 <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg px-3 py-2 shadow-lg">
                   <div className="text-center">
                     <p className="text-lg font-semibold text-teal-600">
@@ -514,9 +514,9 @@ export default function BrowsePage() {
             )}
 
             {/* ✅ Mobile Map Legend - Bottom Left (positioned just above MobileNav) */}
-            <div className="absolute bottom-[11.5rem] left-4 z-20">
+            <div className="absolute top-[5.5rem] left-4 z-20">
               <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg">
-                <h4 className="font-medium text-xs text-slate-800">Legend</h4>
+                <h4 className="font-medium text-xs text-slate-800 mb-2">Legend</h4>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
@@ -536,9 +536,9 @@ export default function BrowsePage() {
               </div>
             </div>
 
-            {/* ✅ Mobile Loading State */}
+            {/* ✅ Mobile Loading State - Fixed position overlay */}
             {isLoading && (
-              <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-30">
+              <div className="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-30">
                 <div className="bg-white rounded-lg p-4 text-center shadow-lg">
                   <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                   <p className="text-sm text-slate-600">Loading spaces...</p>

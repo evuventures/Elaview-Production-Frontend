@@ -66,13 +66,14 @@ export const getNavigationItems = ({
     }
   ] : [];
 
-  const profileItems = [
+  // Profile items - only show on desktop, not mobile
+  const profileItems = !isMobile ? [
     { 
       title: "Profile", 
       url: "/profile", 
       icon: UserIcon 
     },
-  ];
+  ] : [];
 
   return [...baseItems, ...adminItems, ...profileItems];
 };
