@@ -1,9 +1,8 @@
 [build]
 builder = "nixpacks"
-buildCommand = "rm -rf node_modules/.cache && npm install && npm run build"
 
 [build.nixpacks]
 pkgs = ["nodejs_20", "npm-10_x"]
 
 [deploy]
-startCommand = "npx serve -s dist -l $PORT -H 0.0.0.0"
+startCommand = "serve -s dist -l $PORT"
