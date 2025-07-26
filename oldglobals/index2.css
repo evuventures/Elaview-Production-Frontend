@@ -1,0 +1,759 @@
+/* TEMPORARY TEST - Add this at the very top */
+.btn-gradient {
+  background: linear-gradient(135deg, #84cc16, #22d3ee) !important;
+  color: #111827 !important;
+  border: none !important;
+}
+
+.dark .btn-gradient {
+  background: linear-gradient(135deg, #84cc16, #67e8f9) !important;
+  color: #111827 !important;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ================================
+   DARK THEME COLORS - STOCKIFY INSPIRED
+   Modern dark theme with lime green accents
+   ================================ */
+
+@layer base {
+  :root {
+    /* Dark Theme Brand Colors */
+    --brand-primary: 82 85% 47%;            /* #84cc16 - Lime green */
+    --brand-primary-hover: 82 85% 55%;      /* #a3e635 - Brighter lime */
+    --brand-primary-dark: 82 85% 35%;       /* #65a30d - Dark lime */
+    --brand-secondary: 215 20% 65%;         /* #94a3b8 - Light slate */
+    --brand-accent: 187 85% 53%;            /* #22d3ee - Cyan */
+    --brand-accent-light: 187 77% 70%;      /* #67e8f9 - Light cyan */
+    --brand-accent-dark: 188 83% 40%;       /* #0891b2 - Dark cyan */
+    
+    /* Enhanced Gradient System */
+    --brand-gradient-start: 82 85% 47%;     /* #84cc16 - Lime green */
+    --brand-gradient-end: 187 85% 53%;      /* #22d3ee - Cyan */
+    --brand-gradient-hover-start: 82 85% 55%; /* #a3e635 - Brighter lime */
+    --brand-gradient-hover-end: 187 77% 70%; /* #67e8f9 - Light cyan */
+
+    /* Dark Base colors */
+    --background: 222 84% 5%;               /* #0f172a - Deep slate */
+    --foreground: 210 40% 98%;              /* #f8fafc - Light slate */
+    
+    /* Card system - Dark */
+    --card: 215 28% 17%;                    /* #1e293b - Dark slate card */
+    --card-foreground: 210 40% 98%;         /* #f8fafc - Light slate */
+    --card-border: 215 25% 27%;             /* #334155 - Slate border */
+    
+    /* Muted colors - Dark */
+    --muted: 215 25% 27%;                   /* #334155 - Slate */
+    --muted-foreground: 214 32% 81%;        /* #cbd5e1 - Light slate text */
+    
+    /* Primary system */
+    --primary: var(--brand-primary);
+    --primary-foreground: 222 84% 5%;       /* Dark text on lime buttons */
+    --primary-hover: var(--brand-primary-hover);
+    
+    /* Secondary system */
+    --secondary: 215 25% 27%;               /* #334155 - Slate secondary */
+    --secondary-foreground: 214 32% 91%;    /* #e2e8f0 - Light slate text */
+    
+    /* Accent system */
+    --accent: var(--brand-accent);
+    --accent-foreground: 222 84% 5%;        /* Dark text on cyan accents */
+    --accent-light: var(--brand-accent-light);
+    
+    /* Interactive elements */
+    --border: 215 25% 27%;                  /* #334155 - Slate border */
+    --input: 215 28% 17%;                   /* #1e293b - Dark slate input */
+    --ring: var(--brand-primary);
+    
+    /* Semantic colors - Dark optimized */
+    --success: 142 69% 58%;                 /* #34d399 - Bright emerald for dark mode */
+    --success-foreground: 222 84% 5%;
+    --success-hover: 142 69% 64%;           /* #6ee7b7 - Brighter emerald */
+    --warning: 48 96% 53%;                  /* #fbbf24 - Bright amber for dark mode */
+    --warning-foreground: 30 100% 20%;
+    --warning-hover: 48 96% 60%;            /* #fcd34d - Brighter amber */
+    --destructive: 0 73% 72%;               /* #f87171 - Lighter red for dark mode */
+    --destructive-foreground: 222 84% 5%;
+    --destructive-hover: 0 73% 77%;         /* #fca5a5 - Lighter red hover */
+    
+    /* Sidebar system - Dark */
+    --sidebar-background: 222 84% 5%;
+    --sidebar-foreground: 214 32% 91%;
+    --sidebar-primary: var(--brand-primary);
+    --sidebar-primary-foreground: 222 84% 5%;
+    --sidebar-accent: 215 28% 17%;
+    --sidebar-accent-foreground: 214 32% 91%;
+    --sidebar-border: 215 28% 17%;
+    --sidebar-ring: var(--brand-primary);
+    
+    /* Chart colors */
+    --chart-1: var(--brand-primary);
+    --chart-2: var(--brand-accent);
+    --chart-3: var(--success);
+    --chart-4: var(--warning);
+    --chart-5: var(--destructive);
+    
+    /* Enhanced Gradient system */
+    --gradient-primary: linear-gradient(135deg, 
+      hsl(var(--brand-gradient-start)), 
+      hsl(var(--brand-gradient-end))
+    );
+    --gradient-primary-hover: linear-gradient(135deg, 
+      hsl(var(--brand-gradient-hover-start)), 
+      hsl(var(--brand-gradient-hover-end))
+    );
+    --gradient-success: linear-gradient(135deg, 
+      hsl(var(--success)), 
+      hsl(var(--success-hover))
+    );
+    --gradient-warning: linear-gradient(135deg, 
+      hsl(var(--warning)), 
+      hsl(var(--warning-hover))
+    );
+    --gradient-destructive: linear-gradient(135deg, 
+      hsl(var(--destructive)), 
+      hsl(var(--destructive-hover))
+    );
+    
+    /* Border radius */
+    --radius: 0.75rem;
+    --radius-sm: 0.5rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+    
+    /* Dark shadows with lime accent */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.25);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.4);
+    
+    /* Brand shadows with lime glow */
+    --shadow-brand: 0 10px 25px -5px hsl(var(--brand-primary) / 0.4);
+    --shadow-brand-lg: 0 20px 40px -10px hsl(var(--brand-primary) / 0.5);
+  }
+
+  /* Light Mode (optional fallback) */
+  .light {
+    /* Electric Blue Brand Colors */
+    --brand-primary: 199 89% 48%;           /* #0ea5e9 - Sky blue */
+    --brand-primary-hover: 200 98% 39%;     /* #0284c7 - Darker sky blue */
+    --brand-primary-dark: 201 96% 32%;      /* #0369a1 - Deep blue */
+    --brand-secondary: 215 19% 35%;         /* #475569 - Slate gray */
+    --brand-accent: 187 85% 53%;            /* #22d3ee - Cyan */
+    --brand-accent-light: 187 77% 70%;      /* #67e8f9 - Light cyan */
+    --brand-accent-dark: 188 83% 40%;       /* #0891b2 - Dark cyan */
+    
+    /* Enhanced Gradient System */
+    --brand-gradient-start: 199 89% 48%;    /* #0ea5e9 - Sky blue */
+    --brand-gradient-end: 187 85% 53%;      /* #22d3ee - Cyan */
+    --brand-gradient-hover-start: 200 98% 39%; /* #0284c7 - Darker sky blue */
+    --brand-gradient-hover-end: 188 83% 40%; /* #0891b2 - Dark cyan */
+
+    /* Base colors */
+    --background: 210 40% 98%;              /* #f8fafc - Cool white */
+    --foreground: 222 84% 5%;               /* #0f172a - Deep slate */
+    
+    /* Card system */
+    --card: 0 0% 100%;                      /* #ffffff - Pure white */
+    --card-foreground: 222 84% 5%;          /* #0f172a - Deep slate */
+    --card-border: 214 32% 91%;             /* #e2e8f0 - Light slate */
+    
+    /* Muted colors */
+    --muted: 210 40% 96%;                   /* #f1f5f9 - Very light slate */
+    --muted-foreground: 215 16% 47%;        /* #64748b - Slate gray */
+    
+    /* Primary system */
+    --primary: var(--brand-primary);
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: var(--brand-primary-hover);
+    
+    /* Secondary system */
+    --secondary: 210 40% 96%;               /* #f1f5f9 - Very light slate */
+    --secondary-foreground: var(--brand-secondary);
+    
+    /* Accent system */
+    --accent: var(--brand-accent);
+    --accent-foreground: 201 96% 32%;       /* #0369a1 - Deep blue text */
+    --accent-light: var(--brand-accent-light);
+    
+    /* Interactive elements */
+    --border: 214 32% 91%;                  /* #e2e8f0 - Light slate border */
+    --input: 0 0% 100%;                     /* #ffffff - Pure white */
+    --ring: var(--brand-primary);
+    
+    /* Semantic colors */
+    --success: 158 64% 52%;                 /* #10b981 - Emerald */
+    --success-foreground: 0 0% 100%;
+    --success-hover: 158 64% 40%;           /* #059669 - Darker emerald */
+    --warning: 43 96% 56%;                  /* #f59e0b - Amber */
+    --warning-foreground: 30 100% 20%;      /* #92400e - Dark amber */
+    --warning-hover: 32 95% 44%;            /* #d97706 - Darker amber */
+    --destructive: 0 84% 60%;               /* #ef4444 - Red */
+    --destructive-foreground: 0 0% 100%;
+    --destructive-hover: 0 84% 54%;         /* #dc2626 - Darker red */
+    
+    /* Light mode shadows */
+    --shadow-brand: 0 10px 25px -5px hsl(var(--brand-primary) / 0.2);
+    --shadow-brand-lg: 0 20px 40px -10px hsl(var(--brand-primary) / 0.3);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Dark scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(215 28% 17%);
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.5);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.7);
+  }
+}
+
+@layer components {
+  /* ================================
+     ENHANCED BUTTON SYSTEM - DARK THEME
+     ================================ */
+  
+  /* Base button styles */
+  .btn-base {
+    @apply inline-flex items-center justify-center font-medium transition-brand rounded-xl px-4 py-2 text-sm;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    @apply disabled:pointer-events-none disabled:opacity-50;
+  }
+  
+  /* Primary Buttons - Lime Green */
+  .btn-primary {
+    @apply btn-base;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border: 1px solid hsl(var(--primary));
+    box-shadow: var(--shadow-brand);
+  }
+  
+  .btn-primary:hover:not(:disabled) {
+    background: hsl(var(--primary-hover));
+    border-color: hsl(var(--primary-hover));
+    box-shadow: var(--shadow-brand-lg);
+    transform: translateY(-1px);
+  }
+  
+  /* Gradient Buttons - Lime to Cyan */
+  .btn-gradient {
+    @apply btn-base;
+    background: var(--gradient-primary);
+    color: hsl(var(--primary-foreground));
+    border: none;
+    box-shadow: var(--shadow-brand);
+  }
+  
+  .btn-gradient:hover:not(:disabled) {
+    background: var(--gradient-primary-hover);
+    box-shadow: var(--shadow-brand-lg);
+    transform: translateY(-1px);
+  }
+  
+  /* Success Buttons */
+  .btn-success {
+    @apply btn-base;
+    background: hsl(var(--success));
+    color: hsl(var(--success-foreground));
+    border: 1px solid hsl(var(--success));
+    box-shadow: 0 10px 25px -5px hsl(var(--success) / 0.3);
+  }
+  
+  .btn-success:hover:not(:disabled) {
+    background: hsl(var(--success-hover));
+    border-color: hsl(var(--success-hover));
+    box-shadow: 0 20px 40px -10px hsl(var(--success) / 0.4);
+    transform: translateY(-1px);
+  }
+  
+  /* Warning Buttons */
+  .btn-warning {
+    @apply btn-base;
+    background: hsl(var(--warning));
+    color: hsl(var(--warning-foreground));
+    border: 1px solid hsl(var(--warning));
+    box-shadow: 0 10px 25px -5px hsl(var(--warning) / 0.3);
+  }
+  
+  .btn-warning:hover:not(:disabled) {
+    background: hsl(var(--warning-hover));
+    border-color: hsl(var(--warning-hover));
+    box-shadow: 0 20px 40px -10px hsl(var(--warning) / 0.4);
+    transform: translateY(-1px);
+  }
+  
+  /* Destructive Buttons */
+  .btn-destructive {
+    @apply btn-base;
+    background: hsl(var(--destructive));
+    color: hsl(var(--destructive-foreground));
+    border: 1px solid hsl(var(--destructive));
+    box-shadow: 0 10px 25px -5px hsl(var(--destructive) / 0.3);
+  }
+  
+  .btn-destructive:hover:not(:disabled) {
+    background: hsl(var(--destructive-hover));
+    border-color: hsl(var(--destructive-hover));
+    box-shadow: 0 20px 40px -10px hsl(var(--destructive) / 0.4);
+    transform: translateY(-1px);
+  }
+  
+  /* Secondary Buttons - Dark Theme */
+  .btn-secondary {
+    @apply btn-base;
+    background: hsl(var(--secondary));
+    color: hsl(var(--secondary-foreground));
+    border: 1px solid hsl(var(--border));
+  }
+  
+  .btn-secondary:hover:not(:disabled) {
+    background: hsl(var(--muted));
+    transform: translateY(-1px);
+  }
+  
+  /* Outline Buttons - Dark Theme */
+  .btn-outline {
+    @apply btn-base;
+    background: transparent;
+    color: hsl(var(--primary));
+    border: 1px solid hsl(var(--primary));
+  }
+  
+  .btn-outline:hover:not(:disabled) {
+    background: hsl(var(--primary) / 0.1);
+    transform: translateY(-1px);
+  }
+  
+  /* Ghost Buttons - Dark Theme */
+  .btn-ghost {
+    @apply btn-base;
+    background: transparent;
+    color: hsl(var(--foreground));
+    border: none;
+  }
+  
+  .btn-ghost:hover:not(:disabled) {
+    background: hsl(var(--muted));
+    transform: translateY(-1px);
+  }
+  
+  /* Size Variants */
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs rounded-lg;
+  }
+  
+  .btn-lg {
+    @apply px-6 py-3 text-base rounded-2xl;
+  }
+  
+  .btn-xl {
+    @apply px-8 py-4 text-lg rounded-2xl;
+  }
+  
+  /* ================================
+     ENHANCED UTILITY CLASSES - DARK THEME
+     ================================ */
+  
+  .bg-gradient-brand {
+    background: var(--gradient-primary);
+  }
+  
+  .bg-gradient-brand-hover {
+    background: var(--gradient-primary-hover);
+  }
+  
+  .bg-gradient-success {
+    background: var(--gradient-success);
+  }
+  
+  .bg-gradient-warning {
+    background: var(--gradient-warning);
+  }
+  
+  .bg-gradient-destructive {
+    background: var(--gradient-destructive);
+  }
+  
+  .text-gradient-brand {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+  }
+  
+  /* Glass morphism for dark theme */
+  .glass {
+    background: rgba(30, 41, 59, 0.8); /* Dark slate with opacity */
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(51, 65, 85, 0.5); /* Slate border */
+  }
+  
+  .glass-strong {
+    background: rgba(30, 41, 59, 0.95);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(51, 65, 85, 0.3);
+  }
+  
+  /* Dark theme card styling */
+  .card-brand {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--card-border));
+    box-shadow: var(--shadow);
+  }
+  
+  .card-brand:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+  
+  .focus-brand:focus {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+  
+  .transition-brand {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .transition-brand-slow {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* ================================
+     COMPONENT-SPECIFIC FIXES - DARK THEME
+     ================================ */
+  
+  /* Dark theme badge improvements */
+  .badge-primary {
+    background: hsl(var(--primary) / 0.2);
+    color: hsl(var(--primary));
+    border: 1px solid hsl(var(--primary) / 0.4);
+  }
+  
+  .badge-success {
+    background: hsl(var(--success) / 0.2);
+    color: hsl(var(--success));
+    border: 1px solid hsl(var(--success) / 0.4);
+  }
+  
+  .badge-warning {
+    background: hsl(var(--warning) / 0.2);
+    color: hsl(var(--warning));
+    border: 1px solid hsl(var(--warning) / 0.4);
+  }
+  
+  .badge-destructive {
+    background: hsl(var(--destructive) / 0.2);
+    color: hsl(var(--destructive));
+    border: 1px solid hsl(var(--destructive) / 0.4);
+  }
+
+  /* ================================
+     STOCKIFY-SPECIFIC DARK THEME STYLES
+     ================================ */
+
+  /* Navigation pills styling */
+  .nav-pill {
+    @apply flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300;
+  }
+
+  .nav-pill.active {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  .nav-pill:not(.active) {
+    background: rgba(55, 65, 81, 0.5); /* gray-700/50 */
+    color: rgba(209, 213, 219, 1); /* gray-300 */
+  }
+
+  .nav-pill:not(.active):hover {
+    background: rgba(75, 85, 99, 0.5); /* gray-600/50 */
+    color: white;
+  }
+
+  /* Chart bar styling */
+  .chart-bar {
+    background: hsl(var(--primary));
+    transition: all 0.3s ease;
+  }
+
+  .chart-bar:hover {
+    filter: brightness(1.1);
+  }
+
+  /* Performance widget styling */
+  .performance-widget {
+    background: rgba(31, 41, 55, 0.5); /* gray-800/50 */
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(55, 65, 81, 0.5); /* gray-700/50 */
+  }
+
+  .performance-widget:hover {
+    transform: scale(1.02);
+    transition: transform 0.2s ease;
+  }
+
+  /* Status indicators */
+  .status-live {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  .status-pending {
+    background: hsl(var(--warning));
+    color: hsl(var(--warning-foreground));
+  }
+
+  .status-ended {
+    background: rgba(107, 114, 128, 1); /* gray-500 */
+    color: white;
+  }
+
+  /* Dark theme input styling */
+  .input-dark {
+    background: hsl(var(--input));
+    border: 1px solid hsl(var(--border));
+    color: hsl(var(--foreground));
+  }
+
+  .input-dark:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+  }
+
+  /* Dark theme select styling */
+  .select-dark {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    color: hsl(var(--foreground));
+  }
+
+  /* Lime accent glow effect */
+  .lime-glow {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+  }
+
+  .lime-glow:hover {
+    box-shadow: 0 0 30px hsl(var(--primary) / 0.5);
+  }
+
+  /* Dark theme text colors */
+  .text-primary-dark {
+    color: hsl(var(--primary));
+  }
+
+  .text-secondary-dark {
+    color: hsl(var(--muted-foreground));
+  }
+
+  .text-accent-dark {
+    color: hsl(var(--accent));
+  }
+
+  /* Background patterns for dark theme */
+  .bg-pattern-dark {
+    background-image: 
+      radial-gradient(circle at 25% 25%, hsl(var(--primary) / 0.1) 0%, transparent 25%),
+      radial-gradient(circle at 75% 75%, hsl(var(--accent) / 0.1) 0%, transparent 25%);
+  }
+
+  /* Neon border effects */
+  .neon-border {
+    border: 1px solid hsl(var(--primary) / 0.5);
+    box-shadow: 
+      0 0 5px hsl(var(--primary) / 0.3),
+      inset 0 0 5px hsl(var(--primary) / 0.1);
+  }
+
+  .neon-border:hover {
+    border-color: hsl(var(--primary) / 0.8);
+    box-shadow: 
+      0 0 10px hsl(var(--primary) / 0.5),
+      inset 0 0 10px hsl(var(--primary) / 0.2);
+  }
+
+  /* Loading spinner for dark theme */
+  .spinner-dark {
+    border: 2px solid rgba(55, 65, 81, 0.3);
+    border-top: 2px solid hsl(var(--primary));
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Tooltip styling for dark theme */
+  .tooltip-dark {
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    border: 1px solid hsl(var(--border));
+    backdrop-filter: blur(8px);
+  }
+
+  /* Modal/Dialog styling for dark theme */
+  .modal-dark {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+  }
+
+  /* Dropdown menu styling for dark theme */
+  .dropdown-dark {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  }
+
+  .dropdown-item-dark {
+    color: hsl(var(--foreground));
+    transition: all 0.15s ease;
+  }
+
+  .dropdown-item-dark:hover {
+    background: hsl(var(--muted));
+    color: hsl(var(--primary));
+  }
+
+  /* Table styling for dark theme */
+  .table-dark {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+  }
+
+  .table-dark th {
+    background: hsl(var(--muted));
+    color: hsl(var(--foreground));
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
+  .table-dark td {
+    border-bottom: 1px solid hsl(var(--border));
+    color: hsl(var(--muted-foreground));
+  }
+
+  .table-dark tr:hover {
+    background: hsl(var(--muted) / 0.5);
+  }
+
+  /* Progress bar styling for dark theme */
+  .progress-dark {
+    background: hsl(var(--muted));
+    border-radius: 9999px;
+  }
+
+  .progress-fill-dark {
+    background: hsl(var(--primary));
+    border-radius: 9999px;
+    transition: width 0.3s ease;
+  }
+
+  /* Toggle switch styling for dark theme */
+  .toggle-dark {
+    background: hsl(var(--muted));
+    border: 1px solid hsl(var(--border));
+  }
+
+  .toggle-dark.active {
+    background: hsl(var(--primary));
+  }
+
+  /* Card hover effects for dark theme */
+  .card-hover-dark {
+    transition: all 0.2s ease;
+  }
+
+  .card-hover-dark:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4);
+    border-color: hsl(var(--primary) / 0.3);
+  }
+
+  /* Text gradient utilities */
+  .text-gradient-lime {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-hover)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-cyan {
+    background: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--accent-light)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Animation utilities */
+  .fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Responsive text sizing */
+  .text-responsive {
+    font-size: clamp(0.875rem, 2vw, 1rem);
+  }
+
+  .text-responsive-lg {
+    font-size: clamp(1.125rem, 3vw, 1.5rem);
+  }
+
+  .text-responsive-xl {
+    font-size: clamp(1.5rem, 4vw, 2.25rem);
+  }
+}

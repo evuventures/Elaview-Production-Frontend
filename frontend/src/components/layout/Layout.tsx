@@ -23,7 +23,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     const [unreadCount, setUnreadCount] = useState(0);
     const [pendingInvoices, setPendingInvoices] = useState(0);
     const [actionItemsCount, setActionItemsCount] = useState(0);
-    const [theme, setTheme] = useState('dark');
+    const [theme, setTheme] = useState('light'); // ✅ Default to light theme for Elaview
     
     // 🆕 ROLE STATE MANAGEMENT
     const [userRole, setUserRole] = useState<'buyer' | 'seller'>('buyer');
@@ -126,6 +126,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
       }
     };
 
+    // ✅ Elaview page transition animations
     const pageVariants = {
         initial: { opacity: 0, y: 15 },
         in: { opacity: 1, y: 0 },
@@ -135,20 +136,16 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     const pageTransition = {
         type: "tween" as const,
         ease: "anticipate" as const,
-        duration: 0.4
+        duration: 0.3 // ✅ Faster, more professional transition
     };
 
+    // ✅ Apply light theme for Elaview
     const applyThemeToDOM = (themeToApply: string) => {
         const root = window.document.documentElement;
         root.classList.remove('light', 'dark');
-        root.classList.add(themeToApply);
-        root.setAttribute('data-theme', themeToApply);
-        
-        if (themeToApply === 'dark') {
-            root.style.colorScheme = 'dark';
-        } else {
-            root.style.colorScheme = 'light';
-        }
+        root.classList.add('light'); // ✅ Force light theme for Elaview
+        root.setAttribute('data-theme', 'light');
+        root.style.colorScheme = 'light';
     };
 
     // 🆕 FETCH USER DATA ON MOUNT AND WHEN USER CHANGES
@@ -168,12 +165,9 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
               setPendingInvoices(0);
               setActionItemsCount(0);
               
-              // Theme handling
-              const userTheme = (typeof currentUser.publicMetadata?.theme === 'string' ? currentUser.publicMetadata.theme : null) || 
-                               localStorage.getItem('theme-preference') || 
-                               'dark';
-              setTheme(userTheme);
-              applyThemeToDOM(userTheme);
+              // ✅ Always use light theme for Elaview
+              setTheme('light');
+              applyThemeToDOM('light');
             } else {
               console.log('User not signed in');
               setUserRole('buyer');
@@ -181,9 +175,9 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
               setPendingInvoices(0);
               setActionItemsCount(0);
               
-              const storedTheme = localStorage.getItem('theme-preference') || 'dark';
-              setTheme(storedTheme);
-              applyThemeToDOM(storedTheme);
+              // ✅ Always use light theme for Elaview
+              setTheme('light');
+              applyThemeToDOM('light');
             }
           } catch (error) {
             console.warn("Error in loadUserData:", error);
@@ -204,29 +198,29 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
         return () => clearInterval(interval);
       }, [isLoaded, isSignedIn, currentUser]);
 
-    // Show loading state
+    // ✅ Elaview loading state
     if (!isLoaded || isLoading) {
       return (
-        <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Loading...</p>
+            <div className="loading-spinner w-8 h-8 text-mocha-500 mx-auto mb-3"></div>
+            <p className="body-medium text-slate-600">Loading Elaview...</p>
           </div>
         </div>
       );
     }
     
     return (
-        <div className="min-h-screen flex flex-col font-sans bg-background text-foreground relative overflow-hidden">
-            {/* Background Effects */}
-            <div className="fixed inset-0 pointer-events-none opacity-30 dark:opacity-100">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5"></div>
-              <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-lime-400/10 to-transparent rounded-full blur-3xl"></div>
-              <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-cyan-400/10 to-transparent rounded-full blur-3xl"></div>
+        <div className="min-h-screen flex flex-col font-sans bg-slate-50 text-slate-900 relative">
+            {/* ✅ Elaview Background Effects - Subtle and Professional */}
+            <div className="fixed inset-0 pointer-events-none opacity-40">
+              <div className="absolute inset-0 bg-gradient-to-br from-mocha-50 via-transparent to-slate-100"></div>
+              <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-mocha-100/30 to-transparent rounded-full blur-3xl"></div>
+              <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-slate-100/50 to-transparent rounded-full blur-3xl"></div>
             </div>
             
-            <div>
-              {/* 🆕 ENHANCED TOP NAVIGATION */}
+            <div className="relative z-[9999]">
+              {/* ✅ Enhanced Top Navigation with Elaview styling */}
               {typeof DesktopTopNavV2 !== 'undefined' ? (
                 <DesktopTopNavV2
                   unreadCount={unreadCount} 
@@ -239,15 +233,19 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                   canSwitchRoles={true}
                 />
               ) : (
-                // Fallback simple header
-                <header className="bg-gray-800 border-b border-gray-700 p-4">
-                  <div className="flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-white">Dashboard</h1>
+                // ✅ Fallback header with Elaview styling
+                <header className="bg-white border-b border-slate-200 shadow-soft px-6 py-4">
+                  <div className="flex items-center justify-between max-w-7xl mx-auto">
+                    <h1 className="heading-2 text-slate-900">Elaview</h1>
                     {currentUser && (
-                      <div className="text-sm text-gray-300 flex items-center gap-4">
-                        <span>Welcome, {currentUser.firstName || currentUser.primaryEmailAddress?.emailAddress}</span>
-                        <span className={`px-2 py-1 text-white text-xs rounded ${
-                          userRole === 'seller' ? 'bg-emerald-600' : 'bg-blue-600'
+                      <div className="flex items-center gap-4">
+                        <span className="body-medium text-slate-600">
+                          Welcome, {currentUser.firstName || currentUser.primaryEmailAddress?.emailAddress}
+                        </span>
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          userRole === 'seller' 
+                            ? 'bg-success-100 text-success-800' 
+                            : 'bg-mocha-100 text-mocha-800'
                         }`}>
                           {userRole === 'seller' ? 'Space Owner' : 'Advertiser'}
                         </span>
@@ -258,37 +256,50 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
               )}
             </div>
 
-            <div>
+            <div className="flex-1 relative z-10">
               {/* Main Content Area */}
-              <main className="flex-1 relative overflow-y-hidden">
-                  {/* Mobile Components */}
-                  {typeof MobileTopBar !== 'undefined' && <MobileTopBar />}
+              <main className="flex-1 relative">
+                  {/* ✅ Mobile Components with proper z-index */}
+                  {typeof MobileTopBar !== 'undefined' && (
+                    <div className="lg:hidden">
+                      <MobileTopBar />
+                    </div>
+                  )}
                   {typeof MobileNav !== 'undefined' && (
-                    <MobileNav 
-                      unreadCount={unreadCount} 
-                      pendingInvoices={pendingInvoices} 
-                      actionItemsCount={actionItemsCount} 
-                      currentUser={currentUser}
-                    />
+                    <div className="lg:hidden">
+                      <MobileNav 
+                        unreadCount={unreadCount} 
+                        pendingInvoices={pendingInvoices} 
+                        actionItemsCount={actionItemsCount} 
+                        currentUser={currentUser}
+                      />
+                    </div>
                   )}
                   
-                  {/* Content Container */}
-                  <div className="h-full overflow-y-hidden">
+                  {/* ✅ Content Container - Ensures child components aren't affected */}
+                  <div className="w-full">
                       <motion.div
                           initial="initial"
                           animate="in"
                           exit="out"
                           variants={pageVariants}
                           transition={pageTransition}
+                          className="w-full"
                       >
-                          {/* 🆕 ROLE UPDATE NOTIFICATION */}
+                          {/* ✅ Role Update Notification with Elaview styling */}
                           {isUpdatingRole && (
-                            <div className="fixed top-20 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2">
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                              Switching role...
+                            <div className="fixed top-20 right-4 z-50 animate-fade-in">
+                              <div className="card card-compact bg-white border-mocha-200 shadow-soft-lg flex items-center gap-3">
+                                <div className="loading-spinner w-4 h-4 text-mocha-500"></div>
+                                <span className="body-small font-medium text-slate-700">Switching role...</span>
+                              </div>
                             </div>
                           )}
-                          {children}
+                          
+                          {/* ✅ Child Content - Unaffected by layout styling */}
+                          <div className="w-full">
+                            {children}
+                          </div>
                       </motion.div>
                   </div>
               </main>

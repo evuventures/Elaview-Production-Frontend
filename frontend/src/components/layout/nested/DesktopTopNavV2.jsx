@@ -1,15 +1,14 @@
-// Enhanced Navigation with Role-Specific Items
+// Enhanced Navigation with Working Dropdown - Elaview Design System
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  Search, Crown, Sparkles, User, ChevronDown, 
-  Bell, Settings, LogOut, Menu, X, Zap, Filter, ArrowRight,
-  Megaphone, Home, ToggleLeft, ToggleRight, Building2,
-  Calendar, MessageSquare, Map, LayoutDashboard
+  User, ChevronDown, Bell, Settings, LogOut, Menu, X,
+  Building2, Calendar, MessageSquare, Map, LayoutDashboard,
+  MapPin, Calendar as CalendarIcon, Mail, UserCircle, Shield,
+  Bookmark, HelpCircle
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 import elaviewLogo from '../../../public/elaview-logo.png';
 
@@ -27,15 +26,11 @@ const DesktopTopNavV2 = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchFocused, setSearchFocused] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [roleToggleOpen, setRoleToggleOpen] = useState(false);
   const userMenuRef = useRef(null);
-  const roleToggleRef = useRef(null);
 
-  // 🆕 ROLE-SPECIFIC NAVIGATION ITEMS
+  // Role-specific navigation items
   const getNavigationItems = (role) => {
     if (role === 'seller') {
       return [
@@ -48,35 +43,34 @@ const DesktopTopNavV2 = ({
         {
           title: 'Browse',
           url: '/browse',
-          icon: Map,
+          icon: MapPin,
           badge: 0
         },
         {
           title: 'Messages',
           url: '/messages',
-          icon: MessageSquare,
+          icon: Mail,
           badge: unreadCount || 0
         }
       ];
     } else {
-      // Buyer navigation
       return [
         {
           title: 'Bookings',
           url: '/bookings',
-          icon: Calendar,
+          icon: CalendarIcon,
           badge: actionItemsCount || 0
         },
         {
           title: 'Browse',
           url: '/browse',
-          icon: Map,
+          icon: MapPin,
           badge: 0
         },
         {
           title: 'Messages',
           url: '/messages',
-          icon: MessageSquare,
+          icon: Mail,
           badge: unreadCount || 0
         }
       ];
@@ -85,50 +79,41 @@ const DesktopTopNavV2 = ({
 
   const navigationItems = getNavigationItems(userRole);
 
-  // Close menus when clicking outside
+  // Enhanced outside click detection
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
         setUserMenuOpen(false);
       }
-      if (roleToggleRef.current && !roleToggleRef.current.contains(event.target)) {
-        setRoleToggleOpen(false);
-      }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
-  const handleSearch = () => {
-    if (searchTerm.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchTerm)}`);
-      setSearchTerm('');
-    } else {
-      navigate("/search");
+    // Only add listener when menu is open
+    if (userMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
     }
-  };
 
-  // 🆕 UPDATED ROLE SWITCH WITH AUTO-REDIRECT
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [userMenuOpen]);
+
+  // Direct role switch (no popover)
   const handleRoleSwitch = (newRole) => {
-    if (isUpdatingRole || !onRoleChange) return;
+    if (isUpdatingRole || !onRoleChange || userRole === newRole) return;
     
     console.log(`🔄 Switching role from ${userRole} to ${newRole}`);
-    
-    // Call the role change handler (from Layout.tsx)
     onRoleChange(newRole);
     
     // Auto-redirect based on role
     setTimeout(() => {
       if (newRole === 'seller') {
-        console.log('🧭 Redirecting seller to /dashboard');
         navigate('/dashboard');
       } else if (newRole === 'buyer') {
-        console.log('🧭 Redirecting buyer to /browse');
         navigate('/browse');
       }
-    }, 100); // Small delay to ensure role state updates first
-    
-    setRoleToggleOpen(false);
+    }, 100);
   };
 
   const formatBadgeCount = (count) => {
@@ -136,51 +121,46 @@ const DesktopTopNavV2 = ({
     return count.toString();
   };
 
-  // Get role-specific styling and info
-  const getRoleInfo = () => {
-    if (userRole === 'seller') {
-      return {
-        title: 'Space Owner',
-        description: 'Manage your listings',
-        icon: Home,
-        primaryColor: 'text-emerald-600',
-        bgColor: 'bg-emerald-50',
-        buttonBg: 'bg-emerald-600',
-        buttonHover: 'hover:bg-emerald-700',
-        quickAction: {
-          url: '/list-space',
-          text: 'List Property',
-          icon: Building2
-        }
-      };
-    } else {
-      return {
-        title: 'Advertiser',
-        description: 'Book ad spaces',
-        icon: Megaphone,
-        primaryColor: 'text-blue-600',
-        bgColor: 'bg-blue-50',
-        buttonBg: 'bg-blue-600',
-        buttonHover: 'hover:bg-blue-700',
-        quickAction: {
-          url: '/browse',
-          text: 'Find Spaces',
-          icon: Search
-        }
-      };
-    }
+  // Enhanced user menu toggle
+  const toggleUserMenu = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Toggle user menu, current state:', userMenuOpen); // Debug log
+    setUserMenuOpen(prev => !prev);
   };
 
-  const roleInfo = getRoleInfo();
+  // Close user menu
+  const closeUserMenu = () => {
+    setUserMenuOpen(false);
+  };
+
+  // Profile image with fallback
+  const getProfileImage = () => {
+    if (currentUser?.imageUrl) {
+      return (
+        <img 
+          src={currentUser.imageUrl} 
+          alt="Profile"
+          className="w-8 h-8 rounded-full object-cover ring-2 ring-white group-hover:ring-teal-200 transition-all duration-200"
+        />
+      );
+    }
+    
+    return (
+      <div className="w-8 h-8 bg-gradient-to-r from-teal-500 to-teal-600 rounded-full flex items-center justify-center ring-2 ring-white group-hover:ring-teal-200 transition-all duration-200">
+        <UserCircle className="w-5 h-5 text-white" />
+      </div>
+    );
+  };
 
   return (
     <>
       {/* Navigation Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-gray-50 border-b border-gray-200 z-50">
+      <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-50 shadow-sm">
         <div className="flex items-center justify-between h-full px-4 lg:px-6">
           
           {/* Left Section: Logo + Navigation */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-8">
             {/* Logo */}
             <Link to={userRole === 'seller' ? '/dashboard' : '/browse'} className="flex items-center gap-2 group">
               <img 
@@ -190,7 +170,7 @@ const DesktopTopNavV2 = ({
               />
             </Link>
 
-            {/* 🆕 ROLE-SPECIFIC NAVIGATION */}
+            {/* Navigation */}
             <nav className="hidden lg:flex items-center gap-1">
               {navigationItems.map((item) => {
                 const isActive = location.pathname === item.url;
@@ -200,7 +180,7 @@ const DesktopTopNavV2 = ({
                     to={item.url}
                     className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                       isActive
-                        ? 'text-slate-800 bg-slate-100 border border-slate-200'
+                        ? 'text-teal-700 bg-teal-50 border border-teal-200'
                         : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
                     }`}
                   >
@@ -215,7 +195,7 @@ const DesktopTopNavV2 = ({
                     {isActive && (
                       <motion.div
                         layoutId="activeIndicator"
-                        className="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-slate-800 rounded-full"
+                        className="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-teal-500 rounded-full"
                         transition={{ type: "spring", stiffness: 400, damping: 30 }}
                       />
                     )}
@@ -225,172 +205,37 @@ const DesktopTopNavV2 = ({
             </nav>
           </div>
 
-          {/* Center Section: Search (Optional - can be removed if not needed) */}
-          <div className="flex-1 max-w-md mx-4 lg:mx-8">
-            <div className="relative group">
-              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${
-                searchFocused ? 'text-slate-600' : 'text-slate-400'
-              }`} />
-              <Input
-                type="search"
-                placeholder={userRole === 'seller' ? "Search properties, bookings..." : "Search ad spaces, campaigns..."}
-                className={`w-full pl-10 pr-4 py-2.5 rounded-lg bg-white border border-gray-300 text-slate-800 placeholder-slate-400 transition-all duration-200 ${
-                  searchFocused 
-                    ? 'border-slate-400 ring-2 ring-slate-200' 
-                    : 'hover:border-slate-400 focus:border-slate-400'
-                }`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setSearchFocused(false)}
-              />
-            </div>
-          </div>
-
           {/* Right Section: Role Toggle + Actions + User */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             
-            {/* 🆕 ENHANCED ROLE TOGGLE WITH LOADING STATE */}
+            {/* Single Role Toggle Button */}
             {canSwitchRoles && (
-              <div className="relative hidden md:block" ref={roleToggleRef}>
-                <Button
-                  onClick={() => !isUpdatingRole && setRoleToggleOpen(!roleToggleOpen)}
+              <div className="hidden md:block relative">
+                <button
+                  onClick={() => handleRoleSwitch(userRole === 'buyer' ? 'seller' : 'buyer')}
                   disabled={isUpdatingRole}
-                  size="sm"
-                  variant="ghost"
-                  className={`relative flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 ${
-                    isUpdatingRole
-                      ? 'opacity-50 cursor-not-allowed'
-                      : roleToggleOpen 
-                        ? `${roleInfo.bgColor} ${roleInfo.primaryColor} border border-gray-200` 
-                        : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
-                  }`}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    userRole === 'seller' 
+                      ? 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50' 
+                      : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+                  } ${isUpdatingRole ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  {isUpdatingRole && (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  {isUpdatingRole ? (
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  ) : userRole === 'seller' ? (
+                    <Building2 className="w-4 h-4" />
+                  ) : (
+                    <MapPin className="w-4 h-4" />
                   )}
-                  <div className="flex items-center gap-2">
-                    <roleInfo.icon className="w-4 h-4" />
-                    <div className="text-left">
-                      <div className="text-sm font-semibold">
-                        {isUpdatingRole ? 'Switching...' : roleInfo.title}
-                      </div>
-                      <div className="text-xs opacity-75">{roleInfo.description}</div>
-                    </div>
-                  </div>
-                  {!isUpdatingRole && (
-                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${roleToggleOpen ? 'rotate-180' : ''}`} />
-                  )}
-                </Button>
-
-                {/* Role Toggle Dropdown */}
-                <AnimatePresence>
-                  {roleToggleOpen && !isUpdatingRole && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute top-full right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden"
-                    >
-                      {/* Header */}
-                      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                        <h3 className="font-semibold text-sm text-slate-800">Switch Role</h3>
-                        <p className="text-xs text-slate-600">Choose your primary activity</p>
-                      </div>
-                      
-                      {/* Role Options */}
-                      <div className="p-3 space-y-2">
-                        {/* Advertiser/Buyer Option */}
-                        <motion.button
-                          onClick={() => handleRoleSwitch('buyer')}
-                          className={`w-full flex items-center gap-4 p-4 rounded-lg transition-all duration-200 ${
-                            userRole === 'buyer'
-                              ? 'bg-blue-50 border-2 border-blue-200'
-                              : 'hover:bg-gray-50 border-2 border-transparent'
-                          }`}
-                          whileHover={{ scale: 1.01 }}
-                          whileTap={{ scale: 0.99 }}
-                        >
-                          <div className={`p-3 rounded-lg ${
-                            userRole === 'buyer' 
-                              ? 'bg-blue-600 text-white' 
-                              : 'bg-gray-100 text-slate-600'
-                          }`}>
-                            <Megaphone className="w-5 h-5" />
-                          </div>
-                          <div className="flex-1 text-left">
-                            <div className="font-semibold text-slate-800 flex items-center gap-2">
-                              Advertiser
-                              {userRole === 'buyer' && (
-                                <div className="w-2 h-2 bg-blue-600 rounded-full" />
-                              )}
-                            </div>
-                            <div className="text-sm text-slate-600">Find and book ad spaces</div>
-                            <div className="text-xs text-slate-500 mt-1">
-                              Browse spaces • {bookingsCount} active campaigns
-                            </div>
-                          </div>
-                          {userRole === 'buyer' && (
-                            <div className="text-blue-600">
-                              <ToggleRight className="w-5 h-5" />
-                            </div>
-                          )}
-                        </motion.button>
-
-                        {/* Property Owner/Seller Option */}
-                        <motion.button
-                          onClick={() => handleRoleSwitch('seller')}
-                          className={`w-full flex items-center gap-4 p-4 rounded-lg transition-all duration-200 ${
-                            userRole === 'seller'
-                              ? 'bg-emerald-50 border-2 border-emerald-200'
-                              : 'hover:bg-gray-50 border-2 border-transparent'
-                          }`}
-                          whileHover={{ scale: 1.01 }}
-                          whileTap={{ scale: 0.99 }}
-                        >
-                          <div className={`p-3 rounded-lg ${
-                            userRole === 'seller' 
-                              ? 'bg-emerald-600 text-white' 
-                              : 'bg-gray-100 text-slate-600'
-                          }`}>
-                            <Home className="w-5 h-5" />
-                          </div>
-                          <div className="flex-1 text-left">
-                            <div className="font-semibold text-slate-800 flex items-center gap-2">
-                              Property Owner
-                              {userRole === 'seller' && (
-                                <div className="w-2 h-2 bg-emerald-600 rounded-full" />
-                              )}
-                            </div>
-                            <div className="text-sm text-slate-600">List and manage properties</div>
-                            <div className="text-xs text-slate-500 mt-1">
-                              Dashboard • {propertiesCount} active properties
-                            </div>
-                          </div>
-                          {userRole === 'seller' && (
-                            <div className="text-emerald-600">
-                              <ToggleRight className="w-5 h-5" />
-                            </div>
-                          )}
-                        </motion.button>
-                      </div>
-
-                      {/* Quick Action for Current Role */}
-                      <div className="p-3 border-t border-gray-200 bg-gray-50">
-                        <Link
-                          to={roleInfo.quickAction.url}
-                          onClick={() => setRoleToggleOpen(false)}
-                          className={`flex items-center justify-center gap-2 w-full py-3 rounded-lg font-semibold text-sm transition-all duration-200 text-white ${roleInfo.buttonBg} ${roleInfo.buttonHover}`}
-                        >
-                          <roleInfo.quickAction.icon className="w-4 h-4" />
-                          {roleInfo.quickAction.text}
-                        </Link>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                  <span>
+                    {isUpdatingRole 
+                      ? 'Switching...' 
+                      : userRole === 'seller' 
+                        ? 'Start Advertising' 
+                        : 'Start Listing'
+                    }
+                  </span>
+                </button>
               </div>
             )}
 
@@ -398,7 +243,7 @@ const DesktopTopNavV2 = ({
             <Button
               size="sm"
               variant="ghost"
-              className="relative w-10 h-10 p-0 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all duration-200"
+              className="relative w-10 h-10 p-0 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-teal-50 transition-all duration-200"
             >
               <Bell className="w-4 h-4" />
               {(unreadCount > 0 || pendingInvoices > 0) && (
@@ -406,74 +251,140 @@ const DesktopTopNavV2 = ({
               )}
             </Button>
 
-            {/* User Menu */}
+            {/* Enhanced User Menu with Fixed Dropdown */}
             {currentUser && (
               <div className="relative" ref={userMenuRef}>
                 <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-slate-50 transition-all duration-200 group"
+                  type="button"
+                  onClick={toggleUserMenu}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-r from-slate-600 to-slate-700 rounded-lg flex items-center justify-center ring-2 ring-white group-hover:ring-slate-200 transition-all duration-200">
-                    <User className="w-4 h-4 text-white" />
-                  </div>
+                  {getProfileImage()}
                   <div className="hidden sm:block text-left">
-                    <p className="font-medium text-xs text-slate-800 truncate max-w-24 group-hover:text-slate-600 transition-colors">
+                    <p className="font-medium text-sm text-slate-800 truncate max-w-28 group-hover:text-slate-600 transition-colors">
                       {currentUser.firstName}
                     </p>
                     <p className="text-xs text-slate-500 capitalize">
                       {userRole === 'seller' ? 'Space Owner' : 'Advertiser'}
                     </p>
                   </div>
-                  <ChevronDown className={`w-3 h-3 text-slate-400 transition-all duration-200 ${userMenuOpen ? 'rotate-180 text-slate-600' : 'group-hover:text-slate-600'}`} />
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-all duration-200 ${userMenuOpen ? 'rotate-180 text-slate-600' : 'group-hover:text-slate-600'}`} />
                 </button>
 
-                {/* User Dropdown */}
-                <AnimatePresence>
+                {/* Enhanced User Dropdown - Portal-style to escape map z-index */}
+                <AnimatePresence mode="wait">
                   {userMenuOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden"
-                    >
-                      <div className="px-4 py-4 border-b border-gray-200 bg-gray-50">
-                        <p className="font-semibold text-sm text-slate-800">
-                          {currentUser.firstName} {currentUser.lastName}
-                        </p>
-                        <p className="text-xs text-slate-600 truncate mt-1">
-                          {currentUser.emailAddresses?.[0]?.emailAddress}
-                        </p>
-                        <Badge className={`text-xs mt-2 text-white ${
-                          userRole === 'seller' 
-                            ? 'bg-emerald-600' 
-                            : 'bg-blue-600'
-                        }`}>
-                          {userRole === 'seller' ? 'Space Owner' : 'Advertiser'}
-                        </Badge>
+                    <>
+                      {/* Invisible backdrop to catch clicks */}
+                      <div 
+                        className="fixed inset-0 z-[999998]" 
+                        onClick={closeUserMenu}
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        transition={{ 
+                          type: "spring", 
+                          stiffness: 300, 
+                          damping: 30,
+                          duration: 0.2 
+                        }}
+                        className="fixed top-16 right-4 w-72 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden z-[999999]"
+                        style={{ 
+                          transformOrigin: 'top right',
+                        }}
+                      >
+                      {/* User Info Header */}
+                      <div className="px-4 py-4 bg-gradient-to-r from-teal-50 to-slate-50 border-b border-slate-200">
+                        <div className="flex items-center gap-3">
+                          {getProfileImage()}
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm text-slate-800">
+                              {currentUser.firstName} {currentUser.lastName}
+                            </p>
+                            <p className="text-xs text-slate-600 truncate">
+                              {currentUser.emailAddresses?.[0]?.emailAddress}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-3">
+                          <Badge className={`text-xs px-2 py-1 ${
+                            userRole === 'seller' 
+                              ? 'bg-teal-100 text-teal-700 border border-teal-200' 
+                              : 'bg-blue-100 text-blue-700 border border-blue-200'
+                          }`}>
+                            {userRole === 'seller' ? 'Space Owner' : 'Advertiser'}
+                          </Badge>
+                        </div>
                       </div>
+
+                      {/* Menu Items */}
                       <div className="p-2">
                         <Link
                           to="/profile"
+                          onClick={closeUserMenu}
                           className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
                         >
-                          <User className="w-4 h-4 group-hover:text-slate-700 transition-colors" />
-                          Profile Settings
+                          <UserCircle className="w-4 h-4 group-hover:text-teal-600 transition-colors" />
+                          <div className="flex-1">
+                            <div className="font-medium">Profile Settings</div>
+                            <div className="text-xs text-slate-500">Manage your account</div>
+                          </div>
                         </Link>
+                        
                         <Link
                           to="/settings"
+                          onClick={closeUserMenu}
                           className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
                         >
-                          <Settings className="w-4 h-4 group-hover:text-slate-700 transition-colors" />
-                          Preferences
+                          <Settings className="w-4 h-4 group-hover:text-teal-600 transition-colors" />
+                          <div className="flex-1">
+                            <div className="font-medium">Preferences</div>
+                            <div className="text-xs text-slate-500">Notifications & privacy</div>
+                          </div>
                         </Link>
-                        <div className="border-t border-gray-200 my-2" />
-                        <button className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 group">
+
+                        <Link
+                          to="/saved"
+                          onClick={closeUserMenu}
+                          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
+                        >
+                          <Bookmark className="w-4 h-4 group-hover:text-teal-600 transition-colors" />
+                          <div className="flex-1">
+                            <div className="font-medium">Saved Spaces</div>
+                            <div className="text-xs text-slate-500">Your bookmarked listings</div>
+                          </div>
+                        </Link>
+
+                        <Link
+                          to="/help"
+                          onClick={closeUserMenu}
+                          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
+                        >
+                          <HelpCircle className="w-4 h-4 group-hover:text-teal-600 transition-colors" />
+                          <div className="flex-1">
+                            <div className="font-medium">Help & Support</div>
+                            <div className="text-xs text-slate-500">Get assistance</div>
+                          </div>
+                        </Link>
+
+                        <div className="border-t border-slate-200 my-2" />
+                        
+                        <button 
+                          type="button"
+                          onClick={closeUserMenu}
+                          className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 group"
+                        >
                           <LogOut className="w-4 h-4" />
-                          Sign Out
+                          <div className="flex-1 text-left">
+                            <div className="font-medium">Sign Out</div>
+                            <div className="text-xs text-red-500">End your session</div>
+                          </div>
                         </button>
                       </div>
                     </motion.div>
+                  </>
                   )}
                 </AnimatePresence>
               </div>
@@ -488,16 +399,6 @@ const DesktopTopNavV2 = ({
             </button>
           </div>
         </div>
-
-        {/* 🆕 LOADING OVERLAY FOR ROLE SWITCHING */}
-        {isUpdatingRole && (
-          <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-40">
-            <div className="flex items-center space-x-2 text-blue-600">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-              <span className="text-sm font-medium">Switching roles...</span>
-            </div>
-          </div>
-        )}
       </header>
 
       {/* Mobile Menu */}
@@ -515,7 +416,7 @@ const DesktopTopNavV2 = ({
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="w-80 h-full bg-white border-r border-gray-200 shadow-xl p-6 overflow-y-auto"
+              className="w-80 h-full bg-white border-r border-slate-200 shadow-xl p-6 overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="space-y-6">
@@ -523,30 +424,26 @@ const DesktopTopNavV2 = ({
                 {canSwitchRoles && !isUpdatingRole && (
                   <div className="space-y-3">
                     <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wide">Switch Role</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => handleRoleSwitch('buyer')}
-                        className={`p-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          userRole === 'buyer'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-slate-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        <Megaphone className="w-4 h-4 mx-auto mb-1" />
-                        Advertiser
-                      </button>
-                      <button
-                        onClick={() => handleRoleSwitch('seller')}
-                        className={`p-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          userRole === 'seller'
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-gray-100 text-slate-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        <Home className="w-4 h-4 mx-auto mb-1" />
-                        Space Owner
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => handleRoleSwitch(userRole === 'buyer' ? 'seller' : 'buyer')}
+                      className={`w-full flex items-center justify-center gap-3 p-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        userRole === 'seller'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-blue-50 text-blue-700 border border-blue-200'
+                      }`}
+                    >
+                      {userRole === 'seller' ? (
+                        <Building2 className="w-5 h-5" />
+                      ) : (
+                        <MapPin className="w-5 h-5" />
+                      )}
+                      <span>
+                        {userRole === 'seller' ? 'Space Owner' : 'Advertiser'}
+                      </span>
+                      <span className="text-xs opacity-75">
+                        - Tap to switch
+                      </span>
+                    </button>
                   </div>
                 )}
 
@@ -562,7 +459,7 @@ const DesktopTopNavV2 = ({
                         onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
                           isActive
-                            ? 'bg-slate-100 text-slate-800 border border-slate-200'
+                            ? 'bg-teal-50 text-teal-700 border border-teal-200'
                             : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
                         }`}
                       >
@@ -576,19 +473,6 @@ const DesktopTopNavV2 = ({
                       </Link>
                     );
                   })}
-                </div>
-
-                {/* Primary Action */}
-                <div className="space-y-3">
-                  <Link
-                    to={roleInfo.quickAction.url}
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <button className={`w-full rounded-lg py-3 font-medium flex items-center justify-center gap-2 text-sm transition-all duration-200 text-white ${roleInfo.buttonBg} ${roleInfo.buttonHover}`}>
-                      <roleInfo.quickAction.icon className="h-4 w-4" />
-                      {roleInfo.quickAction.text}
-                    </button>
-                  </Link>
                 </div>
               </div>
             </motion.div>

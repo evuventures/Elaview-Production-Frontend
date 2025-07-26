@@ -1,8 +1,9 @@
 // src/components/browse/maps/GoogleMap.tsx
-// ✅ ENHANCED: GoogleMap with space dropdown functionality
+// ✅ CLEAN: Simplified GoogleMap with Elaview design system - Deep Teal
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, X, MapPin, DollarSign } from 'lucide-react';
+import { X, MapPin } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 
 // ✅ TypeScript Interfaces
 interface LatLng {
@@ -78,7 +79,7 @@ interface GoogleMapProps {
   showAreaMarkers?: boolean;
 }
 
-// ✅ NEW: Space dropdown component with smart positioning
+// ✅ CLEAN: Simplified Space Dropdown
 interface SpaceDropdownProps {
   spaces: AdvertisingArea[];
   position: { lat: number; lng: number };
@@ -95,177 +96,40 @@ const SpaceDropdown: React.FC<SpaceDropdownProps> = ({
   map 
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [pixelPosition, setPixelPosition] = useState<{ 
-    x: number; 
-    y: number; 
-    placement?: string;
-    markerX?: number;
-    markerY?: number;
-    mapWidth?: number;
-    mapHeight?: number;
-  } | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [pixelPosition, setPixelPosition] = useState<{ x: number; y: number } | null>(null);
 
-  // Convert lat/lng to pixel coordinates with smart positioning
+  // ✅ SIMPLIFIED: Basic positioning
   useEffect(() => {
     const updatePosition = () => {
       const mapDiv = map.getDiv();
       if (!mapDiv) return;
 
-      // Get the map's actual container bounds
-      const mapRect = mapDiv.getBoundingClientRect();
-      
-      // Create a temporary overlay to get pixel position
       const overlay = new window.google.maps.OverlayView();
       overlay.onAdd = function() {};
       overlay.onRemove = function() {};
       overlay.draw = function() {
         const projection = this.getProjection();
         if (projection) {
-          const pixelPosition = projection.fromLatLngToDivPixel(
+          const pixelPos = projection.fromLatLngToDivPixel(
             new window.google.maps.LatLng(position.lat, position.lng)
           );
           
-          if (pixelPosition) {
-            // Dropdown dimensions
-            const dropdownWidth = 300;
-            const dropdownHeight = 320; // More accurate height including padding
-            const padding = 16; // Increased padding for safety
-            const markerHeight = 32; // Account for marker size
+          if (pixelPos) {
+            const mapRect = mapDiv.getBoundingClientRect();
+            const dropdownWidth = 280;
+            const dropdownHeight = 200;
             
-            // ✅ CORRECTED: Use actual map container dimensions
-            const mapWidth = mapRect.width;
-            const mapHeight = mapRect.height;
+            // Simple centering with boundary checks
+            let x = pixelPos.x;
+            let y = pixelPos.y - dropdownHeight - 10; // Position above marker
             
-            // Calculate available space in each direction from marker position
-            const spaceAbove = pixelPosition.y - padding;
-            const spaceBelow = mapHeight - pixelPosition.y - markerHeight - padding;
-            const spaceLeft = pixelPosition.x - padding;
-            const spaceRight = mapWidth - pixelPosition.x - padding;
+            // Keep within bounds
+            x = Math.max(dropdownWidth/2, Math.min(mapRect.width - dropdownWidth/2, x));
+            y = Math.max(10, Math.min(mapRect.height - dropdownHeight - 10, y));
             
-            let x = pixelPosition.x;
-            let y = pixelPosition.y;
-            let placement = 'top';
-            
-            console.log('📊 Position Debug:', {
-              marker: { x: pixelPosition.x, y: pixelPosition.y },
-              mapSize: { width: mapWidth, height: mapHeight },
-              spaces: { above: spaceAbove, below: spaceBelow, left: spaceLeft, right: spaceRight },
-              dropdownSize: { width: dropdownWidth, height: dropdownHeight }
-            });
-            
-            // ✅ IMPROVED POSITIONING LOGIC
-            
-            // Try TOP placement first (most preferred)
-            if (spaceAbove >= dropdownHeight) {
-              placement = 'top';
-              y = pixelPosition.y - dropdownHeight - 8; // 8px gap from marker
-              x = Math.max(
-                dropdownWidth/2 + padding, 
-                Math.min(
-                  mapWidth - dropdownWidth/2 - padding,
-                  pixelPosition.x
-                )
-              );
-            }
-            // Try BOTTOM placement
-            else if (spaceBelow >= dropdownHeight) {
-              placement = 'bottom';
-              y = pixelPosition.y + markerHeight + 8; // 8px gap from marker
-              x = Math.max(
-                dropdownWidth/2 + padding, 
-                Math.min(
-                  mapWidth - dropdownWidth/2 - padding,
-                  pixelPosition.x
-                )
-              );
-            }
-            // Try LEFT placement
-            else if (spaceLeft >= dropdownWidth) {
-              placement = 'left';
-              x = pixelPosition.x - dropdownWidth - 8;
-              y = Math.max(
-                padding,
-                Math.min(
-                  mapHeight - dropdownHeight - padding,
-                  pixelPosition.y - dropdownHeight/2
-                )
-              );
-            }
-            // Try RIGHT placement
-            else if (spaceRight >= dropdownWidth) {
-              placement = 'right';
-              x = pixelPosition.x + markerHeight + 8;
-              y = Math.max(
-                padding,
-                Math.min(
-                  mapHeight - dropdownHeight - padding,
-                  pixelPosition.y - dropdownHeight/2
-                )
-              );
-            }
-            // ✅ EMERGENCY FALLBACK: Force fit within bounds
-            else {
-              // Find the direction with most space
-              const maxSpace = Math.max(spaceAbove, spaceBelow, spaceLeft, spaceRight);
-              
-              if (maxSpace === spaceAbove || maxSpace === spaceBelow) {
-                // Vertical placement with constraints
-                placement = maxSpace === spaceAbove ? 'top-constrained' : 'bottom-constrained';
-                
-                if (maxSpace === spaceAbove) {
-                  y = padding; // Stick to top edge
-                } else {
-                  y = mapHeight - dropdownHeight - padding; // Stick to bottom edge
-                }
-                
-                // Center horizontally with constraints
-                x = Math.max(
-                  dropdownWidth/2 + padding,
-                  Math.min(
-                    mapWidth - dropdownWidth/2 - padding,
-                    pixelPosition.x
-                  )
-                );
-              } else {
-                // Horizontal placement with constraints
-                placement = maxSpace === spaceLeft ? 'left-constrained' : 'right-constrained';
-                
-                if (maxSpace === spaceLeft) {
-                  x = padding; // Stick to left edge
-                } else {
-                  x = mapWidth - dropdownWidth - padding; // Stick to right edge
-                }
-                
-                // Center vertically with constraints
-                y = Math.max(
-                  padding,
-                  Math.min(
-                    mapHeight - dropdownHeight - padding,
-                    pixelPosition.y - dropdownHeight/2
-                  )
-                );
-              }
-            }
-            
-            // ✅ FINAL BOUNDARY CHECK (safety net)
-            x = Math.max(padding, Math.min(mapWidth - dropdownWidth - padding, x));
-            y = Math.max(padding, Math.min(mapHeight - dropdownHeight - padding, y));
-            
-            console.log('📍 Final Position:', { x, y, placement });
-            
-            setPixelPosition({ 
-              x, 
-              y, 
-              placement,
-              markerX: pixelPosition.x,
-              markerY: pixelPosition.y,
-              mapWidth,
-              mapHeight
-            });
+            setPixelPosition({ x, y });
           }
         }
-        // Clean up the temporary overlay
         overlay.setMap(null);
       };
       overlay.setMap(map);
@@ -273,26 +137,17 @@ const SpaceDropdown: React.FC<SpaceDropdownProps> = ({
 
     updatePosition();
     
-    // Update position when map moves or zooms
     const listeners = [
       map.addListener('zoom_changed', updatePosition),
-      map.addListener('center_changed', updatePosition),
-      map.addListener('bounds_changed', updatePosition),
-      map.addListener('resize', updatePosition) // Also listen for resize events
+      map.addListener('center_changed', updatePosition)
     ];
 
     return () => {
-      listeners.forEach(listener => {
-        if (listener && listener.remove) {
-          listener.remove();
-        }
-      });
+      listeners.forEach(listener => listener?.remove?.());
     };
   }, [position, map]);
 
   const currentSpace = spaces[currentIndex];
-  const hasNext = currentIndex < spaces.length - 1;
-  const hasPrev = currentIndex > 0;
 
   const getAreaPrice = (area: AdvertisingArea) => {
     if (area.baseRate) {
@@ -300,214 +155,89 @@ const SpaceDropdown: React.FC<SpaceDropdownProps> = ({
       const suffix = rateType.toLowerCase().replace('ly', '').replace('y', 'y');
       return `$${area.baseRate}/${suffix}`;
     }
-    if (area.pricing) {
-      try {
-        const pricing = typeof area.pricing === 'string' ? JSON.parse(area.pricing) : area.pricing;
-        if (pricing.daily) return `$${pricing.daily}/day`;
-        if (pricing.weekly) return `$${pricing.weekly}/week`;
-        if (pricing.monthly) return `$${pricing.monthly}/month`;
-      } catch (e) {
-        console.warn('Error parsing area pricing:', e);
-      }
-    }
-    return 'Price on request';
+    return 'Contact for pricing';
   };
 
   const getAreaName = (area: AdvertisingArea) => {
-    return area.name || area.title || 'Unnamed Advertising Area';
+    return area.name || area.title || 'Advertising Space';
   };
 
   if (!pixelPosition || !currentSpace) return null;
 
-  // ✅ SMART ARROW POSITIONING based on placement
-  const getArrowStyles = () => {
-    const arrowSize = 8;
-    const { placement, markerX, markerY, mapWidth = 800, mapHeight = 600 } = pixelPosition;
-    
-    if (placement === 'top' || placement === 'top-constrained') {
-      // Arrow points down to marker
-      const arrowX = Math.max(20, Math.min(280, (markerX || 0) - pixelPosition.x + 150));
-      return {
-        position: 'absolute',
-        bottom: '-8px',
-        left: `${arrowX}px`,
-        width: 0,
-        height: 0,
-        borderLeft: `${arrowSize}px solid transparent`,
-        borderRight: `${arrowSize}px solid transparent`,
-        borderTop: `${arrowSize}px solid rgb(31 41 55 / 0.95)`,
-        transform: 'translateX(-50%)'
-      };
-    } else if (placement === 'bottom' || placement === 'bottom-constrained') {
-      // Arrow points up to marker
-      const arrowX = Math.max(20, Math.min(280, (markerX || 0) - pixelPosition.x + 150));
-      return {
-        position: 'absolute',
-        top: '-8px',
-        left: `${arrowX}px`,
-        width: 0,
-        height: 0,
-        borderLeft: `${arrowSize}px solid transparent`,
-        borderRight: `${arrowSize}px solid transparent`,
-        borderBottom: `${arrowSize}px solid rgb(31 41 55 / 0.95)`,
-        transform: 'translateX(-50%)'
-      };
-    } else if (placement === 'left' || placement === 'left-constrained') {
-      // Arrow points right to marker
-      const arrowY = Math.max(20, Math.min(280, (markerY || 0) - pixelPosition.y + 160));
-      return {
-        position: 'absolute',
-        right: '-8px',
-        top: `${arrowY}px`,
-        width: 0,
-        height: 0,
-        borderTop: `${arrowSize}px solid transparent`,
-        borderBottom: `${arrowSize}px solid transparent`,
-        borderLeft: `${arrowSize}px solid rgb(31 41 55 / 0.95)`,
-        transform: 'translateY(-50%)'
-      };
-    } else if (placement === 'right' || placement === 'right-constrained') {
-      // Arrow points left to marker
-      const arrowY = Math.max(20, Math.min(280, (markerY || 0) - pixelPosition.y + 160));
-      return {
-        position: 'absolute',
-        left: '-8px',
-        top: `${arrowY}px`,
-        width: 0,
-        height: 0,
-        borderTop: `${arrowSize}px solid transparent`,
-        borderBottom: `${arrowSize}px solid transparent`,
-        borderRight: `${arrowSize}px solid rgb(31 41 55 / 0.95)`,
-        transform: 'translateY(-50%)'
-      };
-    }
-    return {};
-  };
-
   return (
     <div
-      ref={dropdownRef}
-      className="absolute z-50 bg-gray-800/95 backdrop-blur-lg rounded-xl border border-gray-700 shadow-2xl"
+      className="absolute z-50 card card-comfortable shadow-soft-lg max-w-xs"
       style={{
         left: `${pixelPosition.x}px`,
         top: `${pixelPosition.y}px`,
-        width: '300px',
-        maxHeight: '320px',
-        transform: (pixelPosition.placement?.includes('top') || pixelPosition.placement?.includes('bottom')) 
-          ? 'translateX(-50%)' 
-          : 'none',
-        // ✅ FORCE BOUNDARIES (safety net)
-        maxWidth: `${(pixelPosition.mapWidth || 800) - 32}px`,
+        transform: 'translateX(-50%)',
+        width: '280px'
       }}
     >
-      {/* ✅ SMART ARROW */}
-      <div style={getArrowStyles() as React.CSSProperties} />
-      
-      {/* Rest of component remains the same */}
-      {/* Header with count and close button */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-700">
-        <div className="text-sm text-gray-300">
-          {currentIndex + 1} of {spaces.length} spaces
-        </div>
+      {/* ✅ Clean header */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="caption text-slate-500">
+          {spaces.length} space{spaces.length !== 1 ? 's' : ''} available
+        </span>
         <button
           onClick={onClose}
-          className="p-1 hover:bg-gray-700 rounded-lg transition-colors"
+          className="p-1 hover:bg-slate-100 rounded-md transition-colors"
         >
-          <X className="w-4 h-4 text-gray-400" />
+          <X className="w-4 h-4 text-slate-400" />
         </button>
       </div>
 
-      {/* Space preview */}
-      <div className="p-3">
-        <div className="space-y-3">
-          {/* Image */}
-          <div className="relative w-full h-32 rounded-lg overflow-hidden">
-            <img
-              src={currentSpace.images || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400'}
-              alt={getAreaName(currentSpace)}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400';
-              }}
-            />
-            <div className="absolute bottom-2 right-2">
-              <div className="bg-gray-900/90 text-lime-400 text-xs font-bold px-2 py-1 rounded">
-                {getAreaPrice(currentSpace)}
-              </div>
-            </div>
-          </div>
-
-          {/* Info */}
-          <div>
-            <h3 className="font-semibold text-white text-sm leading-tight">
-              {getAreaName(currentSpace)}
-            </h3>
-            <p className="text-xs text-gray-400 mt-1">
-              {currentSpace.propertyName}
-            </p>
-            <div className="flex items-center text-xs text-gray-500 mt-1">
-              <MapPin className="w-3 h-3 mr-1" />
-              {currentSpace.propertyAddress}
-            </div>
-          </div>
-
-          {/* Navigation arrows and details button */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              {/* Previous button */}
-              <button
-                onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
-                disabled={!hasPrev}
-                className={`p-1 rounded transition-colors ${
-                  hasPrev 
-                    ? 'hover:bg-gray-700 text-gray-300' 
-                    : 'text-gray-600 cursor-not-allowed'
-                }`}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-
-              {/* Space indicators */}
-              <div className="flex items-center gap-1 mx-2">
-                {spaces.slice(0, 3).map((_, index) => (
-                  <div
-                    key={index}
-                    className={`w-2 h-2 rounded-sm ${
-                      index === currentIndex ? 'bg-lime-400' : 'bg-gray-600'
-                    }`}
-                  />
-                ))}
-                {spaces.length > 3 && (
-                  <div className="text-xs text-gray-500 ml-1">
-                    +{spaces.length - 3}
-                  </div>
-                )}
-              </div>
-
-              {/* Next button */}
-              <button
-                onClick={() => setCurrentIndex(Math.min(spaces.length - 1, currentIndex + 1))}
-                disabled={!hasNext}
-                className={`p-1 rounded transition-colors ${
-                  hasNext 
-                    ? 'hover:bg-gray-700 text-gray-300' 
-                    : 'text-gray-600 cursor-not-allowed'
-                }`}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Details button */}
-            <button
-              onClick={() => onSpaceClick(currentSpace)}
-              className="bg-lime-400 text-gray-900 text-xs px-3 py-1 rounded hover:bg-lime-500 transition-colors font-medium"
-            >
-              Details
-            </button>
-          </div>
+      {/* ✅ Simplified space info */}
+      <div className="space-y-3">
+        <div>
+          <h3 className="property-title text-sm mb-1">
+            {getAreaName(currentSpace)}
+          </h3>
+          <p className="caption text-slate-500 flex items-center gap-1">
+            <MapPin className="w-3 h-3" />
+            {currentSpace.propertyName}
+          </p>
         </div>
+
+        <div className="flex items-center justify-between">
+          <span className="property-price bg-teal-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+            {getAreaPrice(currentSpace)}
+          </span>
+          <Button 
+            onClick={() => onSpaceClick(currentSpace)}
+            className="btn-primary btn-small"
+          >
+            View Details
+          </Button>
+        </div>
+
+        {/* ✅ Simple navigation if multiple spaces */}
+        {spaces.length > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-2 border-t border-slate-200">
+            {spaces.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentIndex(index)}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  index === currentIndex ? 'bg-teal-500' : 'bg-slate-300'
+                }`}
+              />
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* ✅ Clean arrow */}
+      <div 
+        className="absolute top-full left-1/2 transform -translate-x-1/2"
+        style={{
+          width: 0,
+          height: 0,
+          borderLeft: '8px solid transparent',
+          borderRight: '8px solid transparent',
+          borderTop: '8px solid white',
+        }}
+      />
     </div>
   );
 };
@@ -519,27 +249,6 @@ interface GoogleMapsWindow extends Window {
 }
 
 declare const window: GoogleMapsWindow;
-
-// ✅ Enhanced color system for areas
-const getAreaColor = (area: AdvertisingArea): { background: string; border: string } => {
-  const type = area.type?.toLowerCase() || '';
-  
-  if (type.includes('digital')) {
-    return { background: '#059669', border: '#047857' }; // Green for digital
-  }
-  if (type.includes('billboard') || type.includes('outdoor')) {
-    return { background: '#ea580c', border: '#c2410c' }; // Orange for outdoor
-  }
-  if (type.includes('retail') || type.includes('mall') || type.includes('storefront')) {
-    return { background: '#7c3aed', border: '#6d28d9' }; // Purple for retail
-  }
-  if (type.includes('transit') || type.includes('platform') || type.includes('bus')) {
-    return { background: '#2563eb', border: '#1d4ed8' }; // Blue for transit
-  }
-  
-  // Default indoor/other
-  return { background: '#6b7280', border: '#4b5563' }; // Gray for indoor/other
-};
 
 const GoogleMap: React.FC<GoogleMapProps> = ({
   properties,
@@ -557,35 +266,16 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const propertyMarkersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
-  const areaMarkersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const clickMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
-  const [status, setStatus] = useState('Initializing...');
   
-  // ✅ NEW: Dropdown state
+  // ✅ Simplified dropdown state
   const [activeDropdown, setActiveDropdown] = useState<{
     spaces: AdvertisingArea[];
     position: LatLng;
   } | null>(null);
 
-  // ✅ Group spaces by property location
-  const groupSpacesByLocation = (spaces: AdvertisingArea[]) => {
-    const grouped = new Map<string, AdvertisingArea[]>();
-    
-    spaces.forEach(space => {
-      if (space.propertyCoords) {
-        const key = `${space.propertyCoords.lat.toFixed(6)},${space.propertyCoords.lng.toFixed(6)}`;
-        if (!grouped.has(key)) {
-          grouped.set(key, []);
-        }
-        grouped.get(key)!.push(space);
-      }
-    });
-    
-    return grouped;
-  };
-
-  // ✅ SIMPLIFIED: Clean up function
+  // ✅ Clean up function
   const cleanupMarkers = (markerArray: google.maps.marker.AdvancedMarkerElement[]) => {
     markerArray.forEach(marker => {
       if (marker && marker.map) {
@@ -598,15 +288,10 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   // ✅ Clean up on unmount
   useEffect(() => {
     return () => {
-      console.log('🗺️ GoogleMap: Component unmounting, cleaning up...');
-      
       propertyMarkersRef.current = cleanupMarkers(propertyMarkersRef.current);
-      areaMarkersRef.current = cleanupMarkers(areaMarkersRef.current);
-      
       if (clickMarkerRef.current && clickMarkerRef.current.map) {
         clickMarkerRef.current.map = null;
       }
-      
       mapInstanceRef.current = null;
     };
   }, []);
@@ -615,38 +300,29 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   useEffect(() => {
     const initMap = async () => {
       try {
-        setStatus('Loading Google Maps API...');
-        console.log('🗺️ GoogleMap: Starting initialization...');
-
         // Check if Google Maps is already loaded
         if (window.google && window.google.maps) {
-          console.log('🗺️ GoogleMap: Google Maps already available');
           createMap();
           return;
         }
 
         // Load Google Maps if not already loaded
         if (!document.querySelector('script[src*="maps.googleapis.com"]')) {
-          console.log('🗺️ GoogleMap: Loading Google Maps script');
-          
           const script = document.createElement('script');
           script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=maps,marker&v=beta&callback=initMainGoogleMap`;
           script.async = true;
           
           window.initMainGoogleMap = () => {
-            console.log('🗺️ GoogleMap: Google Maps callback executed');
             createMap();
             delete window.initMainGoogleMap;
           };
           
           script.onerror = () => {
-            console.error('🗺️ GoogleMap: Failed to load Google Maps');
-            setStatus('Failed to load Google Maps');
+            console.error('Failed to load Google Maps');
           };
           
           document.head.appendChild(script);
         } else {
-          console.log('🗺️ GoogleMap: Google Maps script already exists, waiting...');
           const checkGoogleMaps = setInterval(() => {
             if (window.google && window.google.maps) {
               clearInterval(checkGoogleMaps);
@@ -655,20 +331,13 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
           }, 100);
         }
       } catch (error) {
-        console.error('🗺️ GoogleMap: Error in initMap:', error);
-        setStatus(`Error: ${error}`);
+        console.error('Error in initMap:', error);
       }
     };
 
     const createMap = async () => {
       try {
-        if (!mapRef.current) {
-          console.error('🗺️ GoogleMap: Map ref not available');
-          return;
-        }
-
-        console.log('🗺️ GoogleMap: Creating map instance');
-        setStatus('Creating map...');
+        if (!mapRef.current) return;
 
         const { Map } = await window.google.maps.importLibrary("maps");
         
@@ -685,19 +354,24 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
           rotateControl: false,
           fullscreenControl: true,
           clickableIcons: false,
-          backgroundColor: '#f5f5f5',
+          backgroundColor: '#f8fafc',
           styles: [
             {
               featureType: 'poi',
               elementType: 'labels',
               stylers: [{ visibility: 'off' }]
+            },
+            {
+              featureType: 'all',
+              elementType: 'geometry',
+              stylers: [{ color: '#f8fafc' }]
             }
           ]
         });
 
         mapInstanceRef.current = map;
 
-        // Add click listener to close dropdown when clicking elsewhere
+        // Add click listener to close dropdown
         map.addListener('click', (event: google.maps.MapMouseEvent) => {
           setActiveDropdown(null);
           if (onClick) {
@@ -705,23 +379,19 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
           }
         });
         
-        console.log('🗺️ GoogleMap: Map created successfully!');
-        setStatus('Map loaded successfully!');
         setIsMapReady(true);
 
       } catch (error) {
-        console.error('🗺️ GoogleMap: Error creating map:', error);
-        setStatus(`Map creation error: ${error}`);
+        console.error('Error creating map:', error);
       }
     };
 
     initMap();
-  }, []); // Initialize once only
+  }, []);
 
   // ✅ Update map center and zoom when props change
   useEffect(() => {
     if (mapInstanceRef.current && isMapReady) {
-      console.log('🗺️ GoogleMap: Updating center/zoom', center, zoom);
       mapInstanceRef.current.panTo(center);
       if (mapInstanceRef.current.getZoom() !== zoom) {
         mapInstanceRef.current.setZoom(zoom);
@@ -729,7 +399,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
     }
   }, [center.lat, center.lng, zoom, isMapReady]);
 
-  // ✅ Create property markers with space count
+  // ✅ CLEAN: Simplified property markers
   useEffect(() => {
     const createPropertyMarkers = async () => {
       if (!mapInstanceRef.current || !isMapReady || !showPropertyMarkers) {
@@ -738,19 +408,13 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
       }
 
       try {
-        console.log('🏢 GoogleMap: Creating property markers for', properties.length, 'properties');
-        
-        // Filter out properties without advertising areas
         const propertiesWithSpaces = properties.filter(property => 
           property.advertising_areas && property.advertising_areas.length > 0
         );
         
         const { AdvancedMarkerElement } = await window.google.maps.importLibrary("marker");
-
-        // Clear existing property markers
         propertyMarkersRef.current = cleanupMarkers(propertyMarkersRef.current);
 
-        // Create new property markers
         const newMarkers = [];
         for (const property of propertiesWithSpaces) {
           let position: LatLng | null = null;
@@ -761,20 +425,17 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
             position = { lat: property.coords[0], lng: property.coords[1] };
           }
 
-          if (!position) {
-            console.warn('🏢 GoogleMap: Skipping property without coordinates:', property.id);
-            continue;
-          }
+          if (!position) continue;
 
           const spaceCount = property.advertising_areas?.length || 0;
           
-          // ✅ NEW: Create custom marker with space count
+          // ✅ CLEAN: Simple marker design with Deep Teal
           const markerElement = document.createElement('div');
-          markerElement.className = 'flex items-center justify-center w-8 h-8 bg-blue-500 text-white rounded-full border-2 border-white shadow-lg cursor-pointer hover:bg-blue-600 transition-colors';
+          markerElement.className = 'flex items-center justify-center w-8 h-8 bg-teal-500 text-white rounded-full border-2 border-white shadow-soft cursor-pointer hover:bg-teal-600 transition-all duration-200 hover:scale-110';
           markerElement.style.fontSize = '12px';
-          markerElement.style.fontWeight = 'bold';
+          markerElement.style.fontWeight = '600';
           markerElement.textContent = spaceCount.toString();
-          markerElement.title = `${property.title || property.name || 'Property'} - ${spaceCount} spaces`;
+          markerElement.title = `${spaceCount} space${spaceCount !== 1 ? 's' : ''} available`;
 
           const marker = new AdvancedMarkerElement({
             map: mapInstanceRef.current,
@@ -783,12 +444,10 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
             gmpClickable: true,
           });
 
-          // ✅ NEW: Show dropdown on property marker click
+          // ✅ Show dropdown on property marker click
           marker.addListener('click', (e: any) => {
-            e.stop(); // Prevent map click
-            console.log('🏢 Property clicked:', property.title, 'with', spaceCount, 'spaces');
+            e.stop();
             
-            // Get spaces for this property from advertisingAreas prop
             const propertySpaces = advertisingAreas.filter(space => 
               space.propertyId === property.id || 
               space.property?.id === property.id ||
@@ -803,7 +462,6 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
                 position: position!
               });
             } else {
-              // Fallback to property click handler
               onPropertyClick(property);
             }
           });
@@ -812,10 +470,9 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
         }
 
         propertyMarkersRef.current = newMarkers;
-        console.log(`🏢 Created ${newMarkers.length} property markers`);
 
       } catch (error) {
-        console.error('🏢 GoogleMap: Error creating property markers:', error);
+        console.error('Error creating property markers:', error);
       }
     };
 
@@ -830,14 +487,13 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
       try {
         const { AdvancedMarkerElement, PinElement } = await window.google.maps.importLibrary("marker");
 
-        // Remove existing click marker
         if (clickMarkerRef.current) {
           clickMarkerRef.current.map = null;
         }
 
         const pin = new PinElement({
-          background: '#dc2626',
-          borderColor: '#b91c1c',
+          background: '#0f766e', // Deep Teal color
+          borderColor: '#0d9488',
           glyphColor: '#ffffff',
           scale: 1.0,
         });
@@ -851,7 +507,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
 
         clickMarkerRef.current = clickMarker;
       } catch (error) {
-        console.error('🗺️ GoogleMap: Error creating click marker:', error);
+        console.error('Error creating click marker:', error);
       }
     };
 
@@ -866,7 +522,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
         style={{ minHeight: '300px' }}
       />
       
-      {/* ✅ NEW: Space dropdown */}
+      {/* ✅ CLEAN: Simplified space dropdown */}
       {activeDropdown && mapInstanceRef.current && onAreaClick && (
         <SpaceDropdown
           spaces={activeDropdown.spaces}
@@ -880,24 +536,12 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
         />
       )}
       
-      {/* ✅ Status indicator */}
-      {isMapReady && (
-        <div className="absolute top-4 left-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-md border border-white/20">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-sm font-medium text-white">
-              {properties.length} Properties • {advertisingAreas.length} Spaces
-            </span>
-          </div>
-        </div>
-      )}
-      
+      {/* ✅ CLEAN: Simple loading state */}
       {!isMapReady && (
-        <div className="absolute inset-0 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center">
+        <div className="absolute inset-0 bg-slate-50 rounded-2xl flex items-center justify-center">
           <div className="text-center">
-            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-            <p className="text-sm text-gray-600 dark:text-gray-300">Loading map...</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{status}</p>
+            <div className="loading-spinner w-6 h-6 text-teal-500 mx-auto mb-3"></div>
+            <p className="body-small text-slate-600">Loading map...</p>
           </div>
         </div>
       )}

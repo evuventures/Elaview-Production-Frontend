@@ -1,5 +1,5 @@
-// src/pages/browse/BrowsePage.jsx - Updated with Clean Styling
-// ✅ UPDATED: Clean styling to match navigation component
+// src/pages/browse/BrowsePage.jsx - Redesigned with Elaview Design System
+// ✅ UPDATED: Clean Elaview design system implementation with Deep Teal
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
@@ -13,7 +13,6 @@ import CartModal from './components/CartModal';
 import FiltersModal from './components/FiltersModal';
 import SpaceDetailsModal from './components/SpaceDetailsModal';
 import ROICalculatorModal from './components/ROICalculatorModal';
-import FilterHeader from './components/FilterHeader';
 import PaginationControls from './components/PaginationControls';
 import SpacesGrid from './components/SpacesGrid';
 import LoadingState from './components/LoadingState';
@@ -448,62 +447,126 @@ export default function BrowsePage() {
   }, [filters]);
 
   return (
-    <div className="h-screen overflow-hidden bg-gray-500 text-slate-800">
+    <div className="h-screen overflow-hidden bg-slate-50">
       <div className="flex h-full">
         
-        {/* ✅ LEFT CONTAINER: FilterHeader + Content (55%) */}
-        <div className="w-[55%] h-full flex flex-col">
-          
-          {/* ✅ HEADER: Fixed at top */}
-          <FilterHeader 
-            filteredSpaces={filteredSpaces}
-            activeFiltersCount={activeFiltersCount}
-            setShowFilters={setShowFilters}
-            cart={cart}
-            setShowCart={setShowCart}
-            filters={filters}
-            clearFilters={clearFilters}
-          />
+        {/* ✅ LEFT CONTAINER: Content (55%) - Elaview Design System */}
+        <div className="w-[55%] h-full flex flex-col bg-slate-25">
   
-          {/* ✅ CONTENT: Scrollable area */}
+          {/* ✅ CONTENT: Scrollable area with Elaview styling */}
           <div className="flex-1 flex flex-col min-h-0">
             <div className="flex-1 overflow-y-auto scrollbar-hide">
-              <div className="p-2">
-                {/* ✅ State Components */}
+              <div className="p-6">
+                {/* ✅ Combined Header with Controls */}
+                {!isLoading && !error && (
+                  <div className="mb-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h1 className="heading-2 text-slate-900">
+                          Advertising Spaces
+                        </h1>
+                        <p className="body-medium text-slate-600 mt-1">
+                          {filteredSpaces.length > 0 
+                            ? `${filteredSpaces.length} ${filteredSpaces.length === 1 ? 'space' : 'spaces'} available`
+                            : 'No spaces found with current filters'
+                          }
+                        </p>
+                        {activeFiltersCount > 0 && (
+                          <button
+                            onClick={clearFilters}
+                            className="btn-ghost btn-small text-slate-600 hover:text-slate-800 mt-2"
+                          >
+                            Clear all filters ({activeFiltersCount})
+                          </button>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <button
+                          onClick={() => setShowFilters(true)}
+                          className="btn-outline btn-small flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
+                          </svg>
+                          Filters
+                          {activeFiltersCount > 0 && (
+                            <span className="bg-teal-500 text-white text-xs px-2 py-0.5 rounded-full">
+                              {activeFiltersCount}
+                            </span>
+                          )}
+                        </button>
+                        
+                        <button
+                          onClick={() => setShowCart(true)}
+                          className="btn-primary btn-small flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6.5M7 13h10M17 13v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6" />
+                          </svg>
+                          Cart
+                          {cart.length > 0 && (
+                            <span className="bg-white text-teal-600 text-xs px-2 py-0.5 rounded-full font-medium">
+                              {cart.length}
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {activeFiltersCount > 0 && (
+                      <div className="divider"></div>
+                    )}
+                  </div>
+                )}
+
+                {/* ✅ State Components with Elaview styling */}
                 {error ? (
-                  <ErrorState error={error} onRetry={loadPropertiesData} />
+                  <div className="py-12">
+                    <ErrorState error={error} onRetry={loadPropertiesData} />
+                  </div>
                 ) : isLoading ? (
-                  <LoadingState />
+                  <div className="py-8">
+                    <LoadingState />
+                  </div>
                 ) : paginatedSpaces.length > 0 ? (
-                  <SpacesGrid
-                    spaces={paginatedSpaces}
-                    onSpaceCardClick={handleSpaceCardClick}
-                    onSpaceClick={handleSpaceClick}
-                    animatingSpace={animatingSpace}
-                    savedSpaces={savedSpaces}
-                    toggleSavedSpace={toggleSavedSpace}
-                    isInCart={isInCart}
-                    addToCart={addToCart}
-                  />
+                  <div className="space-y-6">
+                    <SpacesGrid
+                      spaces={paginatedSpaces}
+                      onSpaceCardClick={handleSpaceCardClick}
+                      onSpaceClick={handleSpaceClick}
+                      animatingSpace={animatingSpace}
+                      savedSpaces={savedSpaces}
+                      toggleSavedSpace={toggleSavedSpace}
+                      isInCart={isInCart}
+                      addToCart={addToCart}
+                    />
+                  </div>
                 ) : (
-                  <EmptyState onClearFilters={clearFilters} />
+                  <div className="py-12">
+                    <EmptyState onClearFilters={clearFilters} />
+                  </div>
                 )}
               </div>
             </div>
   
-            {/* ✅ PAGINATION: Fixed at bottom */}
-            <PaginationControls 
-              currentPage={currentPage}
-              setCurrentPage={setCurrentPage}
-              totalPages={totalPages}
-              filteredSpaces={filteredSpaces}
-            />
+            {/* ✅ PAGINATION: Fixed at bottom with Elaview styling */}
+            {!isLoading && !error && totalPages > 1 && (
+              <div className="bg-white border-t border-slate-200 shadow-soft px-6 py-4">
+                <PaginationControls 
+                  currentPage={currentPage}
+                  setCurrentPage={setCurrentPage}
+                  totalPages={totalPages}
+                  filteredSpaces={filteredSpaces}
+                />
+              </div>
+            )}
           </div>
         </div>
   
-        {/* ✅ RIGHT CONTAINER: Fixed Map (45%) */}
+        {/* ✅ RIGHT CONTAINER: Fixed Map (45%) - Reverted to original sizing */}
         <div className="w-[45%] h-full p-4 fixed right-0">
-          <div className="relative w-full h-[calc(100%-75px)] bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-lg">
+          <div className="relative w-full h-[calc(100%-75px)] bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-lg">
             <GoogleMap
               properties={properties.filter(property => 
                 property.latitude && property.longitude
@@ -516,40 +579,78 @@ export default function BrowsePage() {
               onAreaClick={handleSpaceClick}
               showAreaMarkers={true}
             />
-  
-            {/* Map Controls */}
+
+            {/* ✅ Map Controls - Styled with Elaview design */}
             <div className="absolute top-4 right-4 z-20">
               <Button 
                 size="sm" 
-                className="bg-white hover:bg-gray-50 border border-gray-200 text-slate-600 hover:text-slate-800 rounded-lg shadow-sm"
+                variant="outline"
+                className="bg-white/95 backdrop-blur-sm hover:bg-white border-slate-300 text-slate-600 hover:text-slate-800 shadow-soft"
                 onClick={handleCenterOnLocation}
                 title="Center map on your location"
               >
                 <Navigation className="w-4 h-4" />
               </Button>
             </div>
-  
-            {/* Map Legend */}
+
+            {/* ✅ Map Legend - Enhanced with Elaview styling */}
             <div className="absolute bottom-4 left-4 z-20">
-              <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-                <p className="text-xs text-slate-600 mb-2 font-medium">Map Legend</p>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-xs">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <span className="text-slate-600">Ad Spaces</span>
+              <div className="card-compact bg-white/95 backdrop-blur-sm border-slate-200 shadow-soft">
+                <h4 className="label text-slate-800 mb-3">Map Legend</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-teal-500 rounded-full shadow-sm"></div>
+                    <span className="caption text-slate-600">Ad Spaces</span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs">
-                    <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                    <span className="text-slate-600">Properties</span>
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-success-500 rounded-full shadow-sm"></div>
+                    <span className="caption text-slate-600">Properties</span>
                   </div>
+                  {userLocation && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full shadow-sm animate-pulse-soft"></div>
+                      <span className="caption text-slate-600">Your Location</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
+
+            {/* ✅ Map Status Indicator */}
+            {isLoading && (
+              <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-30">
+                <div className="card-compact bg-white text-center">
+                  <div className="loading-spinner w-6 h-6 mx-auto mb-2 text-teal-500"></div>
+                  <p className="body-small text-slate-600">Loading spaces...</p>
+                </div>
+              </div>
+            )}
+
+            {/* ✅ Map Info Card - Floating summary */}
+            {!isLoading && !error && (
+              <div className="absolute top-4 left-4 z-20">
+                <div className="card-compact bg-white/95 backdrop-blur-sm border-slate-200 shadow-soft max-w-48">
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-teal-600">
+                      {filteredSpaces.length}
+                    </p>
+                    <p className="caption text-slate-600">
+                      {filteredSpaces.length === 1 ? 'Space Available' : 'Spaces Available'}
+                    </p>
+                    {activeFiltersCount > 0 && (
+                      <p className="caption text-slate-500 mt-1">
+                        {activeFiltersCount} filter{activeFiltersCount !== 1 ? 's' : ''} active
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
   
-      {/* ✅ Modal Components */}
+      {/* ✅ Modal Components - Will be styled separately */}
       <CartModal 
         showCart={showCart}
         setShowCart={setShowCart}

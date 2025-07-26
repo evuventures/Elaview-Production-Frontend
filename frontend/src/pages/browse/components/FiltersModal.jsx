@@ -22,165 +22,153 @@ export default function FiltersModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setShowFilters(false)}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="w-full max-w-2xl bg-gray-800 rounded-2xl overflow-hidden border border-gray-700 max-h-[80vh] overflow-y-auto"
+            className="w-full max-w-2xl card card-spacious max-h-[80vh] overflow-y-auto shadow-soft-lg"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white">Filter Advertising Spaces</h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
+              <h2 className="heading-2">Filter Advertising Spaces</h2>
+              <button
+                onClick={() => setShowFilters(false)}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-8">
+              {/* Price Range */}
+              <div>
+                <h3 className="label text-slate-800 mb-4">Price Range</h3>
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { id: 'all', label: 'Any Budget' },
+                    { id: 'under500', label: 'Under $500/mo' },
+                    { id: 'under1000', label: 'Under $1K/mo' },
+                    { id: 'under2000', label: 'Under $2K/mo' }
+                  ].map(price => (
+                    <button
+                      key={price.id}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        filters.priceRange === price.id 
+                          ? 'bg-teal-500 text-white shadow-md hover:bg-teal-600' 
+                          : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 hover:border-slate-300'
+                      }`}
+                      onClick={() => toggleFilter('priceRange', price.id)}
+                    >
+                      {price.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Space Type */}
+              <div>
+                <h3 className="label text-slate-800 mb-4">Space Type</h3>
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { id: 'all', label: 'All Types', icon: Building2 },
+                    { id: 'digital', label: 'Digital', icon: Lightning },
+                    { id: 'outdoor', label: 'Outdoor', icon: Eye },
+                    { id: 'retail', label: 'Retail', icon: Building2 },
+                    { id: 'transit', label: 'Transit', icon: Navigation },
+                    { id: 'indoor', label: 'Indoor', icon: Monitor }
+                  ].map(type => (
+                    <button
+                      key={type.id}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
+                        filters.spaceType === type.id 
+                          ? 'bg-teal-500 text-white shadow-md hover:bg-teal-600' 
+                          : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 hover:border-slate-300'
+                      }`}
+                      onClick={() => toggleFilter('spaceType', type.id)}
+                    >
+                      <type.icon className="w-4 h-4" />
+                      {type.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Target Audience */}
+              <div>
+                <h3 className="label text-slate-800 mb-4">Target Audience</h3>
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { id: 'all', label: 'Everyone', icon: Users },
+                    { id: 'families', label: 'Families', icon: Users },
+                    { id: 'professionals', label: 'Professionals', icon: Target },
+                    { id: 'commuters', label: 'Commuters', icon: Navigation }
+                  ].map(audience => (
+                    <button
+                      key={audience.id}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
+                        filters.audience === audience.id 
+                          ? 'bg-teal-500 text-white shadow-md hover:bg-teal-600' 
+                          : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 hover:border-slate-300'
+                      }`}
+                      onClick={() => toggleFilter('audience', audience.id)}
+                    >
+                      <audience.icon className="w-4 h-4" />
+                      {audience.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Features */}
+              <div>
+                <h3 className="label text-slate-800 mb-4">Features</h3>
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { id: 'verified', label: 'Verified Owner', icon: CheckCircle },
+                    { id: 'high_traffic', label: 'High Traffic', icon: TrendingUp },
+                    { id: 'premium', label: 'Premium Location', icon: Star },
+                    { id: 'digital', label: 'Digital Display', icon: Lightning }
+                  ].map(feature => (
+                    <button
+                      key={feature.id}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
+                        filters.features.includes(feature.id) 
+                          ? 'bg-teal-500 text-white shadow-md hover:bg-teal-600' 
+                          : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 hover:border-slate-300'
+                      }`}
+                      onClick={() => toggleFeature(feature.id)}
+                    >
+                      <feature.icon className="w-4 h-4" />
+                      {feature.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Filter Actions */}
+            <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-8">
+              <button 
+                onClick={clearFilters}
+                className="btn-secondary btn-small"
+              >
+                Clear All
+              </button>
+              
+              <div className="flex items-center gap-4">
+                <span className="body-small text-slate-600">
+                  {filteredSpaces.length} space{filteredSpaces.length !== 1 ? 's' : ''} found
+                </span>
+                <button 
                   onClick={() => setShowFilters(false)}
-                  className="text-gray-400 hover:text-white hover:bg-gray-700"
+                  className="btn-primary"
                 >
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Price Range */}
-                <div>
-                  <h3 className="text-sm font-semibold text-white mb-3">Price Range</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { id: 'all', label: 'Any Budget' },
-                      { id: 'under500', label: 'Under $500/mo' },
-                      { id: 'under1000', label: 'Under $1K/mo' },
-                      { id: 'under2000', label: 'Under $2K/mo' }
-                    ].map(price => (
-                      <Button
-                        key={price.id}
-                        variant={filters.priceRange === price.id ? 'default' : 'outline'}
-                        size="sm"
-                        className={`rounded-xl transition-all ${
-                          filters.priceRange === price.id 
-                            ? 'bg-lime-400 text-gray-900 hover:bg-lime-500' 
-                            : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white'
-                        }`}
-                        onClick={() => toggleFilter('priceRange', price.id)}
-                      >
-                        {price.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Space Type */}
-                <div>
-                  <h3 className="text-sm font-semibold text-white mb-3">Space Type</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { id: 'all', label: 'All Types', icon: Building2 },
-                      { id: 'digital', label: 'Digital', icon: Lightning },
-                      { id: 'outdoor', label: 'Outdoor', icon: Eye },
-                      { id: 'retail', label: 'Retail', icon: Building2 },
-                      { id: 'transit', label: 'Transit', icon: Navigation },
-                      { id: 'indoor', label: 'Indoor', icon: Monitor }
-                    ].map(type => (
-                      <Button
-                        key={type.id}
-                        variant={filters.spaceType === type.id ? 'default' : 'outline'}
-                        size="sm"
-                        className={`rounded-xl flex items-center gap-1 transition-all ${
-                          filters.spaceType === type.id 
-                            ? 'bg-lime-400 text-gray-900 hover:bg-lime-500' 
-                            : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white'
-                        }`}
-                        onClick={() => toggleFilter('spaceType', type.id)}
-                      >
-                        <type.icon className="w-3 h-3" />
-                        {type.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Target Audience */}
-                <div>
-                  <h3 className="text-sm font-semibold text-white mb-3">Target Audience</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { id: 'all', label: 'Everyone', icon: Users },
-                      { id: 'families', label: 'Families', icon: Users },
-                      { id: 'professionals', label: 'Professionals', icon: Target },
-                      { id: 'commuters', label: 'Commuters', icon: Navigation }
-                    ].map(audience => (
-                      <Button
-                        key={audience.id}
-                        variant={filters.audience === audience.id ? 'default' : 'outline'}
-                        size="sm"
-                        className={`rounded-xl flex items-center gap-1 transition-all ${
-                          filters.audience === audience.id 
-                            ? 'bg-lime-400 text-gray-900 hover:bg-lime-500' 
-                            : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white'
-                        }`}
-                        onClick={() => toggleFilter('audience', audience.id)}
-                      >
-                        <audience.icon className="w-3 h-3" />
-                        {audience.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Features */}
-                <div>
-                  <h3 className="text-sm font-semibold text-white mb-3">Features</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { id: 'verified', label: 'Verified Owner', icon: CheckCircle },
-                      { id: 'high_traffic', label: 'High Traffic', icon: TrendingUp },
-                      { id: 'premium', label: 'Premium Location', icon: Star },
-                      { id: 'digital', label: 'Digital Display', icon: Lightning }
-                    ].map(feature => (
-                      <Button
-                        key={feature.id}
-                        variant={filters.features.includes(feature.id) ? 'default' : 'outline'}
-                        size="sm"
-                        className={`rounded-xl flex items-center gap-1 transition-all ${
-                          filters.features.includes(feature.id) 
-                            ? 'bg-lime-400 text-gray-900 hover:bg-lime-500' 
-                            : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white'
-                        }`}
-                        onClick={() => toggleFeature(feature.id)}
-                      >
-                        <feature.icon className="w-3 h-3" />
-                        {feature.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Filter Actions */}
-              <div className="flex items-center justify-between pt-6 border-t border-gray-700 mt-6">
-                <Button 
-                  variant="outline" 
-                  onClick={clearFilters}
-                  className="bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white"
-                >
-                  Clear All
-                </Button>
-                
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-400">
-                    {filteredSpaces.length} spaces found
-                  </span>
-                  <Button 
-                    onClick={() => setShowFilters(false)}
-                    className="bg-lime-400 text-gray-900 hover:bg-lime-500"
-                  >
-                    Show Results
-                  </Button>
-                </div>
+                  Show Results
+                </button>
               </div>
             </div>
           </motion.div>
