@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  User, ChevronDown, Bell, Settings, LogOut, Menu, X,
+  User, ChevronDown, Bell, Settings, LogOut,
   Building2, Calendar, MessageSquare, Map, LayoutDashboard,
   MapPin, Calendar as CalendarIcon, Mail, UserCircle, Shield,
   Bookmark, HelpCircle
@@ -27,7 +27,6 @@ const DesktopTopNavV2 = ({
   const location = useLocation();
   const navigate = useNavigate();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
   // Role-specific navigation items
@@ -389,96 +388,9 @@ const DesktopTopNavV2 = ({
                 </AnimatePresence>
               </div>
             )}
-
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all duration-200"
-            >
-              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-            </button>
           </div>
         </div>
       </header>
-
-      {/* Mobile Menu */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <motion.div
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="w-80 h-full bg-white border-r border-slate-200 shadow-xl p-6 overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="space-y-6">
-                {/* Mobile Role Switcher */}
-                {canSwitchRoles && !isUpdatingRole && (
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wide">Switch Role</h3>
-                    <button
-                      onClick={() => handleRoleSwitch(userRole === 'buyer' ? 'seller' : 'buyer')}
-                      className={`w-full flex items-center justify-center gap-3 p-4 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        userRole === 'seller'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-blue-50 text-blue-700 border border-blue-200'
-                      }`}
-                    >
-                      {userRole === 'seller' ? (
-                        <Building2 className="w-5 h-5" />
-                      ) : (
-                        <MapPin className="w-5 h-5" />
-                      )}
-                      <span>
-                        {userRole === 'seller' ? 'Space Owner' : 'Advertiser'}
-                      </span>
-                      <span className="text-xs opacity-75">
-                        - Tap to switch
-                      </span>
-                    </button>
-                  </div>
-                )}
-
-                {/* Navigation Items */}
-                <div className="space-y-1">
-                  <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wide mb-3">Navigation</h3>
-                  {navigationItems.map((item) => {
-                    const isActive = location.pathname === item.url;
-                    return (
-                      <Link
-                        key={item.title}
-                        to={item.url}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                          isActive
-                            ? 'bg-teal-50 text-teal-700 border border-teal-200'
-                            : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
-                        }`}
-                      >
-                        <item.icon className="w-5 h-5" />
-                        <span className="flex-1 font-medium">{item.title}</span>
-                        {item.badge > 0 && (
-                          <Badge className="bg-red-500 text-white text-xs">
-                            {formatBadgeCount(item.badge)}
-                          </Badge>
-                        )}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Content Spacer */}
       <div className="h-16" />

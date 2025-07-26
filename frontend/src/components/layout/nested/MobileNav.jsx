@@ -16,7 +16,7 @@ const MobileNav = ({ unreadCount, pendingInvoices, actionItemsCount, currentUser
   });
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 glass-strong border-t border-border z-30 shadow-brand">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border z-30 shadow-brand">
       <div className="flex justify-around items-center py-3 px-4">
         {navigationItems.map((item) => {
           const isActive = location.pathname === item.url;

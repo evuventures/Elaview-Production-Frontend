@@ -1,5 +1,6 @@
 // src/pages/browse/BrowsePage.jsx - Redesigned with Elaview Design System
 // ✅ UPDATED: Clean Elaview design system implementation with Deep Teal
+// ✅ MOBILE: Full-screen map with bottom navigation
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
@@ -446,6 +447,152 @@ export default function BrowsePage() {
     return count;
   }, [filters]);
 
+  // ✅ MOBILE LAYOUT: Full-screen map only (uses existing MobileNav component)
+  if (isMobile) {
+    return (
+      <div className="h-screen overflow-hidden bg-slate-50">
+        {/* ✅ MOBILE: Full-screen Map Container */}
+        <div className="w-full h-full relative">
+          <div className="w-full h-full bg-white overflow-hidden">
+            <GoogleMap
+              properties={properties.filter(property => 
+                property.latitude && property.longitude
+              )}
+              onPropertyClick={handlePropertyClick}
+              center={mapCenter}
+              zoom={mapZoom}
+              className="w-full h-full"
+              advertisingAreas={paginatedSpaces}
+              onAreaClick={handleSpaceClick}
+              showAreaMarkers={true}
+            />
+
+            {/* ✅ Mobile Map Controls - Top Right */}
+            <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="bg-white/95 backdrop-blur-sm hover:bg-white border-slate-300 text-slate-600 hover:text-slate-800 shadow-lg h-10 w-10 p-0"
+                onClick={handleCenterOnLocation}
+                title="Center map on your location"
+              >
+                <Navigation className="w-4 h-4" />
+              </Button>
+              
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="bg-white/95 backdrop-blur-sm hover:bg-white border-slate-300 text-slate-600 hover:text-slate-800 shadow-lg h-10 w-10 p-0"
+                onClick={() => setShowFilters(true)}
+                title="Filters"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
+                </svg>
+                {activeFiltersCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-teal-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </Button>
+            </div>
+
+            {/* ✅ Mobile Map Info Card - Top Left */}
+            {!isLoading && !error && (
+              <div className="absolute top-4 left-4 z-20">
+                <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg px-3 py-2 shadow-lg">
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-teal-600">
+                      {filteredSpaces.length}
+                    </p>
+                    <p className="text-xs text-slate-600">
+                      {filteredSpaces.length === 1 ? 'Space' : 'Spaces'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ✅ Mobile Map Legend - Bottom Left (positioned just above MobileNav) */}
+            <div className="absolute bottom-[11.5rem] left-4 z-20">
+              <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg">
+                <h4 className="font-medium text-xs text-slate-800">Legend</h4>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
+                    <span className="text-xs text-slate-600">Ad Spaces</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-xs text-slate-600">Properties</span>
+                  </div>
+                  {userLocation && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-slate-600">You</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ✅ Mobile Loading State */}
+            {isLoading && (
+              <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-30">
+                <div className="bg-white rounded-lg p-4 text-center shadow-lg">
+                  <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-sm text-slate-600">Loading spaces...</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ✅ Modal Components for Mobile */}
+        <CartModal 
+          showCart={showCart}
+          setShowCart={setShowCart}
+          cart={cart}
+          setCart={setCart}
+          removeFromCart={removeFromCart}
+          updateCartItemDuration={updateCartItemDuration}
+          getTotalCartValue={getTotalCartValue}
+        />
+
+        <FiltersModal 
+          showFilters={showFilters}
+          setShowFilters={setShowFilters}
+          filters={filters}
+          toggleFilter={toggleFilter}
+          toggleFeature={toggleFeature}
+          clearFilters={clearFilters}
+          filteredSpaces={filteredSpaces}
+        />
+
+        <SpaceDetailsModal 
+          selectedSpace={selectedSpace}
+          detailsExpanded={detailsExpanded}
+          setSelectedSpace={setSelectedSpace}
+          setDetailsExpanded={setDetailsExpanded}
+          isInCart={isInCart}
+          addToCart={addToCart}
+          handleBookingNavigation={handleBookingNavigation}
+          setShowROICalculator={setShowROICalculator}
+        />
+
+        <ROICalculatorModal 
+          showROICalculator={showROICalculator}
+          setShowROICalculator={setShowROICalculator}
+          selectedSpace={selectedSpace}
+          isInCart={isInCart}
+          addToCart={addToCart}
+          handleBookingNavigation={handleBookingNavigation}
+        />
+      </div>
+    );
+  }
+
+  // ✅ DESKTOP LAYOUT: Original side-by-side layout
   return (
     <div className="h-screen overflow-hidden bg-slate-50">
       <div className="flex h-full">
@@ -564,7 +711,7 @@ export default function BrowsePage() {
           </div>
         </div>
   
-        {/* ✅ RIGHT CONTAINER: Fixed Map (45%) - Reverted to original sizing */}
+        {/* ✅ RIGHT CONTAINER: Fixed Map (45%) - Desktop Only */}
         <div className="w-[45%] h-full p-4 fixed right-0">
           <div className="relative w-full h-[calc(100%-75px)] bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-lg">
             <GoogleMap
@@ -650,7 +797,7 @@ export default function BrowsePage() {
         </div>
       </div>
   
-      {/* ✅ Modal Components - Will be styled separately */}
+      {/* ✅ Modal Components - Desktop */}
       <CartModal 
         showCart={showCart}
         setShowCart={setShowCart}
