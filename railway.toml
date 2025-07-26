@@ -1,0 +1,16 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "npm start"
+restartPolicyType = "always"
+
+[[services]]
+name = "frontend"
+
+[services.source]
+repo = "your-username/your-frontend-repo"
+rootDirectory = "frontend"
+
+[services.variables]
+NODE_ENV = "production"
