@@ -1,62 +1,68 @@
 import React from 'react';
-import { User } from '@/types/messages';
+import { Conversation, User } from '@/types/messages';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ArrowLeft, MoreVertical } from 'lucide-react';
+import { User as UserIcon, Phone, Video } from 'lucide-react';
 
-interface MessagesHeaderProps {
-  otherUser: User;
-  isBlockedByMe: boolean;
-  isBlockingMe: boolean;
+export interface MessagesHeaderProps {
+  currentUser: User | null;
+  otherUser: User | null;
   onBack: () => void;
+  conversation: Conversation & { participants: User[] };
 }
 
-export const MessagesHeader: React.FC<MessagesHeaderProps> = ({ 
-  otherUser, 
-  isBlockedByMe, 
-  isBlockingMe,
-  onBack 
-}) => {
+export const MessagesHeader = ({
+  currentUser,
+  otherUser,
+  onBack,
+  conversation
+}: MessagesHeaderProps) => {
   return (
-    <div className="p-6 border-b border-[hsl(var(--border))] glass-strong flex justify-between items-center">
-      <div className="flex items-center gap-4">
-            <Button 
-            variant="ghost" 
-            size="icon" 
-            className="md:hidden rounded-full" 
+    <div className="p-4 border-b">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onBack}
-            >
-            <ArrowLeft className="w-5 h-5" />
-            </Button>
-        <div className="relative">
-          <img 
-            src={otherUser.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUser.full_name)}&background=6169A7&color=fff&size=40`}
-            alt={otherUser.full_name}
-            className="w-12 h-12 rounded-full object-cover ring-2 ring-[hsl(var(--border))] shadow-md"
-          />
-          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[hsl(var(--success))] rounded-full border-2 border-[hsl(var(--card))] shadow-sm"></div>
-        </div>
-        <div>
-          <h2 className="font-bold text-lg text-[hsl(var(--foreground))]">{otherUser.full_name}</h2>
-          <div className="text-sm text-[hsl(var(--success))] font-medium flex items-center gap-1">
-            <div className="w-2 h-2 bg-[hsl(var(--success))] rounded-full animate-pulse"></div>
-            Online
+            className="md:hidden text-muted-foreground hover:text-foreground hover:bg-muted"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          
+          {otherUser?.profile_image ? (
+            <img 
+              src={otherUser.profile_image}
+              className="w-8 h-8 rounded-full"
+              alt={otherUser.full_name}
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+              <UserIcon className="w-4 h-4 text-muted-foreground" />
+            </div>
+          )}
+          
+          <div>
+            <h2 className="font-semibold">{otherUser?.full_name || 'Unknown'}</h2>
+            <p className="text-sm text-muted-foreground">
+              {conversation.last_message?.content || 'No messages yet'}
+            </p>
           </div>
         </div>
-      </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="rounded-full hover:bg-[hsl(var(--muted))]">
-            <MoreVertical className="w-5 h-5" />
+
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted">
+            <Phone className="w-4 h-4" />
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="glass-strong border-[hsl(var(--border))] rounded-2xl">
-          <DropdownMenuItem className="rounded-xl">View Profile</DropdownMenuItem>
-          <DropdownMenuItem className="text-[hsl(var(--destructive))] rounded-xl">
-            {isBlockedByMe ? 'Unblock User' : 'Block User'}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted">
+            <Video className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted">
+            <MoreVertical className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };

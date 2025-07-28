@@ -1,5 +1,5 @@
 import React from 'react';
-import { ConversationMessage, MessageType } from '@/types/messages';
+import { Message, MessageType } from '@/types/messages';
 import { format } from 'date-fns';
 import { 
   Info, CheckCircle, XCircle, PlayCircle, StopCircle, 
@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 interface SystemMessageProps {
-  message: ConversationMessage;
+  message: Message;
   onClick?: () => void;
 }
 

@@ -53,23 +53,25 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
               {otherUser.full_name}
             </div>
             <div className="flex-shrink-0 text-xs text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))] px-2 py-0.5 rounded-full">
-              {formatDistanceToNow(new Date(conversation.lastActivity), { addSuffix: true })}
+              {formatDistanceToNow(new Date(conversation.last_activity || new Date()), { 
+  addSuffix: true 
+})}
             </div>
           </div>
     
           <div className="flex justify-between items-center gap-2">
             <div className="relative max-w-[180px]">
               <div className="text-sm text-[hsl(var(--muted-foreground))] leading-relaxed pr-2 line-clamp-1">
-                {conversation.lastMessage}
+                {conversation.last_message?.content}
               </div>
               <div className="absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-[hsl(var(--muted)/0.5)] to-transparent" />
             </div>
-            {conversation.unreadCount > 0 && (
+            {conversation.unread_count > 0 && (
               <Badge
                 variant="default"
                 className="bg-gradient-brand text-white border-0 rounded-full min-w-[20px] h-5 text-xs font-bold px-2 flex items-center justify-center shadow-sm"
               >
-                {conversation.unreadCount}
+                {conversation.unread_count}
               </Badge>
             )}
           </div>

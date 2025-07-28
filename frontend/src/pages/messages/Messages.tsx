@@ -54,6 +54,7 @@ const MessagesPage = () => {
   const [isSending, setIsSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showSidebar, setShowSidebar] = useState(true);
+  const [isBlocked, setIsBlocked] = useState(false); // Add this state hook
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -62,15 +63,14 @@ const MessagesPage = () => {
     if (!searchTerm) return conversations;
   
     return conversations.filter(conversation => {
-      // Find the other participant (not current user)
       const otherParticipant = conversation.participants?.find(
         p => p.id !== currentUser?.id
       );
   
-      // Search by participant name or last message content
       return (
         otherParticipant?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        conversation.last_message.toLowerCase().includes(searchTerm.toLowerCase())
+        conversation.last_message?.content.toLowerCase().includes(searchTerm.toLowerCase()) || // Safe access
+        false // Fallback if last_message is undefined
       );
     });
   }, [conversations, searchTerm, currentUser?.id]);
@@ -303,11 +303,11 @@ const MessagesPage = () => {
               {conversation.participants?.find(p => p.id !== currentUser?.id)?.full_name || 'Unknown'}
             </h3>
             <span className="text-xs text-gray-500">
-              {formatDistanceToNow(new Date(conversation.last_activity))}
+              {formatDistanceToNow(new Date(conversation.last_activity || Date.now()))}
             </span>
           </div>
           <p className="text-sm text-gray-500 truncate">
-            {conversation.last_message}
+            {conversation.last_message?.content || 'No message'}
           </p>
         </div>
         
@@ -377,9 +377,9 @@ const MessagesPage = () => {
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0">
-                      {conversation.participants.find(p => p.id !== currentUser?.id)?.imageUrl ? (
+                      {conversation.participants.find(p => p.id !== currentUser?.id)?.profile_image ? (
                         <img 
-                          src={conversation.participants.find(p => p.id !== currentUser?.id)?.imageUrl || ''}
+                          src={conversation.participants.find(p => p.id !== currentUser?.id)?.profile_image || ''}
                           className="w-10 h-10 rounded-full"
                           alt="Profile"
                         />
@@ -395,16 +395,16 @@ const MessagesPage = () => {
                           {conversation.participants.find(p => p.id !== currentUser?.id)?.full_name || 'Unknown'}
                         </h3>
                         <span className="text-xs text-gray-500">
-                          {formatDistanceToNow(new Date(conversation.lastActivity))}
+                          {formatDistanceToNow(new Date(conversation.last_activity || Date.now()))}
                         </span>
                       </div>
                       <p className="text-sm text-gray-500 truncate">
-                        {conversation.lastMessage}
+                        {conversation.last_message?.content || 'No message'}
                       </p>
                     </div>
-                    {conversation.unreadCount > 0 && (
+                    {conversation.unread_count > 0 && (
                       <div className="ml-2 bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                        {conversation.unreadCount}
+                        {conversation.unread_count}
                       </div>
                     )}
                   </div>
@@ -420,9 +420,10 @@ const MessagesPage = () => {
         {selectedConversation ? (
           <>
             <MessagesHeader
-              user={otherUser}
+              currentUser={currentUser as User | null}
+              otherUser={otherUser}
               onBack={() => setShowSidebar(true)}
-              conversation={selectedConversation}
+              conversation={selectedConversation!} // Non-null assertion if you're sure it's not null
             />
             
             <ScrollArea className="flex-1 p-4">
@@ -437,7 +438,7 @@ const MessagesPage = () => {
               ) : (
                 <div className="space-y-4">
                   {messages.map((message, index) => {
-                    const isCurrentUser = message.sender.id === currentUser?.id;
+                    const isCurrentUser = message.sender?.id === currentUser?.id;
                     const showDate = index === 0 || 
                       new Date(message.created_date).getDate() !== 
                       new Date(messages[index - 1].created_date).getDate();
@@ -453,7 +454,7 @@ const MessagesPage = () => {
                         )}
                         <MessageBubble
                           message={message}
-                          isCurrentUser={isCurrentUser}
+                          isCurrentUser={message.sender?.id === currentUser?.id}
                           isOptimistic={message.isOptimistic}
                         />
                       </React.Fragment>
@@ -467,11 +468,12 @@ const MessagesPage = () => {
             <div className="p-4 border-t">
               <MessageInput
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onSubmit={sendMessage}
+                onChange={setNewMessage}
+                onKeyPress={handleKeyDown}
+                onSend={sendMessage}
                 disabled={isSending}
-                isLoading={isSending}
+                isSending={isSending}      
+                isBlocked={isBlocked}      
               />
             </div>
           </>
