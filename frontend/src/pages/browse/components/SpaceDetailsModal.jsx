@@ -8,6 +8,7 @@ import {
 import { getAreaName, getAreaType, getAreaPrice, getAreaCategoryIcon } from '../utils/areaHelpers';
 import { getBusinessInsights, getTrustIndicators, calculateROI } from '../utils/businessInsights';
 import { getNumericPrice } from '../utils/areaHelpers';
+import { MessageButton} from './MessageButton';
 
 export default function SpaceDetailsModal({ 
   selectedSpace,
@@ -205,12 +206,12 @@ export default function SpaceDetailsModal({
                     <Calculator className="w-4 h-4 mr-2" />
                     ROI Calculator
                   </Button>
-                  <Button 
-                    className="btn-secondary"
-                  >
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Contact Owner
-                  </Button>
+                  
+                  <MessageButton
+                    advertisingAreaId={selectedSpace.id}
+                    ownerId={selectedSpace.properties?.users?.id || selectedSpace.ownerId || selectedSpace.property?.ownerId}
+                  />
+                  
                 </div>
               </div>
             </div>
