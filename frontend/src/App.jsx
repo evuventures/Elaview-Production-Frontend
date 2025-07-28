@@ -1,6 +1,6 @@
 // src/App.jsx
 import './App.css'
-import Pages from "@/pages/Index.jsx"
+import Pages from "@/pages/Pages.js"
 import { Toaster } from "@/components/ui/toaster"
 import VerificationModal from '@/components/verification/VerificationModal' // ✅ ADDED: Global verification modal
 

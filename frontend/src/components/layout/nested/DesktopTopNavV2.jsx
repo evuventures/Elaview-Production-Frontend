@@ -1,11 +1,12 @@
-// Enhanced Navigation with Working Dropdown - Elaview Design System
+// Enhanced Navigation with Working Authentication - Elaview Design System
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@clerk/clerk-react'; // Add Clerk auth hook
 import { 
   User, ChevronDown, Bell, Settings, LogOut,
   Building2, Calendar, MessageSquare, Map, LayoutDashboard,
   MapPin, Calendar as CalendarIcon, Mail, UserCircle, Shield,
-  Bookmark, HelpCircle
+  Bookmark, HelpCircle, LogIn
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ const DesktopTopNavV2 = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isSignedIn, signOut } = useAuth(); // Add Clerk auth
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
@@ -115,6 +117,28 @@ const DesktopTopNavV2 = ({
     }, 100);
   };
 
+  // Handle sign out
+  const handleSignOut = async () => {
+    try {
+      console.log('🚪 Signing out user...');
+      closeUserMenu();
+      
+      // Sign out with Clerk and redirect to browse
+      await signOut({
+        redirectUrl: '/browse'
+      });
+    } catch (error) {
+      console.error('❌ Error signing out:', error);
+      // Fallback redirect if signOut fails
+      navigate('/browse');
+    }
+  };
+
+  // Handle sign in redirect
+  const handleSignIn = () => {
+    navigate('/sign-in');
+  };
+
   const formatBadgeCount = (count) => {
     if (count > 99) return '99+';
     return count.toString();
@@ -169,46 +193,48 @@ const DesktopTopNavV2 = ({
               />
             </Link>
 
-            {/* Navigation */}
-            <nav className="hidden lg:flex items-center gap-1">
-              {navigationItems.map((item) => {
-                const isActive = location.pathname === item.url;
-                return (
-                  <Link
-                    key={item.title}
-                    to={item.url}
-                    className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      isActive
-                        ? 'text-teal-700 bg-teal-50 border border-teal-200'
-                        : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
-                    }`}
-                  >
-                    <item.icon className="w-4 h-4" />
-                    <span className="hidden xl:inline">{item.title}</span>
-                    {item.badge > 0 && (
-                      <Badge className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[16px] h-4 flex items-center justify-center">
-                        {formatBadgeCount(item.badge)}
-                      </Badge>
-                    )}
-                    {/* Active indicator */}
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeIndicator"
-                        className="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-teal-500 rounded-full"
-                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                      />
-                    )}
-                  </Link>
-                );
-              })}
-            </nav>
+            {/* Navigation - Only show for authenticated users */}
+            {isSignedIn && (
+              <nav className="hidden lg:flex items-center gap-1">
+                {navigationItems.map((item) => {
+                  const isActive = location.pathname === item.url;
+                  return (
+                    <Link
+                      key={item.title}
+                      to={item.url}
+                      className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        isActive
+                          ? 'text-teal-700 bg-teal-50 border border-teal-200'
+                          : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      <span className="hidden xl:inline">{item.title}</span>
+                      {item.badge > 0 && (
+                        <Badge className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[16px] h-4 flex items-center justify-center">
+                          {formatBadgeCount(item.badge)}
+                        </Badge>
+                      )}
+                      {/* Active indicator */}
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeIndicator"
+                          className="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-teal-500 rounded-full"
+                          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                        />
+                      )}
+                    </Link>
+                  );
+                })}
+              </nav>
+            )}
           </div>
 
           {/* Right Section: Role Toggle + Actions + User */}
           <div className="flex items-center gap-3">
             
-            {/* Single Role Toggle Button */}
-            {canSwitchRoles && (
+            {/* Single Role Toggle Button - Only for authenticated users */}
+            {isSignedIn && canSwitchRoles && (
               <div className="hidden md:block relative">
                 <button
                   onClick={() => handleRoleSwitch(userRole === 'buyer' ? 'seller' : 'buyer')}
@@ -238,20 +264,23 @@ const DesktopTopNavV2 = ({
               </div>
             )}
 
-            {/* Notifications */}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="relative w-10 h-10 p-0 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-teal-50 transition-all duration-200"
-            >
-              <Bell className="w-4 h-4" />
-              {(unreadCount > 0 || pendingInvoices > 0) && (
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-              )}
-            </Button>
+            {/* Notifications - Only for authenticated users */}
+            {isSignedIn && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="relative w-10 h-10 p-0 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-teal-50 transition-all duration-200"
+              >
+                <Bell className="w-4 h-4" />
+                {(unreadCount > 0 || pendingInvoices > 0) && (
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                )}
+              </Button>
+            )}
 
-            {/* Enhanced User Menu with Fixed Dropdown */}
-            {currentUser && (
+            {/* Authentication Section */}
+            {isSignedIn && currentUser ? (
+              /* Authenticated User Menu */
               <div className="relative" ref={userMenuRef}>
                 <button
                   type="button"
@@ -270,7 +299,7 @@ const DesktopTopNavV2 = ({
                   <ChevronDown className={`w-4 h-4 text-slate-400 transition-all duration-200 ${userMenuOpen ? 'rotate-180 text-slate-600' : 'group-hover:text-slate-600'}`} />
                 </button>
 
-                {/* Enhanced User Dropdown - Portal-style to escape map z-index */}
+                {/* Enhanced User Dropdown */}
                 <AnimatePresence mode="wait">
                   {userMenuOpen && (
                     <>
@@ -372,7 +401,7 @@ const DesktopTopNavV2 = ({
                         
                         <button 
                           type="button"
-                          onClick={closeUserMenu}
+                          onClick={handleSignOut}
                           className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 group"
                         >
                           <LogOut className="w-4 h-4" />
@@ -387,6 +416,15 @@ const DesktopTopNavV2 = ({
                   )}
                 </AnimatePresence>
               </div>
+            ) : (
+              /* Sign In Button for Unauthenticated Users */
+              <Button
+                onClick={handleSignIn}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-medium rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Sign In</span>
+              </Button>
             )}
           </div>
         </div>

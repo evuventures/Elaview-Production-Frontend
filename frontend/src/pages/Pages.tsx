@@ -21,6 +21,7 @@ import ProtectedRoute from "../components/auth/ProtectedRoute.jsx";
 import Search from "./search/Search.jsx";
 import SignInPage from "./auth/SignIn.jsx";
 import SignUpPage from "./auth/SignUp.jsx";
+import LearnMore from "./learn-more/LearnMore.jsx"; // ✅ NEW: Learn More page
 import { ChatBotProvider } from "@/contexts/ChatBotContext";
 
 // 🧪 TEMPORARY DEBUG IMPORTS - Remove after fixing Map component
@@ -51,6 +52,7 @@ const PAGES = {
     CampaignDetails: CampaignDetails,
     PaymentTest: PaymentTest,
     Search: Search,
+    LearnMore: LearnMore, // ✅ NEW: Learn More page
     // 🧪 TEMPORARY DEBUG PAGES
     ApiDebugTest: ApiDebugTest,
     MinimalTestMap: MinimalTestMap,
@@ -108,17 +110,12 @@ function PagesContent() {
                 </Layout>
             } />
             
-            {/* ✅ NATIVE AUTH ROUTES - Custom styled auth pages */}
-            <Route path="/sign-in/*" element={
-                <Layout currentPageName="Browse" key="sign-in-page">
-                    <SignInPage />
-                </Layout>
-            } />
-            <Route path="/sign-up/*" element={
-                <Layout currentPageName="Browse" key="sign-up-page">
-                    <SignUpPage />
-                </Layout>
-            } />
+            {/* ✅ AUTH ROUTES - NO LAYOUT (No navigation bars) */}
+            <Route path="/sign-in/*" element={<SignInPage />} />
+            <Route path="/sign-up/*" element={<SignUpPage />} />
+            
+            {/* ✅ STANDALONE PAGES - NO LAYOUT (No navigation bars) */}
+            <Route path="/learn-more" element={<LearnMore />} />
             
             {/* ✅ PUBLIC ROUTES - No authentication required */}
             <Route path="/browse" element={
