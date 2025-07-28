@@ -313,12 +313,12 @@ const MessagesPage: React.FC = () => {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-6 bg-lime-400 rounded-2xl md:rounded-3xl flex items-center justify-center shadow-xl">
-            <Loader2 className="w-8 h-8 md:w-10 md:h-10 animate-spin text-gray-900" />
+          <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-6 bg-teal-500 rounded-2xl md:rounded-3xl flex items-center justify-center shadow-xl">
+            <Loader2 className="w-8 h-8 md:w-10 md:h-10 animate-spin text-white" />
           </div>
-          <p className="text-gray-300 font-semibold text-base md:text-lg">
+          <p className="text-slate-600 font-semibold text-base md:text-lg">
             Loading authentication...
           </p>
         </div>
@@ -328,12 +328,12 @@ const MessagesPage: React.FC = () => {
 
   if (isPageLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-6 bg-lime-400 rounded-2xl md:rounded-3xl flex items-center justify-center shadow-xl">
-            <MessageCircle className="w-8 h-8 md:w-10 md:h-10 text-gray-900" />
+          <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-6 bg-teal-500 rounded-2xl md:rounded-3xl flex items-center justify-center shadow-xl">
+            <MessageCircle className="w-8 h-8 md:w-10 md:h-10 text-white" />
           </div>
-          <p className="text-gray-300 font-semibold text-base md:text-lg">
+          <p className="text-slate-600 font-semibold text-base md:text-lg">
             Loading your conversations...
           </p>
         </div>
@@ -343,16 +343,16 @@ const MessagesPage: React.FC = () => {
 
   if (!isSignedIn) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
+      <div className="min-h-screen bg-slate-50 text-slate-900 p-4 md:p-8">
         <div className="w-full max-w-4xl mx-auto">
-          <div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl md:rounded-3xl overflow-hidden shadow-xl border border-gray-700/50 p-8 md:p-12 text-center">
-            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-6 bg-gray-700 rounded-2xl md:rounded-3xl flex items-center justify-center">
-              <MessageSquare className="w-8 h-8 md:w-10 md:h-10 text-gray-400" />
+          <div className="bg-white border border-slate-200 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl p-8 md:p-12 text-center">
+            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-6 bg-slate-200 rounded-2xl md:rounded-3xl flex items-center justify-center">
+              <MessageSquare className="w-8 h-8 md:w-10 md:h-10 text-slate-500" />
             </div>
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">
               Please sign in to view messages
             </h2>
-            <p className="text-gray-400 text-lg">
+            <p className="text-slate-600 text-lg">
               Access your conversations and connect with other users
             </p>
           </div>
@@ -362,22 +362,22 @@ const MessagesPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white pt-16">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pt-16">
       <div className="h-[calc(100vh-4rem)] flex">
         
         {/* ✅ Left Sidebar: Conversations List (35%) */}
-        <div className={`${showConversations ? 'w-full' : 'hidden'} md:w-[35%] md:block h-full border-r border-gray-800/50`}>
+        <div className={`${showConversations ? 'w-full' : 'hidden'} md:w-[35%] md:block h-full border-r border-slate-200`}>
           
           {/* Header */}
-          <div className="p-6 border-b border-gray-800/50 bg-gray-900">
+          <div className="p-6 border-b border-slate-200 bg-white">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-lime-400 rounded-xl flex items-center justify-center">
-                  <MessageSquare className="w-5 h-5 text-gray-900" />
+                <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center">
+                  <MessageSquare className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-white">Messages</h1>
-                  <p className="text-sm text-gray-400">
+                  <h1 className="text-xl font-bold text-slate-900">Messages</h1>
+                  <p className="text-sm text-slate-600">
                     {filteredConversations.length} conversations
                   </p>
                 </div>
@@ -385,7 +385,7 @@ const MessagesPage: React.FC = () => {
               
               <Button 
                 size="sm"
-                className="bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white"
+                className="bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200 hover:text-slate-900"
                 variant="outline"
               >
                 <Plus className="w-4 h-4 mr-1" />
@@ -395,12 +395,12 @@ const MessagesPage: React.FC = () => {
 
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
               <Input
                 placeholder="Search conversations..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-gray-800/50 border-gray-700 text-white placeholder-gray-400 focus:ring-lime-400 focus:border-lime-400"
+                className="pl-10 bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:ring-teal-500 focus:border-teal-500"
               />
             </div>
           </div>
@@ -423,45 +423,45 @@ const MessagesPage: React.FC = () => {
                   >
                     <TypedCard 
                       onClick={() => handleSelectConversation(conversation)}
-                      className={`cursor-pointer transition-all duration-300 rounded-xl border-0 ${
+                      className={`cursor-pointer transition-all duration-300 rounded-xl border ${
                         isSelected 
-                          ? 'bg-lime-400/20 ring-1 ring-lime-400 shadow-lg' 
-                          : 'bg-gray-800/30 hover:bg-gray-800/50'
+                          ? 'bg-teal-50 ring-1 ring-teal-500 shadow-lg border-teal-200' 
+                          : 'bg-white hover:bg-slate-50 border-slate-200'
                       }`}
                     >
                       <TypedCardContent className="p-4">
                         <div className="flex items-start gap-3">
                           {/* Avatar */}
-                          <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                            <UserIcon className="w-5 h-5 text-gray-300" />
+                          <div className="w-10 h-10 bg-slate-300 rounded-full flex items-center justify-center flex-shrink-0">
+                            <UserIcon className="w-5 h-5 text-slate-600" />
                           </div>
                           
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-1">
                               <h3 className={`font-semibold truncate ${
-                                isSelected ? 'text-lime-400' : 'text-white'
+                                isSelected ? 'text-teal-700' : 'text-slate-900'
                               }`}>
                                 {otherParticipant?.full_name || 'Unknown User'}
                               </h3>
                               <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                                 {conversation.unreadCount > 0 && (
-                                  <Badge variant="secondary" className="bg-lime-400 text-gray-900 text-xs px-2 py-1 rounded-full min-w-[20px] h-5">
+                                  <Badge variant="secondary" className="bg-teal-500 text-white text-xs px-2 py-1 rounded-full min-w-[20px] h-5">
                                     {conversation.unreadCount}
                                   </Badge>
                                 )}
-                                <span className="text-xs text-gray-400">
+                                <span className="text-xs text-slate-500">
                                   {formatDistanceToNow(conversation.lastActivity, { addSuffix: true })}
                                 </span>
                               </div>
                             </div>
                             
-                            <p className="text-sm text-gray-400 truncate">
+                            <p className="text-sm text-slate-600 truncate">
                               {conversation.lastMessage}
                             </p>
                           </div>
-                                                  </div>
-                        </TypedCardContent>
-                      </TypedCard>
+                        </div>
+                      </TypedCardContent>
+                    </TypedCard>
                   </motion.div>
                 );
               })}
@@ -469,11 +469,11 @@ const MessagesPage: React.FC = () => {
             
             {filteredConversations.length === 0 && (
               <div className="p-8 text-center">
-                <MessageSquare className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-white mb-2">
+                <MessageSquare className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">
                   {searchTerm ? 'No conversations found' : 'No conversations yet'}
                 </h3>
-                <p className="text-gray-400">
+                <p className="text-slate-600">
                   {searchTerm ? 'Try a different search term' : 'Start a conversation to get started'}
                 </p>
               </div>
@@ -482,40 +482,40 @@ const MessagesPage: React.FC = () => {
         </div>
 
         {/* ✅ Right Panel: Messages (65%) */}
-        <div className={`${showConversations ? 'hidden' : 'w-full'} md:w-[65%] md:block h-full flex flex-col bg-gray-800/20`}>
+        <div className={`${showConversations ? 'hidden' : 'w-full'} md:w-[65%] md:block h-full flex flex-col bg-slate-25`}>
           {selectedConversation && otherUser ? (
             <>
               {/* Messages Header */}
-              <div className="p-6 border-b border-gray-800/50 bg-gray-900/50">
+              <div className="p-6 border-b border-slate-200 bg-white">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={handleBackToConversations}
-                      className="md:hidden text-gray-400 hover:text-white hover:bg-gray-800"
+                      className="md:hidden text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                     >
                       <ArrowLeft className="w-4 h-4" />
                     </Button>
                     
-                    <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-                      <UserIcon className="w-4 h-4 text-gray-300" />
+                    <div className="w-8 h-8 bg-slate-300 rounded-full flex items-center justify-center">
+                      <UserIcon className="w-4 h-4 text-slate-600" />
                     </div>
                     
                     <div>
-                      <h2 className="font-semibold text-white">{otherUser.full_name}</h2>
-                      <p className="text-sm text-gray-400">Online now</p>
+                      <h2 className="font-semibold text-slate-900">{otherUser.full_name}</h2>
+                      <p className="text-sm text-slate-600">Online now</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white hover:bg-gray-800">
+                    <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                       <Phone className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white hover:bg-gray-800">
+                    <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                       <Video className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white hover:bg-gray-800">
+                    <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                       <MoreVertical className="w-4 h-4" />
                     </Button>
                   </div>
@@ -528,16 +528,16 @@ const MessagesPage: React.FC = () => {
                   {isLoading ? (
                     <div className="flex items-center justify-center h-32">
                       <div className="text-center">
-                        <Loader2 className="w-6 h-6 animate-spin text-lime-400 mx-auto mb-2" />
-                        <p className="text-gray-400 text-sm">Loading messages...</p>
+                        <Loader2 className="w-6 h-6 animate-spin text-teal-500 mx-auto mb-2" />
+                        <p className="text-slate-600 text-sm">Loading messages...</p>
                       </div>
                     </div>
                   ) : messages.length === 0 ? (
                     <div className="flex items-center justify-center h-32">
                       <div className="text-center">
-                        <MessageCircle className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-white mb-2">No messages yet</h3>
-                        <p className="text-gray-400">Start the conversation!</p>
+                        <MessageCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-slate-900 mb-2">No messages yet</h3>
+                        <p className="text-slate-600">Start the conversation!</p>
                       </div>
                     </div>
                   ) : (
@@ -550,8 +550,8 @@ const MessagesPage: React.FC = () => {
                         <div key={msg.id}>
                           {showTimestamp && (
                             <div className="flex justify-center mb-4">
-                              <div className="bg-gray-800/50 px-3 py-1 rounded-full">
-                                <span className="text-xs text-gray-400">
+                              <div className="bg-slate-200 px-3 py-1 rounded-full">
+                                <span className="text-xs text-slate-600">
                                   {format(new Date(msg.created_date), 'MMM d, h:mm a')}
                                 </span>
                               </div>
@@ -566,14 +566,14 @@ const MessagesPage: React.FC = () => {
                           >
                             <div className={`max-w-[70%] rounded-2xl p-4 ${
                               isMyMessage 
-                                ? 'bg-lime-400 text-gray-900 rounded-br-sm' 
-                                : 'bg-gray-800/50 text-white rounded-bl-sm border border-gray-700'
+                                ? 'bg-teal-500 text-white rounded-br-sm' 
+                                : 'bg-white text-slate-900 rounded-bl-sm border border-slate-200'
                             }`}>
                               <p className="text-sm leading-relaxed">{msg.content}</p>
                               {msg.isOptimistic && (
                                 <div className="flex items-center gap-1 mt-2">
-                                  <Clock className="w-3 h-3 text-gray-600" />
-                                  <span className="text-xs text-gray-600">Sending...</span>
+                                  <Clock className="w-3 h-3 text-teal-200" />
+                                  <span className="text-xs text-teal-200">Sending...</span>
                                 </div>
                               )}
                             </div>
@@ -587,7 +587,7 @@ const MessagesPage: React.FC = () => {
               </div>
 
               {/* Message Input */}
-              <div className="p-6 border-t border-gray-800/50 bg-gray-900/50">
+              <div className="p-6 border-t border-slate-200 bg-white">
                 <div className="flex items-end gap-4">
                   <div className="flex-1">
                     <div className="relative">
@@ -597,13 +597,13 @@ const MessagesPage: React.FC = () => {
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyPress={handleKeyPress}
                         disabled={isSending || isBlockedByMe}
-                        className="pr-12 py-3 bg-gray-800/50 border-gray-700 text-white placeholder-gray-400 focus:ring-lime-400 focus:border-lime-400 rounded-xl"
+                        className="pr-12 py-3 bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:ring-teal-500 focus:border-teal-500 rounded-xl"
                       />
                       <Button
                         onClick={handleSendMessage}
                         disabled={!newMessage.trim() || isSending || isBlockedByMe}
                         size="sm"
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-lime-400 hover:bg-lime-500 text-gray-900 rounded-lg"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg"
                       >
                         {isSending ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -616,8 +616,8 @@ const MessagesPage: React.FC = () => {
                 </div>
                 
                 {isBlockingMe && (
-                  <div className="mt-2 p-3 bg-red-500/20 border border-red-500/30 rounded-xl">
-                    <div className="flex items-center gap-2 text-red-400">
+                  <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-xl">
+                    <div className="flex items-center gap-2 text-red-600">
                       <ShieldOff className="w-4 h-4" />
                       <span className="text-sm">You cannot send messages to this user</span>
                     </div>
@@ -628,11 +628,11 @@ const MessagesPage: React.FC = () => {
           ) : (
             <div className="flex-1 flex items-center justify-center text-center p-8">
               <div>
-                <div className="w-20 h-20 bg-gray-800/50 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                  <MessageSquare className="w-10 h-10 text-gray-500" />
+                <div className="w-20 h-20 bg-slate-200 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                  <MessageSquare className="w-10 h-10 text-slate-500" />
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-4">Welcome to Messages</h3>
-                <p className="text-gray-400 text-lg max-w-md">
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">Welcome to Messages</h3>
+                <p className="text-slate-600 text-lg max-w-md">
                   Select a conversation from the sidebar to start chatting with other users
                 </p>
               </div>

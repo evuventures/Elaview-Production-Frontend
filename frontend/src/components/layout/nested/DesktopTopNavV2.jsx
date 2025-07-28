@@ -1,115 +1,200 @@
-// src/components/layout/DesktopTopNavV2.jsx - Seamless Dark Integration
+// Enhanced Navigation with Working Dropdown - Elaview Design System
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  Search, Crown, Sparkles, User as UserIcon, ChevronDown, 
-  Bell, Settings, LogOut, Menu, X, Zap, Filter, ArrowRight
+  User, ChevronDown, Bell, Settings, LogOut,
+  Building2, Calendar, MessageSquare, Map, LayoutDashboard,
+  MapPin, Calendar as CalendarIcon, Mail, UserCircle, Shield,
+  Bookmark, HelpCircle
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import ThemeToggle from '@/components/ui/ThemeToggle';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getNavigationItems, getPrimaryActions, formatBadgeCount } from '@/lib/navigation';
+import elaviewLogo from '../../../public/elaview-logo.png';
 
-const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, currentUser }) => {
+const DesktopTopNavV2 = ({ 
+  unreadCount = 0, 
+  pendingInvoices = 0, 
+  actionItemsCount = 0, 
+  currentUser,
+  userRole = 'buyer', // 'buyer' | 'seller'
+  onRoleChange,
+  isUpdatingRole = false,
+  canSwitchRoles = true,
+  bookingsCount = 0,
+  propertiesCount = 0
+}) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchFocused, setSearchFocused] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const userMenuRef = useRef(null);
-  const quickActionsRef = useRef(null);
 
-  const navigationItems = getNavigationItems({
-    currentUser,
-    unreadCount,
-    pendingInvoices,
-    actionItemsCount,
-    isMobile: false
-  });
+  // Role-specific navigation items
+  const getNavigationItems = (role) => {
+    if (role === 'seller') {
+      return [
+        {
+          title: 'Dashboard',
+          url: '/dashboard',
+          icon: LayoutDashboard,
+          badge: pendingInvoices || 0
+        },
+        {
+          title: 'Browse',
+          url: '/browse',
+          icon: MapPin,
+          badge: 0
+        },
+        {
+          title: 'Messages',
+          url: '/messages',
+          icon: Mail,
+          badge: unreadCount || 0
+        }
+      ];
+    } else {
+      return [
+        {
+          title: 'Bookings',
+          url: '/bookings',
+          icon: CalendarIcon,
+          badge: actionItemsCount || 0
+        },
+        {
+          title: 'Browse',
+          url: '/browse',
+          icon: MapPin,
+          badge: 0
+        },
+        {
+          title: 'Messages',
+          url: '/messages',
+          icon: Mail,
+          badge: unreadCount || 0
+        }
+      ];
+    }
+  };
 
-  const primaryActions = getPrimaryActions();
+  const navigationItems = getNavigationItems(userRole);
 
-  // Close menus when clicking outside
+  // Enhanced outside click detection
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
         setUserMenuOpen(false);
       }
-      if (quickActionsRef.current && !quickActionsRef.current.contains(event.target)) {
-        setQuickActionsOpen(false);
-      }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
-  const handleSearch = () => {
-    if (searchTerm.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchTerm)}`);
-      setSearchTerm('');
-    } else {
-      navigate("/search");
+    // Only add listener when menu is open
+    if (userMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
     }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [userMenuOpen]);
+
+  // Direct role switch (no popover)
+  const handleRoleSwitch = (newRole) => {
+    if (isUpdatingRole || !onRoleChange || userRole === newRole) return;
+    
+    console.log(`🔄 Switching role from ${userRole} to ${newRole}`);
+    onRoleChange(newRole);
+    
+    // Auto-redirect based on role
+    setTimeout(() => {
+      if (newRole === 'seller') {
+        navigate('/dashboard');
+      } else if (newRole === 'buyer') {
+        navigate('/browse');
+      }
+    }, 100);
   };
 
-  // Separate navigation into primary (always visible) and contextual groups
-  const dashboardItems = navigationItems.filter(item => 
-    ['Dashboard', 'Browse Map', 'Messages'].includes(item.title)
-  );
-  const workflowItems = navigationItems.filter(item => 
-    !dashboardItems.some(d => d.title === item.title)
-  );
+  const formatBadgeCount = (count) => {
+    if (count > 99) return '99+';
+    return count.toString();
+  };
 
-  // Calculate total badge count for quick actions
-  const totalBadges = navigationItems.reduce((sum, item) => sum + (item.badge || 0), 0);
+  // Enhanced user menu toggle
+  const toggleUserMenu = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Toggle user menu, current state:', userMenuOpen); // Debug log
+    setUserMenuOpen(prev => !prev);
+  };
+
+  // Close user menu
+  const closeUserMenu = () => {
+    setUserMenuOpen(false);
+  };
+
+  // Profile image with fallback
+  const getProfileImage = () => {
+    if (currentUser?.imageUrl) {
+      return (
+        <img 
+          src={currentUser.imageUrl} 
+          alt="Profile"
+          className="w-8 h-8 rounded-full object-cover ring-2 ring-white group-hover:ring-teal-200 transition-all duration-200"
+        />
+      );
+    }
+    
+    return (
+      <div className="w-8 h-8 bg-gradient-to-r from-teal-500 to-teal-600 rounded-full flex items-center justify-center ring-2 ring-white group-hover:ring-teal-200 transition-all duration-200">
+        <UserCircle className="w-5 h-5 text-white" />
+      </div>
+    );
+  };
 
   return (
     <>
-      {/* ✅ Seamless Dark Navigation Bar - Same Background as Dashboard */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-gray-900 z-50">
+      {/* Navigation Header */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-50 shadow-sm">
         <div className="flex items-center justify-between h-full px-4 lg:px-6">
           
-          {/* Left Section: Logo + Core Navigation */}
-          <div className="flex items-center gap-6">
-            {/* ✅ Logo - Lime Green Accent to Match Dashboard */}
-            <Link to="/dashboard" className="flex items-center gap-2 group">
-              <div className="w-8 h-8 bg-lime-400 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 group-hover:shadow-xl transition-all duration-200">
-                <Crown className="text-gray-900 w-4 h-4 font-bold" />
-              </div>
-              <h2 className="font-bold text-xl text-white hidden sm:block group-hover:text-lime-400 transition-colors duration-200">
-                Elaview
-              </h2>
+          {/* Left Section: Logo + Navigation */}
+          <div className="flex items-center gap-8">
+            {/* Logo */}
+            <Link to={userRole === 'seller' ? '/dashboard' : '/browse'} className="flex items-center gap-2 group">
+              <img 
+                src={elaviewLogo}
+                alt="Elaview Logo" 
+                className="w-20 h-20 object-contain"
+              />
             </Link>
 
-            {/* ✅ Core Navigation - Seamless Dark Styling */}
+            {/* Navigation */}
             <nav className="hidden lg:flex items-center gap-1">
-              {dashboardItems.map((item) => {
+              {navigationItems.map((item) => {
                 const isActive = location.pathname === item.url;
                 return (
                   <Link
                     key={item.title}
                     to={item.url}
-                    className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
+                    className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                       isActive
-                        ? 'text-lime-400 bg-lime-400/10 shadow-lg shadow-lime-400/20'
-                        : 'text-gray-300 hover:text-white hover:bg-gray-800/50'
+                        ? 'text-teal-700 bg-teal-50 border border-teal-200'
+                        : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
                     }`}
                   >
                     <item.icon className="w-4 h-4" />
                     <span className="hidden xl:inline">{item.title}</span>
                     {item.badge > 0 && (
-                      <Badge className={`${item.badgeColor || 'bg-red-500'} text-white text-xs px-1.5 py-0.5 rounded-full min-w-[16px] h-4 flex items-center justify-center animate-pulse`}>
+                      <Badge className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[16px] h-4 flex items-center justify-center">
                         {formatBadgeCount(item.badge)}
                       </Badge>
                     )}
+                    {/* Active indicator */}
                     {isActive && (
                       <motion.div
                         layoutId="activeIndicator"
-                        className="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-lime-400 rounded-full"
+                        className="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-teal-500 rounded-full"
                         transition={{ type: "spring", stiffness: 400, damping: 30 }}
                       />
                     )}
@@ -119,338 +204,195 @@ const DesktopTopNavV2 = ({ unreadCount, pendingInvoices, actionItemsCount, curre
             </nav>
           </div>
 
-          {/* ✅ Center Section: Enhanced Dark Search */}
-          <div className="flex-1 max-w-lg mx-4 lg:mx-8">
-            <div className={`relative group transition-all duration-300 ${
-              searchFocused ? 'transform scale-[1.02]' : ''
-            }`}>
-              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-all duration-200 ${
-                searchFocused ? 'text-lime-400 scale-110' : 'text-gray-400'
-              }`} />
-              <Input
-                type="search"
-                placeholder="Search properties, campaigns, areas..."
-                className={`w-full pl-10 pr-20 py-3 rounded-xl bg-gray-800/50 border-gray-700/50 text-white placeholder-gray-400 transition-all duration-300 ${
-                  searchFocused 
-                    ? 'border-lime-400/50 ring-2 ring-lime-400/20 bg-gray-800/80 shadow-lg shadow-lime-400/10' 
-                    : 'hover:bg-gray-800/70 focus:bg-gray-800/80 hover:border-gray-600'
-                }`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setSearchFocused(false)}
-              />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                <Button
-                  onClick={handleSearch}
-                  size="sm"
-                  className="w-7 h-7 p-0 rounded-lg bg-lime-400/20 hover:bg-lime-400/30 border-0 transition-all duration-200 text-lime-400"
-                >
-                  <Search className="w-3 h-3" />
-                </Button>
-                <Link
-                  to="/search"
-                  className="hidden sm:flex items-center gap-1 text-xs text-gray-400 hover:text-lime-400 transition-colors px-2 py-1 rounded-md hover:bg-lime-400/10"
-                >
-                  <Filter className="w-3 h-3" />
-                  <span className="hidden md:inline">Filters</span>
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* ✅ Right Section: Dark Theme Actions + User */}
-          <div className="flex items-center gap-2">
+          {/* Right Section: Role Toggle + Actions + User */}
+          <div className="flex items-center gap-3">
             
-            {/* ✅ Quick Actions Button - Dark Styled */}
-            <div className="relative hidden md:block" ref={quickActionsRef}>
-              <Button
-                onClick={() => setQuickActionsOpen(!quickActionsOpen)}
-                size="sm"
-                variant="ghost"
-                className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 ${
-                  quickActionsOpen 
-                    ? 'bg-lime-400/10 text-lime-400 shadow-lg shadow-lime-400/20' 
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800/50'
-                }`}
-              >
-                <Zap className="w-4 h-4" />
-                <span className="hidden lg:inline text-sm font-medium">Quick Actions</span>
-                {totalBadges > 0 && (
-                  <Badge className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[18px] h-4 animate-pulse">
-                    {formatBadgeCount(totalBadges)}
-                  </Badge>
-                )}
-                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${quickActionsOpen ? 'rotate-180' : ''}`} />
-              </Button>
+            {/* Single Role Toggle Button */}
+            {canSwitchRoles && (
+              <div className="hidden md:block relative">
+                <button
+                  onClick={() => handleRoleSwitch(userRole === 'buyer' ? 'seller' : 'buyer')}
+                  disabled={isUpdatingRole}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    userRole === 'seller' 
+                      ? 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50' 
+                      : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+                  } ${isUpdatingRole ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {isUpdatingRole ? (
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  ) : userRole === 'seller' ? (
+                    <Building2 className="w-4 h-4" />
+                  ) : (
+                    <MapPin className="w-4 h-4" />
+                  )}
+                  <span>
+                    {isUpdatingRole 
+                      ? 'Switching...' 
+                      : userRole === 'seller' 
+                        ? 'Start Advertising' 
+                        : 'Start Listing'
+                    }
+                  </span>
+                </button>
+              </div>
+            )}
 
-              {/* ✅ Quick Actions Dropdown - Dark Theme */}
-              <AnimatePresence>
-                {quickActionsOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute top-full right-0 mt-2 w-80 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-xl"
-                  >
-                    {/* Quick Actions Header */}
-                    <div className="px-4 py-3 border-b border-gray-700 bg-gray-800/50">
-                      <h3 className="font-semibold text-sm text-white">Quick Actions</h3>
-                      <p className="text-xs text-gray-400">Frequently used features</p>
-                    </div>
-                    
-                    {/* Primary Actions */}
-                    <div className="p-3">
-                      {primaryActions.map((action) => (
-                        <Link
-                          key={action.title}
-                          to={action.url}
-                          onClick={() => setQuickActionsOpen(false)}
-                          className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-gray-700/50 transition-all duration-200 group"
-                        >
-                          <div className={`p-2.5 rounded-lg transition-all duration-200 ${
-                            action.type === 'primary' 
-                              ? 'bg-lime-400 text-gray-900 group-hover:bg-lime-300 shadow-lg' 
-                              : 'bg-gray-700 text-gray-300 group-hover:bg-lime-400/20 group-hover:text-lime-400'
-                          }`}>
-                            <action.icon className="w-4 h-4" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-sm text-white group-hover:text-lime-400 transition-colors">{action.title}</p>
-                            <p className="text-xs text-gray-400">
-                              {action.type === 'primary' ? 'Create new campaign' : 'Add property listing'}
-                            </p>
-                          </div>
-                          <ArrowRight className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 group-hover:text-lime-400 transition-all duration-200" />
-                        </Link>
-                      ))}
-                    </div>
-
-                    {/* Workflow Items */}
-                    {workflowItems.length > 0 && (
-                      <>
-                        <div className="px-4 py-2 border-t border-gray-700 bg-gray-800/30">
-                          <h4 className="font-medium text-xs text-gray-400 uppercase tracking-wide">Workflow</h4>
-                        </div>
-                        <div className="p-2 max-h-48 overflow-y-auto">
-                          {workflowItems.map((item) => (
-                            <Link
-                              key={item.title}
-                              to={item.url}
-                              onClick={() => setQuickActionsOpen(false)}
-                              className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-700/50 transition-colors group"
-                            >
-                              <item.icon className="w-4 h-4 text-gray-400 group-hover:text-lime-400 transition-colors" />
-                              <span className="flex-1 text-sm text-gray-300 group-hover:text-white transition-colors">{item.title}</span>
-                              {item.badge > 0 && (
-                                <Badge className={`${item.badgeColor || 'bg-red-500'} text-white text-xs px-1.5 py-0.5 rounded-full`}>
-                                  {formatBadgeCount(item.badge)}
-                                </Badge>
-                              )}
-                            </Link>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* ✅ Notifications - Dark Theme */}
+            {/* Notifications */}
             <Button
               size="sm"
               variant="ghost"
-              className="relative w-10 h-10 p-0 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all duration-200"
+              className="relative w-10 h-10 p-0 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-teal-50 transition-all duration-200"
             >
               <Bell className="w-4 h-4" />
               {(unreadCount > 0 || pendingInvoices > 0) && (
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
               )}
             </Button>
 
-            {/* ✅ Theme Toggle - Hidden for now since we're dark-first */}
-            <div className="hidden">
-              <ThemeToggle />
-            </div>
-
-            {/* ✅ User Menu - Enhanced Dark Theme */}
+            {/* Enhanced User Menu with Fixed Dropdown */}
             {currentUser && (
               <div className="relative" ref={userMenuRef}>
                 <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 px-2 py-2 rounded-xl hover:bg-gray-800/50 transition-all duration-200 group"
+                  type="button"
+                  onClick={toggleUserMenu}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-r from-lime-400 to-cyan-400 rounded-lg flex items-center justify-center ring-2 ring-gray-800 group-hover:ring-lime-400/30 transition-all duration-200">
-                    <UserIcon className="w-4 h-4 text-gray-900" />
-                  </div>
+                  {getProfileImage()}
                   <div className="hidden sm:block text-left">
-                    <p className="font-medium text-xs text-white truncate max-w-24 group-hover:text-lime-400 transition-colors">
+                    <p className="font-medium text-sm text-slate-800 truncate max-w-28 group-hover:text-slate-600 transition-colors">
                       {currentUser.firstName}
                     </p>
-                    <p className="text-xs text-gray-400 capitalize">
-                      {currentUser.publicMetadata?.role || 'Member'}
+                    <p className="text-xs text-slate-500 capitalize">
+                      {userRole === 'seller' ? 'Space Owner' : 'Advertiser'}
                     </p>
                   </div>
-                  <ChevronDown className={`w-3 h-3 text-gray-400 transition-all duration-200 ${userMenuOpen ? 'rotate-180 text-lime-400' : 'group-hover:text-white'}`} />
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-all duration-200 ${userMenuOpen ? 'rotate-180 text-slate-600' : 'group-hover:text-slate-600'}`} />
                 </button>
 
-                {/* ✅ Enhanced User Dropdown - Dark Theme */}
-                <AnimatePresence>
+                {/* Enhanced User Dropdown - Portal-style to escape map z-index */}
+                <AnimatePresence mode="wait">
                   {userMenuOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute top-full right-0 mt-2 w-64 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-xl"
-                    >
-                      <div className="px-4 py-4 border-b border-gray-700 bg-gradient-to-r from-lime-400/5 to-cyan-400/5">
-                        <p className="font-semibold text-sm text-white">
-                          {currentUser.firstName} {currentUser.lastName}
-                        </p>
-                        <p className="text-xs text-gray-400 truncate mt-1">
-                          {currentUser.emailAddresses?.[0]?.emailAddress}
-                        </p>
-                        {currentUser.publicMetadata?.role === 'admin' && (
-                          <Badge className="bg-purple-500 text-white text-xs mt-2">
-                            Admin
+                    <>
+                      {/* Invisible backdrop to catch clicks */}
+                      <div 
+                        className="fixed inset-0 z-[999998]" 
+                        onClick={closeUserMenu}
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        transition={{ 
+                          type: "spring", 
+                          stiffness: 300, 
+                          damping: 30,
+                          duration: 0.2 
+                        }}
+                        className="fixed top-16 right-4 w-72 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden z-[999999]"
+                        style={{ 
+                          transformOrigin: 'top right',
+                        }}
+                      >
+                      {/* User Info Header */}
+                      <div className="px-4 py-4 bg-gradient-to-r from-teal-50 to-slate-50 border-b border-slate-200">
+                        <div className="flex items-center gap-3">
+                          {getProfileImage()}
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm text-slate-800">
+                              {currentUser.firstName} {currentUser.lastName}
+                            </p>
+                            <p className="text-xs text-slate-600 truncate">
+                              {currentUser.emailAddresses?.[0]?.emailAddress}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-3">
+                          <Badge className={`text-xs px-2 py-1 ${
+                            userRole === 'seller' 
+                              ? 'bg-teal-100 text-teal-700 border border-teal-200' 
+                              : 'bg-blue-100 text-blue-700 border border-blue-200'
+                          }`}>
+                            {userRole === 'seller' ? 'Space Owner' : 'Advertiser'}
                           </Badge>
-                        )}
+                        </div>
                       </div>
+
+                      {/* Menu Items */}
                       <div className="p-2">
                         <Link
                           to="/profile"
-                          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-700/50 transition-all duration-200 group"
+                          onClick={closeUserMenu}
+                          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
                         >
-                          <UserIcon className="w-4 h-4 group-hover:text-lime-400 transition-colors" />
-                          Profile Settings
+                          <UserCircle className="w-4 h-4 group-hover:text-teal-600 transition-colors" />
+                          <div className="flex-1">
+                            <div className="font-medium">Profile Settings</div>
+                            <div className="text-xs text-slate-500">Manage your account</div>
+                          </div>
                         </Link>
+                        
                         <Link
                           to="/settings"
-                          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-700/50 transition-all duration-200 group"
+                          onClick={closeUserMenu}
+                          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
                         >
-                          <Settings className="w-4 h-4 group-hover:text-lime-400 transition-colors" />
-                          Preferences
+                          <Settings className="w-4 h-4 group-hover:text-teal-600 transition-colors" />
+                          <div className="flex-1">
+                            <div className="font-medium">Preferences</div>
+                            <div className="text-xs text-slate-500">Notifications & privacy</div>
+                          </div>
                         </Link>
-                        <div className="border-t border-gray-700 my-2" />
-                        <button className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all duration-200 group">
+
+                        <Link
+                          to="/saved"
+                          onClick={closeUserMenu}
+                          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
+                        >
+                          <Bookmark className="w-4 h-4 group-hover:text-teal-600 transition-colors" />
+                          <div className="flex-1">
+                            <div className="font-medium">Saved Spaces</div>
+                            <div className="text-xs text-slate-500">Your bookmarked listings</div>
+                          </div>
+                        </Link>
+
+                        <Link
+                          to="/help"
+                          onClick={closeUserMenu}
+                          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
+                        >
+                          <HelpCircle className="w-4 h-4 group-hover:text-teal-600 transition-colors" />
+                          <div className="flex-1">
+                            <div className="font-medium">Help & Support</div>
+                            <div className="text-xs text-slate-500">Get assistance</div>
+                          </div>
+                        </Link>
+
+                        <div className="border-t border-slate-200 my-2" />
+                        
+                        <button 
+                          type="button"
+                          onClick={closeUserMenu}
+                          className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 group"
+                        >
                           <LogOut className="w-4 h-4" />
-                          Sign Out
+                          <div className="flex-1 text-left">
+                            <div className="font-medium">Sign Out</div>
+                            <div className="text-xs text-red-500">End your session</div>
+                          </div>
                         </button>
                       </div>
                     </motion.div>
+                  </>
                   )}
                 </AnimatePresence>
               </div>
             )}
-
-            {/* ✅ Mobile Menu Button - Dark Theme */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all duration-200"
-            >
-              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-            </button>
           </div>
         </div>
       </header>
 
-      {/* ✅ Mobile Menu - Enhanced Dark Theme */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-gray-900/95 backdrop-blur-xl z-40 lg:hidden"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <motion.div
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="w-80 h-full bg-gray-800 border-r border-gray-700 shadow-2xl p-6 overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="space-y-6">
-                {/* Mobile Search */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    type="search"
-                    placeholder="Search..."
-                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-700/50 border-gray-600 text-white placeholder-gray-400"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSearch();
-                        setMobileMenuOpen(false);
-                      }
-                    }}
-                  />
-                </div>
-
-                {/* Navigation Items */}
-                <div className="space-y-1">
-                  <h3 className="font-semibold text-sm text-gray-400 uppercase tracking-wide mb-3">Navigation</h3>
-                  {navigationItems.map((item) => {
-                    const isActive = location.pathname === item.url;
-                    return (
-                      <Link
-                        key={item.title}
-                        to={item.url}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                          isActive
-                            ? 'bg-lime-400/10 text-lime-400 shadow-lg shadow-lime-400/20'
-                            : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <item.icon className="w-5 h-5" />
-                        <span className="flex-1 font-medium">{item.title}</span>
-                        {item.badge > 0 && (
-                          <Badge className={`${item.badgeColor || 'bg-red-500'} text-white text-xs`}>
-                            {formatBadgeCount(item.badge)}
-                          </Badge>
-                        )}
-                      </Link>
-                    );
-                  })}
-                </div>
-
-                {/* Primary Actions */}
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-sm text-gray-400 uppercase tracking-wide mb-3">Actions</h3>
-                  {primaryActions.map((action) => (
-                    <Link
-                      key={action.title}
-                      to={action.url}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <button className={`w-full rounded-xl py-3 font-medium flex items-center justify-center gap-2 text-sm transition-all duration-200 ${
-                        action.type === 'primary'
-                          ? 'bg-lime-400 text-gray-900 hover:bg-lime-500 shadow-lg'
-                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
-                      }`}>
-                        <action.icon className="h-4 w-4" />
-                        {action.title}
-                        {action.type === 'primary' && <Sparkles className="h-3 w-3" />}
-                      </button>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ✅ Content Spacer - Adjusted for new height */}
+      {/* Content Spacer */}
       <div className="h-16" />
     </>
   );

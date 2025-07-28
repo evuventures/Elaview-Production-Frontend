@@ -4,7 +4,7 @@ import { Loader2, MapPin, Search, CheckCircle, AlertCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import GoogleMap from '@/components/browse/maps/GoogleMap';
+import GoogleMap from '@/pages/browse/components/GoogleMap';
 
 // Type assertions for JSX components
 const InputComponent = Input as React.ComponentType<any>;

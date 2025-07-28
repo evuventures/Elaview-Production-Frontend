@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Save, Loader2, MapPin, Camera, Trash2, AlertTriangle, Building, Sparkles, Edit3, Target } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import GoogleMap from '@/components/browse/maps/GoogleMap';
+import GoogleMap from '@/pages/browse/components/GoogleMap';
 import { Property } from '@/api/entities';
 import { useUser } from '@clerk/clerk-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
