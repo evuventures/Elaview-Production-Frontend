@@ -194,6 +194,20 @@ class ApiClient {
   async cancelBooking(id) {
     return this.post(`/bookings/${id}/cancel`);
   }
+
+  // 🔔 NEW: Booking approval/decline methods
+  async approveBooking(bookingId) {
+    return this.put(`/bookings/${bookingId}/approve`);
+  }
+
+  async declineBooking(bookingId, reason = '') {
+    return this.put(`/bookings/${bookingId}/decline`, { reason });
+  }
+
+  async updateBookingStatus(bookingId, status) {
+    return this.put(`/bookings/${bookingId}`, { status });
+  }
+
   // Invoice endpoints - ALL PROTECTED
   async getInvoices() {
     return this.get('/invoices');
@@ -220,6 +234,109 @@ class ApiClient {
   async markMessageAsRead(id) {
     return this.post(`/messages/${id}/read`);
   }
+  // 🔔 NEW: Notification endpoints - ALL PROTECTED
+  async getNotifications(options = {}) {
+    const { unread_only = false, limit = 20 } = options;
+    const params = new URLSearchParams({ 
+      unread_only: unread_only.toString(), 
+      limit: limit.toString() 
+    });
+    
+    return this.get(`/notifications?${params}`);
+  }
+
+  async getNotificationCount() {
+    return this.get('/notifications/count');
+  }
+
+  async markNotificationAsRead(notificationId) {
+    return this.post(`/notifications/${notificationId}/read`);
+  }
+
+  async markAllNotificationsAsRead() {
+    return this.post('/notifications/mark-all-read');
+  }
+
+  // 🔔 NEW: Booking-specific notification endpoints
+  async getBookingNotifications() {
+    return this.get('/bookings/notifications');
+  }
+
+  async markBookingNotificationAsRead(notificationId) {
+    return this.post(`/bookings/notifications/${notificationId}/read`);
+  }
+
+  async markAllBookingNotificationsAsRead() {
+    return this.post('/bookings/notifications/mark-all-read');
+  }
+
+  // 🔔 NEW: Helper method to get all unread notifications across the app
+  async getUnreadNotifications() {
+    try {
+      // Use the general notifications endpoint with unread filter
+      const response = await this.getNotifications({ unread_only: true, limit: 50 });
+      
+      if (response.success) {
+        return {
+          success: true,
+          notifications: response.notifications || [],
+          count: response.unreadCount || 0
+        };
+      }
+      
+      return { success: false, notifications: [], count: 0 };
+    } catch (error) {
+      console.error('❌ Failed to fetch unread notifications:', error);
+      return { success: false, notifications: [], count: 0 };
+    }
+  }
+
+  // 🔔 ENHANCED: Helper method for notification actions with improved routing
+  async handleNotificationClick(notification) {
+    try {
+      // Mark as read
+      await this.markNotificationAsRead(notification.id);
+      
+      // Parse message data for better routing
+      const messageData = notification.messageData || {};
+      let actionUrl = '/messages'; // Default fallback
+      
+      // Enhanced routing based on notification type
+      if (messageData.bookingId) {
+        // Booking-related notifications
+        switch (messageData.action) {
+          case 'booking_request':
+            actionUrl = `/messages?conversation=${notification.conversationId}&booking=${messageData.bookingId}`;
+            break;
+          case 'booking_approved':
+          case 'booking_declined':
+            actionUrl = `/bookings/${messageData.bookingId}`;
+            break;
+          default:
+            actionUrl = `/messages?conversation=${notification.conversationId}`;
+        }
+      } else if (notification.conversationId) {
+        actionUrl = `/messages?conversation=${notification.conversationId}`;
+      } else if (messageData.actionUrl) {
+        actionUrl = messageData.actionUrl;
+      }
+      
+      return {
+        success: true,
+        actionUrl,
+        notificationData: messageData,
+        conversationId: notification.conversationId
+      };
+    } catch (error) {
+      console.error('❌ Failed to handle notification click:', error);
+      return {
+        success: false,
+        actionUrl: '/messages',
+        error: error.message
+      };
+    }
+  }
+
   // Advertising Area endpoints - PUBLIC for browsing
   async getAreas(params = {}) {
     // :white_check_mark: PUBLIC - Browse advertising areas within spaces

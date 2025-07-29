@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
 import { updateUserRole } from '../../api/users/update-role';
+import apiClient from '@/api/apiClient'; // ✅ ADD: Import API client
 
 // Import your navigation components
 import DesktopTopNavV2 from './nested/DesktopTopNavV2';
@@ -46,28 +47,25 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
       return roleMapping[dbRole] || 'buyer';
     };
 
-    // 🆕 EXTRACT FETCHUSERDATA AS REUSABLE FUNCTION
+    // ✅ FIXED: Use API client instead of hardcoded URL
     const fetchUserData = async () => {
       if (!currentUser) return;
       
       try {
         console.log('📋 Fetching user data from backend...');
-        const token = await getToken();
-        const response = await fetch('https://elaview-backend.up.railway.app/api/users/profile', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        
+        // ✅ FIXED: Use API client instead of hardcoded fetch
+        const response = await apiClient.get('/users/profile');
 
-        if (response.ok) {
-          const userData = await response.json();
+        if (response.success) {
+          const userData = response.data;
           const backendRole = userData.role;
           const uiRole = mapDatabaseRoleToUI(backendRole);
           
           console.log(`📋 User role from backend: ${backendRole} -> UI role: ${uiRole}`);
           setUserRole(uiRole);
         } else {
-          console.error('Failed to fetch user profile:', response.statusText);
+          console.error('Failed to fetch user profile:', response.message);
           setUserRole('buyer'); // Default fallback
         }
       } catch (error) {
@@ -264,7 +262,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                   {/* ✅ Mobile Components with proper z-index */}
                   {typeof MobileTopBar !== 'undefined' && (
                     <div className="lg:hidden">
-                      <MobileTopBar />
+                      <MobileTopBar currentUser={currentUser} />
                     </div>
                   )}
                   {typeof MobileNav !== 'undefined' && (

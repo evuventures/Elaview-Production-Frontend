@@ -1,15 +1,45 @@
 // src/components/layout/MobileNav.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '@clerk/clerk-react';
 import { Badge } from '@/components/ui/badge';
 import { getNavigationItems, formatBadgeCount } from '@/lib/navigation';
+import apiClient from '@/api/apiClient';
 
 const MobileNav = ({ unreadCount, pendingInvoices, actionItemsCount, currentUser }) => {
   const location = useLocation();
+  const { isSignedIn } = useAuth();
+  const [notificationCount, setNotificationCount] = useState(0);
+
+  // Fetch notification count for the Messages badge
+  const fetchNotificationCount = async () => {
+    if (!isSignedIn) return;
+    
+    try {
+      const response = await apiClient.getNotificationCount();
+      if (response.success) {
+        setNotificationCount(response.count || 0);
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch notification count:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (isSignedIn) {
+      fetchNotificationCount();
+      // Refresh every 60 seconds
+      const interval = setInterval(fetchNotificationCount, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [isSignedIn]);
+
+  // Include notification count in unread count for Messages badge
+  const totalUnreadCount = (unreadCount || 0) + notificationCount;
 
   const navigationItems = getNavigationItems({
     currentUser,
-    unreadCount,
+    unreadCount: totalUnreadCount, // Include notifications in Messages badge
     pendingInvoices,
     actionItemsCount,
     isMobile: true

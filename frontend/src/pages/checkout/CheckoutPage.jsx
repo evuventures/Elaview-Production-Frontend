@@ -43,7 +43,7 @@ export default function OptimizedBookingPage() {
     { days: 30, label: '1 Month', popular: false }
   ];
 
-  // API helper function
+  // ✅ FIXED: API helper function with correct base URL
   const apiCall = async (endpoint, options = {}) => {
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
     
@@ -67,8 +67,9 @@ export default function OptimizedBookingPage() {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API call failed: ${response.status} ${errorText}`);
+      const errorData = await response.json().catch(() => ({}));
+      console.error('API Error:', response.status, errorData);
+      throw new Error(`API call failed: ${response.status} ${JSON.stringify(errorData)}`);
     }
 
     return await response.json();
@@ -118,9 +119,9 @@ export default function OptimizedBookingPage() {
         console.log('✅ Space loaded:', foundSpace.name);
       }
 
-      // ✅ SIMPLIFIED: Check if user has business profile (optional check)
+      // ✅ FIXED: Check if user has business profile (correct endpoint)
       try {
-        const userProfile = await apiCall('/user/profile');
+        const userProfile = await apiCall('/users/me'); // ✅ FIXED: Was /user/profile
         if (userProfile.success && userProfile.data?.businessName) {
           setHasBusinessProfile(true);
           setBusinessInfo({
@@ -145,6 +146,14 @@ export default function OptimizedBookingPage() {
   // Calculate dates and cost
   const endDate = new Date(new Date(startDate).getTime() + duration * 24 * 60 * 60 * 1000);
   const totalCost = space ? (space.baseRate || 450) * duration : 0;
+
+  // ✅ Helper function to format dates for display
+  const formatDateForDisplay = (date) => {
+    if (date instanceof Date) {
+      return date.toLocaleDateString();
+    }
+    return new Date(date).toLocaleDateString();
+  };
 
   // Handle file upload
   const handleFileUpload = async (file) => {
@@ -182,42 +191,61 @@ export default function OptimizedBookingPage() {
     }
   };
 
-  // ✅ SIMPLIFIED: Direct booking without campaign requirement!
+  // ✅ FIXED: Direct booking with correct endpoint and notification trigger
   const handleBooking = async () => {
     try {
-      console.log('🔄 Creating direct booking...');
+      console.log('🔄 Creating booking...');
 
-      // Create booking without campaign requirement
+      // ✅ FIXED: Create proper datetime strings for backend validation
+      const startDateTime = new Date(startDate + 'T00:00:00.000Z').toISOString();
+      const endDateTime = new Date(endDate.getTime()).toISOString();
+
+      // ✅ FIXED: Create booking data matching your backend schema
       const bookingData = {
-        startDate: startDate,
-        endDate: endDate.toISOString().split('T')[0],
+        startDate: startDateTime,
+        endDate: endDateTime,
         totalAmount: totalCost,
-        currency: 'USD',
         propertyId: propertyId,
         advertisingAreaId: spaceId,
-        businessName: businessInfo.name,
-        businessType: businessInfo.type,
-        contactPhone: businessInfo.phone,
-        contactEmail: businessInfo.email,
-        creativeUrl: uploadedImage?.url,
-        notes: `Direct booking for ${space?.name} - Business: ${businessInfo.name}`
+        message: `Booking request for ${space?.name} - Business: ${businessInfo.name}`,
+        bookingDetails: {
+          businessName: businessInfo.name,
+          businessType: businessInfo.type,
+          contactPhone: businessInfo.phone,
+          contactEmail: businessInfo.email,
+          creativeUrl: uploadedImage?.url,
+          currency: 'USD'
+        }
       };
 
-      // ✅ NEW: Use direct booking endpoint instead of campaign-based
-      const response = await apiCall('/bookings/direct', {
+      console.log('📦 Booking data:', bookingData);
+      console.log('📅 Start Date (original):', startDate);
+      console.log('📅 Start Date (ISO):', startDateTime);
+      console.log('📅 End Date (ISO):', endDateTime);
+
+      // ✅ FIXED: Use correct endpoint - /bookings not /bookings/direct
+      const response = await apiCall('/bookings', {
         method: 'POST',
         body: JSON.stringify(bookingData)
       });
 
       if (response.success) {
         console.log('✅ Booking created successfully:', response.data);
-        alert('🎉 Booking submitted! You\'ll hear back within 24 hours.');
+        
+        // Show success message
+        alert(`🎉 Booking request submitted! 
+        
+The property owner will review your request and respond within 24 hours.
+You'll receive a notification once they approve or have questions.
+
+Booking ID: ${response.data.id}`);
+        
         navigate('/dashboard?booking_created=true');
       }
       
     } catch (error) {
       console.error('❌ Booking failed:', error);
-      alert('Failed to create booking. Please try again.');
+      alert(`Failed to create booking: ${error.message}`);
     }
   };
 
@@ -599,7 +627,7 @@ export default function OptimizedBookingPage() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">End Date:</span>
-                      <span>{endDate.toLocaleDateString()}</span>
+                      <span>{formatDateForDisplay(endDate)}</span>
                     </div>
                     <div className="border-t border-gray-200 pt-3">
                       <div className="flex justify-between font-bold">
@@ -609,7 +637,7 @@ export default function OptimizedBookingPage() {
                     </div>
                   </div>
                   
-                  {/* ✅ SIMPLIFIED: Direct booking button */}
+                  {/* ✅ FIXED: Direct booking button */}
                   <button
                     onClick={handleBooking}
                     disabled={!canProceed}
@@ -623,12 +651,12 @@ export default function OptimizedBookingPage() {
                      !businessInfo.type ? 'Select Business Type' :
                      !businessInfo.phone || !businessInfo.email ? 'Complete Contact Info' :
                      !uploadedImage ? 'Upload Creative' :
-                     `Book for $${totalCost.toLocaleString()}`
+                     `Request Booking for $${totalCost.toLocaleString()}`
                     }
                   </button>
                   
                   <p className="text-xs text-gray-500 text-center mt-3">
-                    You'll be charged only after space owner approval (usually within 24 hours)
+                    📋 Booking requires owner approval • 🔔 You'll get notified of their response
                   </p>
 
                   {/* Contact Support */}

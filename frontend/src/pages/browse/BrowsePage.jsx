@@ -1,5 +1,5 @@
-// src/pages/browse/BrowsePage.jsx - Redesigned with Elaview Design System
-// ✅ UPDATED: Clean Elaview design system implementation with Deep Teal
+// src/pages/browse/BrowsePage.jsx - Updated with SignIn page background color
+// ✅ UPDATED: Changed background to match SignIn page (#f7f5e6)
 // ✅ MOBILE: Full-screen map with bottom navigation
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
@@ -444,7 +444,10 @@ export default function BrowsePage() {
   // ✅ MOBILE LAYOUT: Full-screen map only (uses existing MobileNav component)
   if (isMobile) {
     return (
-      <div className="fixed inset-0 overflow-hidden bg-gradient-to-br from-slate-50 via-slate-50 to-teal-50/30">
+      <div 
+        className="fixed inset-0 overflow-hidden"
+        style={{ backgroundColor: '#f7f5e6' }}
+      >
         {/* ✅ MOBILE: Full-screen Map Container */}
         <div className="w-full h-full relative">
           <div className="w-full h-full bg-white overflow-hidden touch-none">
@@ -493,7 +496,7 @@ export default function BrowsePage() {
 
            {/* ✅ Mobile Map Info Card - Left positioned */}
 {!isLoading && !error && (
-  <div className="fixed top-20 left-4 z-20">  {/* 👈 Changed from center to left */}
+  <div className="fixed top-20 left-4 z-20">
     <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg px-4 py-3 shadow-lg min-w-[120px] max-w-[200px]">
       <div className="text-center">
         <p className="text-xl font-semibold text-teal-600">
@@ -506,29 +509,6 @@ export default function BrowsePage() {
     </div>
   </div>
 )}
-
-            {/* ✅ Mobile Map Legend - Bottom Left (positioned just above MobileNav) */}
-            {/* <div className="absolute bottom-[5.5rem] left-4 z-20">
-              <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg">
-                <h4 className="font-medium text-xs text-slate-800 mb-2">Legend</h4>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
-                    <span className="text-xs text-slate-600">Ad Spaces</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-xs text-slate-600">Properties</span>
-                  </div>
-                  {userLocation && (
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs text-slate-600">You</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div> */}
 
             {/* ✅ Mobile Loading State - Fixed position overlay */}
             {isLoading && (
@@ -586,16 +566,19 @@ export default function BrowsePage() {
     );
   }
 
-  // ✅ DESKTOP LAYOUT: Original side-by-side layout
+  // ✅ DESKTOP LAYOUT: Original side-by-side layout with updated background
   return (
-    <div className="h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-slate-50 to-teal-50/30">
+    <div 
+      className="h-screen overflow-hidden"
+      style={{ backgroundColor: '#f7f5e6' }}
+    >
       <div className="flex h-full">
         
-        {/* ✅ LEFT CONTAINER: Content (55%) - Enhanced background */}
-        <div className="w-[55%] h-full flex flex-col bg-gradient-to-b from-white/40 to-slate-50/60 backdrop-blur-sm">
+        {/* ✅ LEFT CONTAINER: Content (55%) - Updated with cream background theme */}
+        <div className="w-[55%] h-full flex flex-col">
   
-          {/* ✅ CONTENT: Scrollable area with enhanced glass effect */}
-          <div className="flex-1 flex flex-col min-h-0 bg-white/30 backdrop-blur-sm rounded-2xl m-4 shadow-soft border border-white/40">
+          {/* ✅ CONTENT: Scrollable area with updated styling for cream background */}
+          <div className="flex-1 flex flex-col min-h-0 bg-white/60 backdrop-blur-sm rounded-2xl m-4 shadow-lg border border-white/50">
             <div className="flex-1 overflow-y-auto scrollbar-hide rounded-t-2xl">
               <div className="p-6">
                 {/* ✅ Combined Header with Controls */}
@@ -691,9 +674,9 @@ export default function BrowsePage() {
               </div>
             </div>
   
-            {/* ✅ PAGINATION: Fixed at bottom with enhanced styling */}
+            {/* ✅ PAGINATION: Fixed at bottom with updated styling */}
             {!isLoading && !error && totalPages > 1 && (
-              <div className="bg-white/80 backdrop-blur-sm border-t border-slate-200/60 shadow-soft px-6 py-4 rounded-b-2xl mx-4 mb-4">
+              <div className="bg-white/90 backdrop-blur-sm border-t border-slate-200/60 shadow-lg px-6 py-4 rounded-b-2xl mx-4 mb-4">
                 <PaginationControls 
                   currentPage={currentPage}
                   setCurrentPage={setCurrentPage}
@@ -705,8 +688,8 @@ export default function BrowsePage() {
           </div>
         </div>
   
-        {/* ✅ RIGHT CONTAINER: Fixed Map (45%) - Enhanced background */}
-        <div className="w-[45%] h-full p-4 fixed right-0 bg-gradient-to-bl from-white/20 to-transparent">
+        {/* ✅ RIGHT CONTAINER: Fixed Map (45%) - Updated background */}
+        <div className="w-[45%] h-full p-4 fixed right-0">
           <div className="relative w-full h-[calc(100%-75px)] bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-lg">
             <GoogleMap
               properties={properties.filter(property => 
@@ -726,7 +709,7 @@ export default function BrowsePage() {
               <Button 
                 size="sm" 
                 variant="outline"
-                className="bg-white/95 backdrop-blur-sm hover:bg-white border-slate-300 text-slate-600 hover:text-slate-800 shadow-soft"
+                className="bg-white/95 backdrop-blur-sm hover:bg-white border-slate-300 text-slate-600 hover:text-slate-800 shadow-lg"
                 onClick={handleCenterOnLocation}
                 title="Center map on your location"
               >
@@ -736,21 +719,21 @@ export default function BrowsePage() {
 
             {/* ✅ Map Legend - Enhanced with Elaview styling */}
             <div className="absolute bottom-4 left-4 z-20">
-              <div className="card-compact bg-white/95 backdrop-blur-sm border-slate-200 shadow-soft">
-                <h4 className="label text-slate-800 mb-3">Map Legend</h4>
+              <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg">
+                <h4 className="font-medium text-xs text-slate-800 mb-3">Map Legend</h4>
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
                     <div className="w-3 h-3 bg-teal-500 rounded-full shadow-sm"></div>
-                    <span className="caption text-slate-600">Ad Spaces</span>
+                    <span className="text-xs text-slate-600">Ad Spaces</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-success-500 rounded-full shadow-sm"></div>
-                    <span className="caption text-slate-600">Properties</span>
+                    <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
+                    <span className="text-xs text-slate-600">Properties</span>
                   </div>
                   {userLocation && (
                     <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full shadow-sm animate-pulse-soft"></div>
-                      <span className="caption text-slate-600">Your Location</span>
+                      <div className="w-3 h-3 bg-blue-500 rounded-full shadow-sm animate-pulse"></div>
+                      <span className="text-xs text-slate-600">Your Location</span>
                     </div>
                   )}
                 </div>
@@ -760,9 +743,9 @@ export default function BrowsePage() {
             {/* ✅ Map Status Indicator */}
             {isLoading && (
               <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-30">
-                <div className="card-compact bg-white text-center">
-                  <div className="loading-spinner w-6 h-6 mx-auto mb-2 text-teal-500"></div>
-                  <p className="body-small text-slate-600">Loading spaces...</p>
+                <div className="bg-white rounded-lg p-4 text-center shadow-lg">
+                  <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-sm text-slate-600">Loading spaces...</p>
                 </div>
               </div>
             )}
@@ -770,16 +753,16 @@ export default function BrowsePage() {
             {/* ✅ Map Info Card - Floating summary */}
             {!isLoading && !error && (
               <div className="absolute top-4 left-4 z-20">
-                <div className="card-compact bg-white/95 backdrop-blur-sm border-slate-200 shadow-soft max-w-48">
+                <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg max-w-48">
                   <div className="text-center">
                     <p className="text-lg font-semibold text-teal-600">
                       {filteredSpaces.length}
                     </p>
-                    <p className="caption text-slate-600">
+                    <p className="text-xs text-slate-600">
                       {filteredSpaces.length === 1 ? 'Space Available' : 'Spaces Available'}
                     </p>
                     {activeFiltersCount > 0 && (
-                      <p className="caption text-slate-500 mt-1">
+                      <p className="text-xs text-slate-500 mt-1">
                         {activeFiltersCount} filter{activeFiltersCount !== 1 ? 's' : ''} active
                       </p>
                     )}

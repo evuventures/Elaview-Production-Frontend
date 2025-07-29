@@ -1,4 +1,4 @@
-// backend/src/routes/bookings.js
+// frontend/src/routes/bookings.js
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 

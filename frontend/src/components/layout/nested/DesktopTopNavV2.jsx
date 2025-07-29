@@ -1,16 +1,19 @@
-// Enhanced Navigation with Working Authentication - Elaview Design System
+// Enhanced Navigation with Working Notifications - Elaview Design System
+// ✅ UPDATED: Uses NotificationDropdown component for cleaner code
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@clerk/clerk-react'; // Add Clerk auth hook
+import { useAuth } from '@clerk/clerk-react';
 import { 
   User, ChevronDown, Bell, Settings, LogOut,
   Building2, Calendar, MessageSquare, Map, LayoutDashboard,
   MapPin, Calendar as CalendarIcon, Mail, UserCircle, Shield,
-  Bookmark, HelpCircle, LogIn
+  Bookmark, HelpCircle, LogIn, Clock, Loader2, Check
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
+import apiClient from '@/api/apiClient';
+import NotificationDropdown from '@/components/notifications/NotificationDropdown';
 import elaviewLogo from '../../../public/elaview-logo.png';
 
 const DesktopTopNavV2 = ({ 
@@ -27,9 +30,14 @@ const DesktopTopNavV2 = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isSignedIn, signOut } = useAuth(); // Add Clerk auth
+  const { isSignedIn, signOut } = useAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
+
+  // 🔔 NEW: Simplified notification state (count only - dropdown handles the rest)
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [lastFetchTime, setLastFetchTime] = useState(null);
 
   // Role-specific navigation items
   const getNavigationItems = (role) => {
@@ -57,8 +65,8 @@ const DesktopTopNavV2 = ({
     } else {
       return [
         {
-          title: 'Bookings',
-          url: '/bookings',
+          title: 'Advertise',
+          url: '/advertise',
           icon: CalendarIcon,
           badge: actionItemsCount || 0
         },
@@ -80,6 +88,44 @@ const DesktopTopNavV2 = ({
 
   const navigationItems = getNavigationItems(userRole);
 
+  // 🔔 NEW: Fetch notification count only (NotificationDropdown handles full notifications)
+  const fetchNotificationCount = async (force = false) => {
+    if (!isSignedIn) return;
+    
+    // Avoid too frequent requests (max every 30 seconds unless forced)
+    const now = Date.now();
+    if (!force && lastFetchTime && (now - lastFetchTime) < 30000) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.getNotificationCount();
+      
+      if (response.success) {
+        setNotificationCount(response.count || 0);
+        setLastFetchTime(now);
+        console.log('✅ Notification count fetched:', response.count);
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch notification count:', error);
+    }
+  };
+
+  // 🔔 NEW: Handle notification actions (called from NotificationDropdown)
+  const handleNotificationAction = (action) => {
+    console.log('🔔 Notification action:', action);
+    
+    // Refresh notification count after any action
+    fetchNotificationCount(true);
+    
+    // Update count based on action
+    if (action === 'approved' || action === 'declined' || action === 'messaged') {
+      setNotificationCount(prev => Math.max(0, prev - 1));
+    } else if (action === 'mark_all_read') {
+      setNotificationCount(0);
+    }
+  };
+
   // Enhanced outside click detection
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -88,7 +134,7 @@ const DesktopTopNavV2 = ({
       }
     };
 
-    // Only add listener when menu is open
+    // Only add listener when user menu is open
     if (userMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('touchstart', handleClickOutside);
@@ -99,6 +145,22 @@ const DesktopTopNavV2 = ({
       document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [userMenuOpen]);
+
+  // 🔔 NEW: Fetch notification count on auth change
+  useEffect(() => {
+    if (isSignedIn) {
+      fetchNotificationCount(true);
+      
+      // Set up periodic refresh every 60 seconds
+      const interval = setInterval(() => {
+        fetchNotificationCount();
+      }, 60000);
+      
+      return () => clearInterval(interval);
+    } else {
+      setNotificationCount(0);
+    }
+  }, [isSignedIn]);
 
   // Direct role switch (no popover)
   const handleRoleSwitch = (newRole) => {
@@ -148,13 +210,26 @@ const DesktopTopNavV2 = ({
   const toggleUserMenu = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('Toggle user menu, current state:', userMenuOpen); // Debug log
     setUserMenuOpen(prev => !prev);
+    setNotificationMenuOpen(false); // Close notification menu
+  };
+
+  // 🔔 NEW: Notification menu toggle (simplified)
+  const toggleNotificationMenu = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setNotificationMenuOpen(prev => !prev);
+    setUserMenuOpen(false); // Close user menu
   };
 
   // Close user menu
   const closeUserMenu = () => {
     setUserMenuOpen(false);
+  };
+
+  // Close notification menu
+  const closeNotificationMenu = () => {
+    setNotificationMenuOpen(false);
   };
 
   // Profile image with fallback
@@ -178,8 +253,11 @@ const DesktopTopNavV2 = ({
 
   return (
     <>
-      {/* Navigation Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-50 shadow-sm">
+      {/* Navigation Header - Updated with cream background */}
+      <header 
+        className="fixed top-0 left-0 right-0 h-16 border-b border-slate-200/60 z-50 shadow-sm backdrop-blur-sm"
+        style={{ backgroundColor: '#f7f5e6' }}
+      >
         <div className="flex items-center justify-between h-full px-4 lg:px-6">
           
           {/* Left Section: Logo + Navigation */}
@@ -204,8 +282,8 @@ const DesktopTopNavV2 = ({
                       to={item.url}
                       className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                         isActive
-                          ? 'text-teal-700 bg-teal-50 border border-teal-200'
-                          : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
+                          ? 'text-teal-700 bg-white/80 backdrop-blur-sm border border-teal-200 shadow-sm'
+                          : 'text-slate-600 hover:text-slate-800 hover:bg-white/40 backdrop-blur-sm'
                       }`}
                     >
                       <item.icon className="w-4 h-4" />
@@ -239,10 +317,10 @@ const DesktopTopNavV2 = ({
                 <button
                   onClick={() => handleRoleSwitch(userRole === 'buyer' ? 'seller' : 'buyer')}
                   disabled={isUpdatingRole}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-white/60 backdrop-blur-sm border border-white/40 hover:bg-white/80 shadow-sm ${
                     userRole === 'seller' 
-                      ? 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50' 
-                      : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+                      ? 'text-emerald-600 hover:text-emerald-700 hover:border-emerald-200' 
+                      : 'text-blue-600 hover:text-blue-700 hover:border-blue-200'
                   } ${isUpdatingRole ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {isUpdatingRole ? (
@@ -264,18 +342,30 @@ const DesktopTopNavV2 = ({
               </div>
             )}
 
-            {/* Notifications - Only for authenticated users */}
+            {/* 🔔 UPDATED: Notification Bell Button (dropdown component handles the rest) */}
             {isSignedIn && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="relative w-10 h-10 p-0 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-teal-50 transition-all duration-200"
-              >
-                <Bell className="w-4 h-4" />
-                {(unreadCount > 0 || pendingInvoices > 0) && (
-                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-                )}
-              </Button>
+              <div className="relative">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={toggleNotificationMenu}
+                  className="relative w-10 h-10 p-0 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-white/60 backdrop-blur-sm transition-all duration-200"
+                >
+                  <Bell className="w-4 h-4" />
+                  {notificationCount > 0 && (
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                      {notificationCount > 9 ? '9+' : notificationCount}
+                    </div>
+                  )}
+                </Button>
+
+                {/* 🔔 NEW: Use NotificationDropdown Component */}
+                <NotificationDropdown 
+                  isOpen={notificationMenuOpen}
+                  onClose={closeNotificationMenu}
+                  onNotificationAction={handleNotificationAction}
+                />
+              </div>
             )}
 
             {/* Authentication Section */}
@@ -285,7 +375,7 @@ const DesktopTopNavV2 = ({
                 <button
                   type="button"
                   onClick={toggleUserMenu}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/60 backdrop-blur-sm transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
                 >
                   {getProfileImage()}
                   <div className="hidden sm:block text-left">

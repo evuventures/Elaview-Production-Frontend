@@ -1,4 +1,5 @@
 // Enhanced Dashboard Component with Better Visual Design
+// ✅ UPDATED: Background color changed to match SignIn page (#f7f5e6)
 import React, { useState, useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -322,13 +323,13 @@ export default function EnhancedDashboard() {
   const enhancedStats = getEnhancedStats();
 
   return (
-    <div className="relative p-3 sm:p-6 overflow-hidden" style={{ height: 'calc(100vh - 64px)' }}>
-      {/* Enhanced Background Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-teal-50 to-white"></div>
-      <div className="absolute inset-0 bg-gradient-to-tr from-teal-100/30 via-transparent to-slate-100/50"></div>
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-teal-200/20 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-slate-200/30 rounded-full blur-3xl"></div>
-      
+    <div 
+      className="relative p-3 sm:p-6 overflow-hidden" 
+      style={{ 
+        height: 'calc(100vh - 64px)',
+        backgroundColor: '#f7f5e6'
+      }}
+    >
       {/* Content */}
       <div className="relative z-10 h-full">
         <div className="flex flex-col xl:flex-row gap-4 xl:gap-6 h-full max-w-full mx-auto">

@@ -1,6 +1,6 @@
 import Layout from "../components/layout/Layout.tsx";
 import CheckoutPage from "./checkout/CheckoutPage.jsx"; // ✅ FIXED: Renamed from Bookings to CheckoutPage for clarity
-import BookingsPage from "./bookings/BookingsPage.tsx"; // ✅ NEW: Import the bookings management page
+import AdvertisingPage from "./bookings/AdvertisingPage.tsx"; // ✅ NEW: Import the bookings management page
 import Map from "./browse/BrowsePage.jsx";
 import Messages from "./messages/Messages.tsx";
 import Profile from "./user/Profile.jsx";
@@ -36,7 +36,7 @@ const PAGES = {
     Browse: Map, // ✅ Map.jsx is your browse page
     Messages: Messages,
     CheckoutPage: CheckoutPage, // ✅ UPDATED: Checkout flow (formerly Bookings)
-    BookingsPage: BookingsPage, // ✅ NEW: Bookings management page
+    AdvertisingPage: AdvertisingPage, // ✅ NEW: Bookings management page
     Profile: Profile,
     Help: Help,
     Dashboard: Dashboard,
@@ -145,10 +145,10 @@ function PagesContent() {
             } />
 
             {/* ✅ NEW: Bookings Management Page (for buyers to see their bookings) */}
-            <Route path="/bookings" element={
+            <Route path="/advertise" element={
                 <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="bookings-protected">
                     <Layout currentPageName="Bookings" key="bookings-page">
-                        <BookingsPage key="bookings-component" />
+                        <AdvertisingPage key="bookings-component" />
                     </Layout>
                 </ProtectedRoute>
             } />
