@@ -1,0 +1,234 @@
+Codebase Cleanup & Refactoring Strategy
+This strategy is broken down into four distinct phases. Do not skip phases. Each one builds on the last, ensuring you work safely and effectively without breaking your application.
+
+Guiding Principles:
+
+Safety First: We will not delete code impulsively. We'll use version control (Git) to our advantage. Every major step should be a separate branch and commit.
+
+Data Over Assumption: We won't guess which files are unused. We will use tools to prove it.
+
+Incrementalism: We will not try to fix everything at once. We'll deliver value in small, testable increments. This builds momentum and reduces risk.
+
+Clarity is King: The goal is a codebase that a new developer could understand quickly. This means consistent patterns, clear naming, and good structure.
+
+Phase 1: Discovery & Analysis (The Audit)
+Goal: Understand the current state of the application without making any significant changes. At the end of this phase, you will have a complete map of your technical debt.
+
+1. Create a Cleanup Branch:
+Before you do anything, create a long-lived feature branch. All your cleanup work will happen here.
+
+Bash
+
+git checkout main
+git pull
+git checkout -b feature/frontend-cleanup
+2. Identify Unused Files & Components:
+Manually searching for file usage is unreliable. A file might be imported by another unused file. We need to analyze the entire dependency graph.
+
+Tool: Use a purpose-built tool like unimported or ts-prune (if you're using TypeScript).
+
+Action: Run the tool across your entire src directory.
+
+Bash
+
+# Install the tool globally or as a dev dependency
+npm install -g unimported
+
+# Run it from the root of your project
+unimported
+Output: This will generate a list of files that have no entry point into your application. Do not delete them yet. Create a text file _cleanup_notes/UNUSED_FILES.md and paste this list into it. We will act on this in Phase 2.
+
+3. Map Your True API Usage:
+This is the most critical step to understanding your backend needs. We will manually audit every single API call made from the frontend.
+
+Action:
+
+Globally search your codebase for API call indicators. Common patterns include:
+
+apiClient. (from your existing code)
+
+fetch(
+
+axios.
+
+https://elaview-backend.up.railway.app
+
+Create a spreadsheet or a Markdown table named _cleanup_notes/API_AUDIT.md.
+
+For every API call you find, fill out a row in this table:
+
+Endpoint	HTTP Method	File(s) Used In	Still Needed? (Y/N)	Data Shape (Request/Response)	Notes
+/api/dashboards/space-owner	GET	SpaceOwnerDashboardMVP.jsx	Y	Request: none. Response: { stats, bookings, ... }	Core dashboard endpoint.
+/api/properties	GET	LegacyDashboard.jsx	N	...	Replaced by /api/spaces.
+/api/invoices	POST	BillingPage.jsx	Y	Request: { amount, bookingId }	
+
+Export to Sheets
+Crucial Decision: As you fill this out, you will find legacy calls. Mark them as N for "Still Needed?". This table is now your single source of truth for frontend API requirements.
+
+4. Review Your Dependencies:
+Check for installed packages that are no longer used.
+
+Tool: depcheck
+
+Action: Run the tool to find unused npm packages.
+
+Bash
+
+npx depcheck
+Output: This will list packages in your package.json that aren't imported anywhere in your code. Add this list to a _cleanup_notes/UNUSED_PACKAGES.md file.
+
+At the end of Phase 1, you have made zero breaking changes but now have a definitive list of unused files, required API endpoints, and dead packages.
+
+Phase 2: Low-Hanging Fruit (Quick Wins)
+Goal: Make safe, high-impact changes that immediately reduce clutter.
+
+1. The "Legacy" Folder:
+Instead of deleting files from your UNUSED_FILES.md list, move them to a temporary _legacy folder at the root of your project.
+
+my-app/
+├── _legacy/
+│   ├── LegacyDashboard.jsx
+│   └── oldApiHelper.js
+├── src/
+...
+Why? This is a safety net. If you discover you moved a file that was needed (e.g., loaded dynamically), you can easily restore it.
+
+Action:
+
+Move all files from your UNUSED_FILES.md list into _legacy.
+
+Run your application. Click through everything. Run any tests you have.
+
+If everything works, commit this change: git commit -m "feat(cleanup): Move unused files to _legacy folder"
+
+2. Uninstall Unused Packages:
+Take the list from _cleanup_notes/UNUSED_PACKAGES.md and uninstall them.
+
+Bash
+
+npm uninstall <package-name-1> <package-name-2>
+Commit this change separately: git commit -m "chore(deps): Remove unused npm packages"
+
+3. Standardize Formatting:
+Enforce a single code style. This makes the code easier to read for everyone.
+
+Action: Install Prettier and run it across the entire codebase.
+
+Bash
+
+npm install --save-dev --save-exact prettier
+npx prettier --write .
+Commit this: git commit -m "style: Format entire codebase with Prettier"
+
+After a week or so, if the app is stable, you can safely delete the _legacy folder.
+
+Phase 3: Consolidation & Refactoring
+Goal: Restructure the remaining code to follow best practices, using the API_AUDIT.md as your guide.
+
+1. Create a Single, Canonical apiClient:
+Based on our previous conversation and your code, you have multiple ways of making API calls. We must consolidate this.
+
+Action:
+
+Create a single file: src/services/apiClient.js.
+
+This file should be responsible for:
+
+Setting the base URL.
+
+Automatically attaching the Clerk authentication token to protected requests.
+
+Centralized error handling (e.g., logging errors, handling 401 Unauthorized responses by redirecting to login).
+
+Exporting one function for each needed API endpoint from your audit table.
+
+Example apiClient.js structure:
+
+JavaScript
+
+// src/services/apiClient.js
+import { Clerk } from '@clerk/clerk-react'; // Or your Clerk instance
+
+const API_BASE_URL = 'https://elaview-backend.up.railway.app/api';
+
+async function request(endpoint, options = {}) {
+    // ... (your robust request logic with auth header injection)
+}
+
+// --- Dashboard Endpoints ---
+export const getSpaceOwnerDashboard = () => request('/dashboards/space-owner');
+export const getAdvertiserDashboard = () => request('/dashboards/advertiser');
+
+// --- Booking Endpoints ---
+export const createBooking = (bookingData) => request('/bookings', {
+    method: 'POST',
+    body: JSON.stringify(bookingData),
+});
+
+// Add every other *needed* endpoint from your API Audit table here.
+2. Incrementally Refactor Components:
+Go through your application, component by component, and replace old fetch or axios calls with your new apiClient methods.
+
+Action:
+
+Start with one component, like SpaceOwnerDashboardMVP.jsx.
+
+Remove the data-fetching logic.
+
+Call apiClient.getSpaceOwnerDashboard().
+
+This is the perfect time to move data-fetching logic into custom hooks for reusability (useSpaceOwnerDashboard).
+
+JavaScript
+
+// src/hooks/useSpaceOwnerDashboard.js
+import { useState, useEffect } from 'react';
+import { getSpaceOwnerDashboard } from '../services/apiClient';
+
+export function useSpaceOwnerDashboard() {
+    const [data, setData] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    // ...error handling
+
+    useEffect(() => {
+        getSpaceOwnerDashboard().then(response => {
+            //...set states
+        });
+    }, []);
+
+    return { data, isLoading, error };
+}
+Phase 4: Documentation & Prevention
+Goal: Ensure the codebase stays clean and document the new standards.
+
+1. Document the Architecture:
+Create a README.md file in your src directory explaining the folder structure.
+
+src/components/: Reusable, generic UI components (Button, Card).
+
+src/pages/ or src/features/: Top-level components for each page.
+
+src/services/: Services like apiClient.js.
+
+src/hooks/: Reusable React hooks.
+
+src/utils/: Helper functions.
+
+2. Document the apiClient:
+Add JSDoc comments to your apiClient.js explaining how to add new endpoints and use existing ones.
+
+3. Enforce Code Quality with Tooling:
+
+ESLint: Configure your ESLint rules to automatically fail a build if there are unused variables or imports (no-unused-vars). This prevents code rot from re-appearing.
+
+GitHub Actions (CI): Set up a simple Continuous Integration workflow that runs on every pull request. This action should:
+
+Install dependencies (npm ci).
+
+Run your linter (npm run lint).
+
+Run your tests (npm test).
+
+(Optional but recommended) Run depcheck and unimported to fail the build if new technical debt is introduced.
+
+By following this four-phase strategy, you will methodically and safely transform your frontend from a source of technical debt into a clean, maintainable, and well-documented asset.

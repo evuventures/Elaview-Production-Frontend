@@ -8,16 +8,8 @@ import {
   Download, Truck, Navigation, Star
 } from 'lucide-react';
 
-// Import your apiClient
-// import apiClient from '@/api/apiClient';
-
-// For demo purposes, mock the apiClient
-const apiClient = {
-  getSpaceOwnerDashboard: async () => {
-    console.log('🚨 NOT FETCHING - Using mock apiClient. Import real apiClient!');
-    throw new Error('NOT FETCHING - Real apiClient not imported');
-  }
-};
+// ✅ FIXED: Import real apiClient instead of mock
+import apiClient from '../../api/apiClient.js';
 
 export default function SpaceOwnerDashboardMVP() {
   const { user, isLoaded: userLoaded } = useUser();
@@ -76,12 +68,12 @@ export default function SpaceOwnerDashboardMVP() {
       console.error('❌ Dashboard error:', err);
       setError('Failed to load dashboard data. Please try again.');
       
-      // Show NOT FETCHING indicators
+      // Show fallback data for development
       setStats({
-        totalRevenue: 'NOT FETCHING',
-        activeListings: 'NOT FETCHING',
-        pendingInstalls: 'NOT FETCHING',
-        completedBookings: 'NOT FETCHING'
+        totalRevenue: 0,
+        activeListings: 0,
+        pendingInstalls: 0,
+        completedBookings: 0
       });
     } finally {
       setIsLoading(false);
@@ -115,11 +107,7 @@ export default function SpaceOwnerDashboardMVP() {
           )}
         </div>
         <p className="text-2xl font-bold text-gray-900">
-          {value === 'NOT FETCHING' ? (
-            <span className="text-red-500 text-sm">NOT FETCHING</span>
-          ) : (
-            typeof value === 'number' && label.includes('Revenue') ? `$${value.toLocaleString()}` : value
-          )}
+          {typeof value === 'number' && label.includes('Revenue') ? `$${value.toLocaleString()}` : value}
         </p>
         <p className="text-sm text-gray-600">{label}</p>
         {subValue && <p className="text-xs text-gray-500 mt-1">{subValue}</p>}
@@ -168,11 +156,11 @@ export default function SpaceOwnerDashboardMVP() {
           <div className="flex justify-between items-start mb-3">
             <div>
               <h3 className="font-semibold text-gray-900">
-                {booking.advertiserName || 'NOT FETCHING - Advertiser Name'}
+                {booking.advertiserName || 'Advertiser Name'}
               </h3>
               <p className="text-sm text-gray-600 flex items-center mt-1">
                 <MapPin className="w-3 h-3 mr-1" />
-                {booking.spaceName || 'NOT FETCHING - Space Name'}
+                {booking.spaceName || 'Space Name'}
               </p>
             </div>
             {getStatusBadge(booking.status || 'active')}
@@ -184,13 +172,13 @@ export default function SpaceOwnerDashboardMVP() {
               <p className="font-medium">
                 {booking.startDate && booking.endDate 
                   ? `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}`
-                  : 'NOT FETCHING - Dates'}
+                  : 'N/A'}
               </p>
             </div>
             <div>
               <p className="text-gray-600">Total Revenue</p>
               <p className="font-bold text-green-600">
-                {typeof booking.totalAmount === 'number' ? `$${booking.totalAmount}` : 'NOT FETCHING'}
+                {typeof booking.totalAmount === 'number' ? `$${booking.totalAmount}` : 'N/A'}
               </p>
             </div>
           </div>
@@ -215,15 +203,15 @@ export default function SpaceOwnerDashboardMVP() {
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <p className="text-gray-600">Type</p>
-                    <p className="font-medium">{booking.materialType || 'NOT FETCHING'}</p>
+                    <p className="font-medium">{booking.materialType || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-gray-600">Dimensions</p>
-                    <p className="font-medium">{booking.dimensions || 'NOT FETCHING'}</p>
+                    <p className="font-medium">{booking.dimensions || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-gray-600">Order Status</p>
-                    <p className="font-medium text-blue-600">{booking.materialOrderStatus || 'NOT FETCHING'}</p>
+                    <p className="font-medium text-blue-600">{booking.materialOrderStatus || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-gray-600">Revenue Split</p>
@@ -285,7 +273,7 @@ export default function SpaceOwnerDashboardMVP() {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-gray-900">
-                {listing.name || 'NOT FETCHING - Listing Name'}
+                {listing.name || 'Listing Name'}
               </h3>
               {listing.verificationBadge && (
                 <div className="bg-green-100 p-1 rounded-full">
@@ -293,36 +281,36 @@ export default function SpaceOwnerDashboardMVP() {
                 </div>
               )}
             </div>
-            <p className="text-sm text-gray-600">{listing.type || 'NOT FETCHING - Type'}</p>
+            <p className="text-sm text-gray-600">{listing.type || 'Type'}</p>
           </div>
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
             listing.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
           }`}>
-            {listing.status === 'active' ? 'Active' : listing.status || 'NOT FETCHING'}
+            {listing.status === 'active' ? 'Active' : listing.status || 'N/A'}
           </span>
         </div>
         
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-gray-600">Dimensions</span>
-            <span className="font-medium">{listing.dimensions || 'NOT FETCHING'}</span>
+            <span className="font-medium">{listing.dimensions || 'N/A'}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600">Monthly Price</span>
             <span className="font-bold text-gray-900">
-              {typeof listing.price === 'number' ? `$${listing.price}` : 'NOT FETCHING'}
+              {typeof listing.price === 'number' ? `$${listing.price}` : 'N/A'}
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600">Est. Material Cost</span>
             <span className="font-medium text-blue-600">
-              {typeof listing.estimatedMaterialCost === 'number' ? `$${listing.estimatedMaterialCost}` : 'NOT FETCHING'}
+              {typeof listing.estimatedMaterialCost === 'number' ? `$${listing.estimatedMaterialCost}` : 'N/A'}
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600">Access Level</span>
             <span className="font-medium">
-              {listing.accessDifficulty ? difficultyLabels[listing.accessDifficulty - 1] : 'NOT FETCHING'}
+              {listing.accessDifficulty ? difficultyLabels[listing.accessDifficulty - 1] : 'N/A'}
             </span>
           </div>
         </div>
@@ -338,7 +326,7 @@ export default function SpaceOwnerDashboardMVP() {
                 </span>
               ))
             ) : (
-              <span className="text-red-500 text-xs">NOT FETCHING - Materials</span>
+              <span className="text-gray-500 text-xs">No materials specified</span>
             )}
           </div>
         </div>
@@ -366,7 +354,7 @@ export default function SpaceOwnerDashboardMVP() {
                 <p className="font-medium text-blue-900">Window Cling Installation</p>
                 <p className="text-sm text-blue-700 mt-1">
                   Difficulty: Easy | Time: ~{installation?.estimatedTime || 30} minutes | 
-                  Tools Required: {installation?.requiredTools?.join(', ') || 'NOT FETCHING'}
+                  Tools Required: {installation?.requiredTools?.join(', ') || 'Basic tools'}
                 </p>
               </div>
             </div>

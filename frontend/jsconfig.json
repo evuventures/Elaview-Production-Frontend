@@ -11,6 +11,6 @@
     "esModuleInterop": true,
     "typeRoots": ["./node_modules/@types", "./src/types"]
   },
-  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx", "src/types/**/*.d.ts"],
+  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx", "src/types/**/*.d.ts", "LEGACY/TestMapPage.tsx"],
   "exclude": ["node_modules", "dist", "build"]
 } 

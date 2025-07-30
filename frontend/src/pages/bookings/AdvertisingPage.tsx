@@ -9,28 +9,8 @@ import {
   Camera, ChevronRight, X, Plus
 } from 'lucide-react';
 
-// Import your apiClient
-// import apiClient from '@/api/apiClient';
-
-// For demo purposes, mock the apiClient
-const apiClient = {
-  getAdvertiserDashboard: async () => {
-    console.log('🚨 NOT FETCHING - Using mock apiClient. Import real apiClient!');
-    throw new Error('NOT FETCHING - Real apiClient not imported');
-  },
-  getMaterialsCatalog: async () => {
-    console.log('🚨 NOT FETCHING - Using mock apiClient. Import real apiClient!');
-    throw new Error('NOT FETCHING - Real apiClient not imported');
-  },
-  searchAvailableSpaces: async () => {
-    console.log('🚨 NOT FETCHING - Using mock apiClient. Import real apiClient!');
-    throw new Error('NOT FETCHING - Real apiClient not imported');
-  },
-  createBookingWithMaterials: async (data) => {
-    console.log('🚨 NOT FETCHING - Would create booking with:', data);
-    throw new Error('NOT FETCHING - Real apiClient not imported');
-  }
-};
+// ✅ FIXED: Import real apiClient instead of mock
+import apiClient from '../../api/apiClient.js';
 
 export default function AdvertiserDashboardMVP() {
   const { user, isLoaded: userLoaded } = useUser();
@@ -104,12 +84,12 @@ export default function AdvertiserDashboardMVP() {
       console.error('❌ Dashboard error:', err);
       setError('Failed to load dashboard data. Please try again.');
       
-      // Show NOT FETCHING indicators
+      // Show fallback data for development
       setStats({
-        totalSpent: 'NOT FETCHING',
-        activeCampaigns: 'NOT FETCHING',
-        pendingMaterials: 'NOT FETCHING',
-        completedCampaigns: 'NOT FETCHING'
+        totalSpent: 0,
+        activeCampaigns: 0,
+        pendingMaterials: 0,
+        completedCampaigns: 0
       });
     } finally {
       setIsLoading(false);
@@ -236,11 +216,7 @@ export default function AdvertiserDashboardMVP() {
           )}
         </div>
         <p className="text-2xl font-bold text-gray-900">
-          {value === 'NOT FETCHING' ? (
-            <span className="text-red-500 text-sm">NOT FETCHING</span>
-          ) : (
-            typeof value === 'number' && label.includes('Spent') ? `$${value.toLocaleString()}` : value
-          )}
+          {typeof value === 'number' && label.includes('Spent') ? `$${value.toLocaleString()}` : value}
         </p>
         <p className="text-sm text-gray-600">{label}</p>
         {subValue && <p className="text-xs text-gray-500 mt-1">{subValue}</p>}
@@ -259,28 +235,28 @@ export default function AdvertiserDashboardMVP() {
         />
         <div className="p-4">
           <h3 className="font-semibold text-gray-900 mb-1">
-            {space.name || 'NOT FETCHING - Space Name'}
+            {space.name || 'Space Name'}
           </h3>
           <p className="text-sm text-gray-600 mb-3 flex items-center">
             <MapPin className="w-4 h-4 mr-1" />
-            {space.location || 'NOT FETCHING - Location'}
+            {space.location || 'Location'}
           </p>
           
           <div className="space-y-2 text-sm mb-4">
             <div className="flex justify-between">
               <span className="text-gray-600">Dimensions:</span>
-              <span className="font-medium">{space.dimensions || 'NOT FETCHING'}</span>
+              <span className="font-medium">{space.dimensions || 'N/A'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Space Rental:</span>
               <span className="font-medium">
-                {typeof space.price === 'number' ? `$${space.price}/month` : 'NOT FETCHING'}
+                {typeof space.price === 'number' ? `$${space.price}/month` : 'N/A'}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Est. Materials:</span>
               <span className="font-medium text-blue-600">
-                {typeof space.estimatedMaterialCost === 'number' ? `$${space.estimatedMaterialCost}` : 'NOT FETCHING'}
+                {typeof space.estimatedMaterialCost === 'number' ? `$${space.estimatedMaterialCost}` : 'N/A'}
               </span>
             </div>
             <div className="pt-2 border-t">
@@ -288,7 +264,7 @@ export default function AdvertiserDashboardMVP() {
               <span className="font-bold text-lg text-green-600 float-right">
                 {typeof space.price === 'number' && typeof space.estimatedMaterialCost === 'number' 
                   ? `$${space.price + space.estimatedMaterialCost}`
-                  : 'NOT FETCHING'}
+                  : 'N/A'}
               </span>
             </div>
           </div>
@@ -353,11 +329,11 @@ export default function AdvertiserDashboardMVP() {
           <div className="flex justify-between items-start mb-3">
             <div>
               <h3 className="font-semibold text-gray-900">
-                {booking.spaceName || 'NOT FETCHING - Space Name'}
+                {booking.spaceName || 'Space Name'}
               </h3>
               <p className="text-sm text-gray-600 flex items-center mt-1">
                 <MapPin className="w-3 h-3 mr-1" />
-                {booking.location || 'NOT FETCHING - Location'}
+                {booking.location || 'Location'}
               </p>
             </div>
             {getStatusBadge(booking.status || 'active')}
@@ -369,13 +345,13 @@ export default function AdvertiserDashboardMVP() {
               <p className="font-medium">
                 {booking.startDate && booking.endDate 
                   ? `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}`
-                  : 'NOT FETCHING - Dates'}
+                  : 'N/A'}
               </p>
             </div>
             <div>
               <p className="text-gray-600">Total Cost</p>
               <p className="font-bold text-green-600">
-                {typeof booking.totalCost === 'number' ? `$${booking.totalCost}` : 'NOT FETCHING'}
+                {typeof booking.totalCost === 'number' ? `$${booking.totalCost}` : 'N/A'}
               </p>
             </div>
           </div>
@@ -424,19 +400,19 @@ export default function AdvertiserDashboardMVP() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <p className="text-gray-600">Type</p>
-                      <p className="font-medium">{booking.materialType || 'NOT FETCHING'}</p>
+                      <p className="font-medium">{booking.materialType || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-gray-600">Dimensions</p>
-                      <p className="font-medium">{booking.dimensions || 'NOT FETCHING'}</p>
+                      <p className="font-medium">{booking.dimensions || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-gray-600">Order Status</p>
-                      <p className="font-medium text-blue-600">{booking.materialStatus || 'NOT FETCHING'}</p>
+                      <p className="font-medium text-blue-600">{booking.materialStatus || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-gray-600">Installation</p>
-                      <p className="font-medium">{booking.installationStatus || 'NOT FETCHING'}</p>
+                      <p className="font-medium">{booking.installationStatus || 'N/A'}</p>
                     </div>
                   </div>
                   {booking.trackingNumber && (
@@ -531,25 +507,25 @@ export default function AdvertiserDashboardMVP() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-gray-600">Location</p>
-                    <p className="font-medium">{selectedSpace.name || 'NOT FETCHING'}</p>
-                    <p className="text-xs text-gray-500">{selectedSpace.address || 'NOT FETCHING'}</p>
+                    <p className="font-medium">{selectedSpace.name || 'N/A'}</p>
+                    <p className="text-xs text-gray-500">{selectedSpace.address || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-gray-600">Space Details</p>
-                    <p className="font-medium">{selectedSpace.dimensions || 'NOT FETCHING'}</p>
+                    <p className="font-medium">{selectedSpace.dimensions || 'N/A'}</p>
                     <p className="text-xs text-gray-500">
-                      {selectedSpace.surfaceType?.replace(/_/g, ' ') || 'NOT FETCHING'}
+                      {selectedSpace.surfaceType?.replace(/_/g, ' ') || 'N/A'}
                     </p>
                   </div>
                   <div>
                     <p className="text-gray-600">Monthly Rate</p>
                     <p className="font-medium">
-                      {typeof selectedSpace.price === 'number' ? `$${selectedSpace.price}` : 'NOT FETCHING'}
+                      {typeof selectedSpace.price === 'number' ? `$${selectedSpace.price}` : 'N/A'}
                     </p>
                   </div>
                   <div>
                     <p className="text-gray-600">Availability</p>
-                    <p className="font-medium text-green-600">{selectedSpace.availability || 'NOT FETCHING'}</p>
+                    <p className="font-medium text-green-600">{selectedSpace.availability || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -590,10 +566,10 @@ export default function AdvertiserDashboardMVP() {
                             className="w-16 h-16 rounded object-cover mr-3"
                           />
                           <div className="flex-1">
-                            <p className="font-medium">{material.name || 'NOT FETCHING'}</p>
-                            <p className="text-sm text-gray-600 mt-1">{material.description || 'NOT FETCHING'}</p>
+                            <p className="font-medium">{material.name || 'N/A'}</p>
+                            <p className="text-sm text-gray-600 mt-1">{material.description || 'N/A'}</p>
                             <div className="mt-2 text-xs text-gray-500">
-                              <p>Installation: {material.skillLevel?.replace(/_/g, ' ').toLowerCase() || 'NOT FETCHING'}</p>
+                              <p>Installation: {material.skillLevel?.replace(/_/g, ' ').toLowerCase() || 'N/A'}</p>
                               <p className="font-medium text-blue-600">
                                 ${material.pricePerUnit || 'N/A'}/sq ft
                               </p>
@@ -606,7 +582,6 @@ export default function AdvertiserDashboardMVP() {
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <p>No compatible materials available</p>
-                    <p className="text-sm text-red-500 mt-2">NOT FETCHING - Materials data</p>
                   </div>
                 )}
               </div>
@@ -841,7 +816,6 @@ export default function AdvertiserDashboardMVP() {
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <p>No spaces available</p>
-                  <p className="text-sm text-red-500 mt-2">NOT FETCHING - Space data</p>
                 </div>
               )}
             </div>

@@ -18,7 +18,7 @@ import Checkout from "./payments/Checkout.jsx";
 import CampaignDetails from "./campaigns/CampaignDetails.jsx";
 import PaymentTest from "./payments/PaymentTest.jsx";
 import ProtectedRoute from "../components/auth/ProtectedRoute.jsx";
-import Search from "./search/Search.jsx";
+// import Search from "../../LEGACY/search/Search.js";
 import SignInPage from "./auth/SignIn.jsx";
 import SignUpPage from "./auth/SignUp.jsx";
 import LearnMore from "./learn-more/LearnMore.jsx"; // ✅ NEW: Learn More page
@@ -27,7 +27,7 @@ import { ChatBotProvider } from "@/contexts/ChatBotContext";
 // 🧪 TEMPORARY DEBUG IMPORTS - Remove after fixing Map component
 import ApiDebugTest from "@/dev/debug/ApiDebugTest.jsx";
 import MinimalTestMap from "@/dev/debug/MinimalTestMap.tsx";
-import TestMapPage from '@/pages/test/TestMapPage.tsx';
+// import TestMapPage from 'LEGACY/TestMapPage.js';
 
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation, useParams } from 'react-router-dom';
 import { useEffect } from 'react';
@@ -51,7 +51,7 @@ const PAGES = {
     Checkout: Checkout,
     CampaignDetails: CampaignDetails,
     PaymentTest: PaymentTest,
-    Search: Search,
+    // Search: Search,
     LearnMore: LearnMore, // ✅ NEW: Learn More page
     // 🧪 TEMPORARY DEBUG PAGES
     ApiDebugTest: ApiDebugTest,
@@ -129,11 +129,11 @@ function PagesContent() {
                     <Help key="help-component" />
                 </Layout>
             } />
-            <Route path="/search" element={
+            {/* <Route path="/search" element={
                 <Layout currentPageName="Search" key="search-page">
                     <Search key="search-component" />
                 </Layout>
-            } />
+            } /> */}
             
             {/* ✅ PROTECTED ROUTES - Authentication required */}
             <Route path="/dashboard" element={
@@ -267,7 +267,7 @@ function PagesContent() {
                 </ProtectedRoute>
             } />
 
-            <Route path="/test-map" element={<TestMapPage />} />
+            
 
             {/* ✅ LEGACY ROUTE REDIRECTS - Handle old uppercase routes */}
             <Route path="/Map" element={<Navigate to="/browse" replace />} />
@@ -276,7 +276,7 @@ function PagesContent() {
             <Route path="/Profile" element={<Navigate to="/profile" replace />} />
             <Route path="/Invoices" element={<Navigate to="/invoices" replace />} />
             <Route path="/Help" element={<Navigate to="/help" replace />} />
-            <Route path="/Search" element={<Navigate to="/search" replace />} />
+            {/* <Route path="/Search" element={<Navigate to="/search" replace />} /> */}
             
         </Routes>
     );
