@@ -1,11 +1,11 @@
 import Layout from "../components/layout/Layout.tsx";
 import CheckoutPage from "./checkout/CheckoutPage.jsx"; // ✅ FIXED: Renamed from Bookings to CheckoutPage for clarity
-import AdvertisingPage from "./bookings/AdvertisingPage.tsx"; // ✅ NEW: Import the bookings management page
+import AdvertisingPage from "./dashboard/advertiser/AdvertiserDashboard.tsx"; // ✅ NEW: Import the bookings management page
 import Map from "./browse/BrowsePage.jsx";
 import Messages from "./messages/Messages.tsx";
 import Profile from "./user/Profile.jsx";
 import Help from "./help/Help.jsx";
-import Dashboard from "./dashboard/Dashboard.tsx";
+import Dashboard from "./dashboard/owner/OwnerDashboard.tsx";
 import Invoices from "./payments/Invoices.jsx";
 import BookingManagement from "./bookings/BookingManagement.jsx";
 import CreateCampaign from "./campaigns/CreateCampaign.jsx";

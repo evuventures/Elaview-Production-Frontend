@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 // ✅ FIXED: Import real apiClient instead of mock
-import apiClient from '../../api/apiClient.js';
+import apiClient from '../../../api/apiClient.js';
 
 export default function SpaceOwnerDashboardMVP() {
   const { user, isLoaded: userLoaded } = useUser();

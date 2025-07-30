@@ -1,5 +1,5 @@
 // Enhanced Navigation with Working Notifications - Elaview Design System
-// ✅ UPDATED: Uses NotificationDropdown component for cleaner code
+// ✅ OPTIMIZED: 3-minute polling, better throttling, rate limit handling
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
@@ -35,16 +35,18 @@ const DesktopTopNavV2 = ({
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
-  // 🔔 NEW: Simplified notification state (count only - dropdown handles the rest)
+  // ✅ OPTIMIZED: Notification state with better rate limiting
+  const [notifications, setNotifications] = useState([]);
   const [notificationCount, setNotificationCount] = useState(0);
   const [lastFetchTime, setLastFetchTime] = useState(null);
+  const [isRateLimited, setIsRateLimited] = useState(false);
 
   // Role-specific navigation items
   const getNavigationItems = (role) => {
     if (role === 'seller') {
       return [
         {
-          title: 'Dashboard',
+          title: 'My Spaces',
           url: '/dashboard',
           icon: LayoutDashboard,
           badge: pendingInvoices || 0
@@ -65,7 +67,7 @@ const DesktopTopNavV2 = ({
     } else {
       return [
         {
-          title: 'Advertise',
+          title: 'Ad Manager',
           url: '/advertise',
           icon: CalendarIcon,
           badge: actionItemsCount || 0
@@ -88,13 +90,14 @@ const DesktopTopNavV2 = ({
 
   const navigationItems = getNavigationItems(userRole);
 
-  // 🔔 NEW: Fetch notification count only (NotificationDropdown handles full notifications)
+  // ✅ OPTIMIZED: Fetch notification count with better throttling and rate limit handling
   const fetchNotificationCount = async (force = false) => {
-    if (!isSignedIn) return;
+    if (!isSignedIn || isRateLimited) return;
     
-    // Avoid too frequent requests (max every 30 seconds unless forced)
+    // ✅ OPTIMIZED: Avoid too frequent requests (max every 2 minutes unless forced)
     const now = Date.now();
-    if (!force && lastFetchTime && (now - lastFetchTime) < 30000) {
+    if (!force && lastFetchTime && (now - lastFetchTime) < 120000) {
+      console.log('⏳ Notification fetch throttled (< 2 minutes since last fetch)');
       return;
     }
 
@@ -104,26 +107,74 @@ const DesktopTopNavV2 = ({
       if (response.success) {
         setNotificationCount(response.count || 0);
         setLastFetchTime(now);
+        setIsRateLimited(false); // Reset rate limit flag on success
         console.log('✅ Notification count fetched:', response.count);
       }
     } catch (error) {
       console.error('❌ Failed to fetch notification count:', error);
+      
+      // ✅ OPTIMIZED: Handle rate limiting specifically
+      if (error.message.includes('429')) {
+        console.warn('🚫 Rate limited - pausing notification fetching for 5 minutes');
+        setIsRateLimited(true);
+        
+        // Reset rate limit flag after 5 minutes
+        setTimeout(() => {
+          setIsRateLimited(false);
+          console.log('✅ Rate limit reset - resuming notification fetching');
+        }, 300000); // 5 minutes
+      }
     }
   };
 
-  // 🔔 NEW: Handle notification actions (called from NotificationDropdown)
+  // ✅ OPTIMIZED: Fetch full notifications with rate limit protection
+  const fetchFullNotifications = async () => {
+    if (!isSignedIn || isRateLimited) {
+      return { notifications: [], count: notificationCount };
+    }
+
+    try {
+      const response = await apiClient.getUnreadNotifications();
+      
+      if (response.success) {
+        const fetchedNotifications = response.notifications || [];
+        setNotifications(fetchedNotifications);
+        setNotificationCount(response.count || 0);
+        console.log('✅ Full notifications fetched:', fetchedNotifications.length);
+        return { notifications: fetchedNotifications, count: response.count || 0 };
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch full notifications:', error);
+      
+      if (error.message.includes('429')) {
+        setIsRateLimited(true);
+        setTimeout(() => setIsRateLimited(false), 300000);
+      }
+      
+      // Return cached data on error
+      return { notifications, count: notificationCount };
+    }
+    
+    return { notifications: [], count: 0 };
+  };
+
+  // ✅ OPTIMIZED: Handle notification actions with local state updates
   const handleNotificationAction = (action) => {
     console.log('🔔 Notification action:', action);
     
-    // Refresh notification count after any action
-    fetchNotificationCount(true);
-    
-    // Update count based on action
+    // Update local state immediately for better UX
     if (action === 'approved' || action === 'declined' || action === 'messaged') {
       setNotificationCount(prev => Math.max(0, prev - 1));
+      setNotifications(prev => prev.slice(1)); // Remove first notification
     } else if (action === 'mark_all_read') {
       setNotificationCount(0);
+      setNotifications([]);
     }
+    
+    // Refresh from server after a delay (debounced)
+    setTimeout(() => {
+      fetchNotificationCount(true);
+    }, 2000);
   };
 
   // Enhanced outside click detection
@@ -134,7 +185,6 @@ const DesktopTopNavV2 = ({
       }
     };
 
-    // Only add listener when user menu is open
     if (userMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('touchstart', handleClickOutside);
@@ -146,19 +196,24 @@ const DesktopTopNavV2 = ({
     };
   }, [userMenuOpen]);
 
-  // 🔔 NEW: Fetch notification count on auth change
+  // ✅ OPTIMIZED: Fetch notification count on auth change with 3-minute intervals
   useEffect(() => {
     if (isSignedIn) {
+      // Initial fetch
       fetchNotificationCount(true);
       
-      // Set up periodic refresh every 60 seconds
+      // ✅ OPTIMIZED: Set up periodic refresh every 3 minutes instead of 1 minute
       const interval = setInterval(() => {
-        fetchNotificationCount();
-      }, 60000);
+        if (!isRateLimited) {
+          fetchNotificationCount();
+        }
+      }, 180000); // 3 minutes = 180,000ms
       
       return () => clearInterval(interval);
     } else {
       setNotificationCount(0);
+      setNotifications([]);
+      setIsRateLimited(false);
     }
   }, [isSignedIn]);
 
@@ -214,12 +269,19 @@ const DesktopTopNavV2 = ({
     setNotificationMenuOpen(false); // Close notification menu
   };
 
-  // 🔔 NEW: Notification menu toggle (simplified)
-  const toggleNotificationMenu = (e) => {
+  // ✅ OPTIMIZED: Notification menu toggle with on-demand fetching
+  const toggleNotificationMenu = async (e) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    const wasOpen = notificationMenuOpen;
     setNotificationMenuOpen(prev => !prev);
     setUserMenuOpen(false); // Close user menu
+    
+    // Only fetch full notifications when opening the dropdown
+    if (!wasOpen && !isRateLimited) {
+      await fetchFullNotifications();
+    }
   };
 
   // Close user menu
@@ -334,22 +396,25 @@ const DesktopTopNavV2 = ({
                     {isUpdatingRole 
                       ? 'Switching...' 
                       : userRole === 'seller' 
-                        ? 'Start Advertising' 
-                        : 'Start Listing'
+                        ? 'Current Status: Space Owner' 
+                        : 'Current Status: Advertiser'
                     }
                   </span>
                 </button>
               </div>
             )}
 
-            {/* 🔔 UPDATED: Notification Bell Button (dropdown component handles the rest) */}
+            {/* ✅ OPTIMIZED: Notification Bell Button with rate limit indicator */}
             {isSignedIn && (
               <div className="relative">
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={toggleNotificationMenu}
-                  className="relative w-10 h-10 p-0 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-white/60 backdrop-blur-sm transition-all duration-200"
+                  disabled={isRateLimited}
+                  className={`relative w-10 h-10 p-0 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-white/60 backdrop-blur-sm transition-all duration-200 ${
+                    isRateLimited ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
                   <Bell className="w-4 h-4" />
                   {notificationCount > 0 && (
@@ -357,13 +422,19 @@ const DesktopTopNavV2 = ({
                       {notificationCount > 9 ? '9+' : notificationCount}
                     </div>
                   )}
+                  {isRateLimited && (
+                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-orange-500 rounded-full"></div>
+                  )}
                 </Button>
 
-                {/* 🔔 NEW: Use NotificationDropdown Component */}
+                {/* ✅ OPTIMIZED: Pass notifications as props to avoid additional API calls */}
                 <NotificationDropdown 
                   isOpen={notificationMenuOpen}
                   onClose={closeNotificationMenu}
                   onNotificationAction={handleNotificationAction}
+                  notifications={notifications}
+                  notificationCount={notificationCount}
+                  isLoading={false}
                 />
               </div>
             )}

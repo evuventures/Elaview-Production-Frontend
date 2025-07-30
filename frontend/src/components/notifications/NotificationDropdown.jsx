@@ -1,6 +1,6 @@
 // src/components/notifications/NotificationDropdown.jsx
-// Enhanced notification dropdown with booking action support
-import React, { useState, useEffect } from 'react';
+// ✅ OPTIMIZED: Accept notifications as props, no auto-fetching to prevent duplicate API calls
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -231,10 +231,10 @@ const StandardNotificationCard = ({ notification, onClick }) => {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-slate-900 line-clamp-2">
-            {notification.subject}
+            {notification.subject || notification.title || 'Notification'}
           </p>
           <p className="text-sm text-slate-600 line-clamp-2 mt-1">
-            {notification.content}
+            {notification.content || notification.message || 'You have a new notification'}
           </p>
           <p className="text-xs text-slate-500 mt-2">
             {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
@@ -245,33 +245,16 @@ const StandardNotificationCard = ({ notification, onClick }) => {
   );
 };
 
-// Main notification dropdown component
+// ✅ OPTIMIZED: Main notification dropdown component - accepts data as props
 const NotificationDropdown = ({ 
   isOpen, 
   onClose, 
-  onNotificationAction 
+  onNotificationAction,
+  notifications = [],
+  notificationCount = 0,
+  isLoading = false
 }) => {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState([]);
-  const [notificationCount, setNotificationCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Fetch notifications
-  const fetchNotifications = async () => {
-    try {
-      setIsLoading(true);
-      const response = await apiClient.getUnreadNotifications();
-      
-      if (response.success) {
-        setNotifications(response.notifications || []);
-        setNotificationCount(response.count || 0);
-      }
-    } catch (error) {
-      console.error('❌ Failed to fetch notifications:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Handle standard notification click
   const handleNotificationClick = async (notification) => {
@@ -279,25 +262,27 @@ const NotificationDropdown = ({
       const result = await apiClient.handleNotificationClick(notification);
       
       if (result.success) {
-        // Remove from local state
-        setNotifications(prev => prev.filter(n => n.id !== notification.id));
-        setNotificationCount(prev => Math.max(0, prev - 1));
-        
         // Close dropdown and navigate
         onClose();
         navigate(result.actionUrl);
+        
+        // Notify parent of the action
+        if (onNotificationAction) {
+          onNotificationAction('clicked');
+        }
       }
     } catch (error) {
       console.error('❌ Failed to handle notification click:', error);
+      
+      // Still close and navigate on error
+      onClose();
+      navigate('/messages'); // Fallback navigation
     }
   };
 
   // Handle booking action
   const handleBookingAction = (action) => {
-    // Refresh notifications after action
-    fetchNotifications();
-    
-    // Callback to parent
+    // Callback to parent to refresh data
     if (onNotificationAction) {
       onNotificationAction(action);
     }
@@ -307,20 +292,24 @@ const NotificationDropdown = ({
   const handleMarkAllAsRead = async () => {
     try {
       await apiClient.markAllNotificationsAsRead();
-      setNotifications([]);
-      setNotificationCount(0);
+      
+      // Notify parent to update state
+      if (onNotificationAction) {
+        onNotificationAction('mark_all_read');
+      }
+      
       onClose();
     } catch (error) {
       console.error('❌ Failed to mark all as read:', error);
+      
+      // Still notify parent and close on error
+      if (onNotificationAction) {
+        onNotificationAction('mark_all_read');
+      }
+      
+      onClose();
     }
   };
-
-  // Fetch notifications when dropdown opens
-  useEffect(() => {
-    if (isOpen) {
-      fetchNotifications();
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 

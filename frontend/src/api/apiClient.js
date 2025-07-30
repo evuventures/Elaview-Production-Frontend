@@ -1,6 +1,6 @@
 // src/api/apiClient.js
 // API client updated to match your ACTUAL database structure
-// ✅ FIXED: Added missing getSpaces, getSpaceOwnerDashboard, getAdvertiserDashboard methods
+// ✅ OPTIMIZED: No retries on 429 errors, reduced request load
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const API_TIMEOUT = 30000;
@@ -60,11 +60,17 @@ class ApiClient {
       if (!response.ok) {
         console.log(`❌ API Error Response: ${response.status} ${response.statusText}`);
         
-        if (response.status >= 500 && attempt < maxAttempts) {
+        // ✅ OPTIMIZATION: Don't retry 429 (rate limit) or 4xx errors
+        if (response.status >= 500 && response.status !== 429 && attempt < maxAttempts) {
           const delay = Math.pow(2, attempt) * 1000;
           console.log(`⏳ Retrying in ${delay}ms (attempt ${attempt + 1}/${maxAttempts})`);
           await new Promise(resolve => setTimeout(resolve, delay));
           return this.request(endpoint, method, data, attempt + 1, maxAttempts);
+        }
+        
+        // ✅ OPTIMIZATION: Log rate limit specifically
+        if (response.status === 429) {
+          console.warn('🚫 Rate limit hit - not retrying:', endpoint);
         }
         
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -75,7 +81,8 @@ class ApiClient {
       return result;
 
     } catch (error) {
-      if (attempt < maxAttempts && !error.message.includes('aborted')) {
+      // ✅ OPTIMIZATION: Don't retry rate limit errors or aborted requests
+      if (attempt < maxAttempts && !error.message.includes('aborted') && !error.message.includes('429')) {
         const delay = Math.pow(2, attempt) * 1000;
         console.log(`⏳ Retrying in ${delay}ms (attempt ${attempt + 1}/${maxAttempts})`);
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -180,9 +187,7 @@ class ApiClient {
   }
 
   // ✅ SPACES = AREAS (aliases for backward compatibility)
-  // These methods fix the "getSpaces is not a function" error!
   async getSpaces(params = {}) {
-    // Spaces and areas are the same thing - just call getAreas()
     console.log('🔄 getSpaces() called - routing to getAreas()');
     return this.getAreas(params);
   }
@@ -251,6 +256,14 @@ class ApiClient {
     return this.delete(`/bookings/${id}`);
   }
 
+  async approveBooking(id) {
+    return this.patch(`/bookings/${id}/approve`);
+  }
+
+  async declineBooking(id, reason = '') {
+    return this.patch(`/bookings/${id}/decline`, { reason });
+  }
+
   // ✅ MESSAGES (matches your actual schema - recipientId, conversationId)
   async getMessages(params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -295,7 +308,7 @@ class ApiClient {
     return this.delete(`/invoices/${id}`);
   }
 
-  // ✅ DASHBOARD METHODS (fixes the "NOT FETCHING" errors!)
+  // ✅ DASHBOARD METHODS
   async getSpaceOwnerDashboard() {
     console.log('📊 Fetching space owner dashboard...');
     return this.get('/dashboard/space-owner');
@@ -426,7 +439,7 @@ class ApiClient {
     return this.post('/payment-reminders', data);
   }
 
-  // ✅ NOTIFICATIONS (NEW - fixes your 500 errors!)
+  // ✅ NOTIFICATIONS (OPTIMIZED - single call methods)
   async getNotifications(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     return this.get(`/notifications${queryString ? `?${queryString}` : ''}`);
@@ -450,6 +463,26 @@ class ApiClient {
 
   async createNotification(data) {
     return this.post('/notifications', data);
+  }
+
+  async handleNotificationClick(notification) {
+    // Mark as read and return action URL
+    await this.markNotificationAsRead(notification.id);
+    
+    // Determine where to navigate based on notification type
+    const messageData = notification.messageData ? JSON.parse(notification.messageData) : {};
+    
+    switch (messageData.action) {
+      case 'booking_approved':
+      case 'booking_declined':
+        return { success: true, actionUrl: '/dashboard' };
+      case 'payment_reminder':
+        return { success: true, actionUrl: '/invoices' };
+      case 'new_message':
+        return { success: true, actionUrl: `/messages?conversation=${messageData.conversationId}` };
+      default:
+        return { success: true, actionUrl: '/messages' };
+    }
   }
 
   // ✅ MESSAGE REACTIONS & ATTACHMENTS (matches your actual schema)
