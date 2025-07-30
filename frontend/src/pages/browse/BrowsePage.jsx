@@ -90,71 +90,106 @@ export default function BrowsePage() {
   }, []);
 
   // ✅ API call to backend using the working apiClient
-  const loadPropertiesData = async () => {
-    if (!isMountedRef.current) return;
+ // ✅ FIXED: Updated loadPropertiesData function to handle real API structure
+// Replace the loadPropertiesData function in your BrowsePage.jsx with this:
+
+const loadPropertiesData = async () => {
+  if (!isMountedRef.current) return;
+  
+  setIsLoading(true);
+  setError(null);
+  
+  try {
+    console.log('🗺️ Loading spaces from API...');
     
-    setIsLoading(true);
-    setError(null);
+    // ✅ FIXED: Use getAreas() which calls /api/areas and returns advertising_areas directly
+    const response = await apiClient.getAreas();
     
-    try {
-      console.log('🗺️ Loading properties from API...');
-      
-      // Use the working apiClient.getSpaces() method that connects to Railway
-      const response = await apiClient.getSpaces();
-      
-      if (!isMountedRef.current) {
-        console.log('🗺️ Component unmounted during loading, aborting');
-        return;
-      }
-
-      // Handle response format (check if it has success/data structure)
-      const propertiesData = response.success ? response.data : response;
-      console.log(`🏢 API returned ${propertiesData.length} properties`);
-
-      // Filter properties that have coordinates AND advertising areas
-      const validProperties = propertiesData.filter(property => {
-        const coords = getPropertyCoords(property);
-        const hasSpaces = property.advertising_areas && property.advertising_areas.length > 0;
-        return coords !== null && hasSpaces;
-      });
-
-      // Flatten all spaces from all properties
-      const flattenedSpaces = [];
-      validProperties.forEach(property => {
-        property.advertising_areas.forEach(area => {
-          flattenedSpaces.push({
-            ...area,
-            // Add property context to each space
-            propertyId: property.id,
-            propertyName: getPropertyName(property),
-            propertyAddress: getPropertyAddress(property),
-            propertyCoords: getPropertyCoords(property),
-            propertyType: property.propertyType,
-            property: property,
-            distance: null
-          });
-        });
-      });
-
-      console.log(`🏢 Processed ${validProperties.length} properties with ${flattenedSpaces.length} total spaces`);
-      
-      if (isMountedRef.current) {
-        setProperties(validProperties);
-        setAllSpaces(flattenedSpaces);
-      }
-    } catch (error) {
-      console.error("❌ Error loading data:", error);
-      if (isMountedRef.current) {
-        setError(error.message);
-        setProperties([]);
-        setAllSpaces([]);
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
+    if (!isMountedRef.current) {
+      console.log('🗺️ Component unmounted during loading, aborting');
+      return;
     }
-  };
+
+    // Handle response format (check if it has success/data structure)
+    const areasData = response.success ? response.data : response;
+    console.log(`🎯 API returned ${areasData.length} advertising areas`);
+
+    if (!Array.isArray(areasData)) {
+      throw new Error('API did not return an array of areas');
+    }
+
+    // ✅ FIXED: Process advertising areas directly (they already have property data included)
+    const validAreas = areasData.filter(area => {
+      // Check if area has property and coordinates
+      const hasProperty = area.property && area.property.id;
+      const hasCoords = area.coordinates && 
+                       (area.coordinates.lat || area.property?.latitude) && 
+                       (area.coordinates.lng || area.property?.longitude);
+      const isActive = area.isActive && area.status === 'active';
+      
+      return hasProperty && hasCoords && isActive;
+    });
+
+    // ✅ FIXED: Create properties map from areas and flatten spaces
+    const propertiesMap = new Map();
+    const flattenedSpaces = [];
+
+    validAreas.forEach(area => {
+      // Get coordinates from area or fallback to property
+      const coords = {
+        lat: area.coordinates?.lat || area.property?.latitude,
+        lng: area.coordinates?.lng || area.property?.longitude
+      };
+
+      // Add property to map if not already there
+      if (!propertiesMap.has(area.property.id)) {
+        propertiesMap.set(area.property.id, {
+          ...area.property,
+          latitude: coords.lat,
+          longitude: coords.lng,
+          advertising_areas: []
+        });
+      }
+
+      // Add area to property's advertising_areas
+      propertiesMap.get(area.property.id).advertising_areas.push(area);
+
+      // Create flattened space object
+      flattenedSpaces.push({
+        ...area,
+        // Add property context to each space
+        propertyId: area.property.id,
+        propertyName: getPropertyName(area.property),
+        propertyAddress: getPropertyAddress(area.property),
+        propertyCoords: coords,
+        propertyType: area.property.propertyType,
+        property: area.property,
+        distance: null
+      });
+    });
+
+    // Convert properties map to array
+    const validProperties = Array.from(propertiesMap.values());
+
+    console.log(`🏢 Processed ${validProperties.length} properties with ${flattenedSpaces.length} total spaces`);
+    
+    if (isMountedRef.current) {
+      setProperties(validProperties);
+      setAllSpaces(flattenedSpaces);
+    }
+  } catch (error) {
+    console.error("❌ Error loading data:", error);
+    if (isMountedRef.current) {
+      setError(error.message);
+      setProperties([]);
+      setAllSpaces([]);
+    }
+  } finally {
+    if (isMountedRef.current) {
+      setIsLoading(false);
+    }
+  }
+};
 
   // Component mount/unmount
   useEffect(() => {

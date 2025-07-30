@@ -1,3 +1,6 @@
+// src/pages/browse/utils/areaHelpers.js
+// ✅ UPDATED: Handle real data structure with monthly pricing
+
 import { 
   Building2, Camera, Zap, Eye, Navigation, Monitor, 
   Zap as Lightning 
@@ -9,6 +12,7 @@ import {
  * @returns {string} Area display name
  */
 export const getAreaName = (area) => {
+  if (!area) return 'Unnamed Advertising Area';
   return area.name || area.title || 'Unnamed Advertising Area';
 };
 
@@ -18,8 +22,17 @@ export const getAreaName = (area) => {
  * @returns {string} Formatted type label
  */
 export const getAreaType = (area) => {
+  if (!area) return 'Advertising Area';
+  
   const type = area.type;
   const typeLabels = {
+    // ✅ MVP types from seed data
+    'storefront_window': 'Storefront Window',
+    'building_exterior': 'Building Exterior',
+    'retail_frontage': 'Retail Frontage',
+    'pole_mount': 'Pole-Mounted Display',
+    
+    // Legacy types (in case they exist)
     'billboard': 'Billboard',
     'digital_display': 'Digital Display',
     'digital_marquee': 'Digital Marquee', 
@@ -39,6 +52,7 @@ export const getAreaType = (area) => {
     'concourse_display': 'Concourse Display',
     'other': 'Other'
   };
+  
   return typeLabels[type] || (type ? type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ') : 'Advertising Area');
 };
 
@@ -48,6 +62,9 @@ export const getAreaType = (area) => {
  * @returns {string} Formatted price string
  */
 export const getAreaPrice = (area) => {
+  if (!area) return 'Price on request';
+  
+  // ✅ FIXED: Handle monthly rates from seed data
   if (area.baseRate) {
     const rateType = area.rateType || 'MONTHLY';
     
@@ -62,6 +79,7 @@ export const getAreaPrice = (area) => {
     const suffix = rateTypeMap[rateType.toUpperCase()] || 'month';
     return `$${area.baseRate}/${suffix}`;
   }
+  
   if (area.pricing) {
     try {
       const pricing = typeof area.pricing === 'string' ? JSON.parse(area.pricing) : area.pricing;
@@ -72,6 +90,7 @@ export const getAreaPrice = (area) => {
       console.warn('Error parsing area pricing:', e);
     }
   }
+  
   return 'Price on request';
 };
 
@@ -81,7 +100,22 @@ export const getAreaPrice = (area) => {
  * @returns {number} Daily price in dollars
  */
 export const getNumericPrice = (area) => {
-  if (area.baseRate) return area.baseRate;
+  if (!area) return 150;
+  
+  // ✅ FIXED: Handle monthly rates from seed data
+  if (area.baseRate) {
+    const rateType = area.rateType || 'MONTHLY';
+    
+    // Convert to daily rate based on rate type
+    switch (rateType.toUpperCase()) {
+      case 'DAILY': return area.baseRate;
+      case 'WEEKLY': return Math.round(area.baseRate / 7);
+      case 'MONTHLY': return Math.round(area.baseRate / 30);
+      case 'YEARLY': return Math.round(area.baseRate / 365);
+      default: return Math.round(area.baseRate / 30); // Default to monthly
+    }
+  }
+  
   if (area.pricing) {
     try {
       const pricing = typeof area.pricing === 'string' ? JSON.parse(area.pricing) : area.pricing;
@@ -92,6 +126,7 @@ export const getNumericPrice = (area) => {
       console.warn('Error parsing area pricing:', e);
     }
   }
+  
   return 150; // Default fallback price
 };
 
@@ -101,7 +136,11 @@ export const getNumericPrice = (area) => {
  * @returns {React.Component} Icon component
  */
 export const getAreaCategoryIcon = (area) => {
+  if (!area) return Building2;
+  
   const type = area.type?.toLowerCase() || '';
+  
+  // ✅ Updated for MVP space types
   const categories = {
     digital: { 
       icon: Lightning, 
@@ -109,11 +148,11 @@ export const getAreaCategoryIcon = (area) => {
     },
     outdoor: { 
       icon: Eye, 
-      types: ['billboard', 'coastal_billboard', 'building_wrap', 'parking_totem', 'bus_shelter'] 
+      types: ['billboard', 'coastal_billboard', 'building_wrap', 'parking_totem', 'bus_shelter', 'building_exterior', 'pole_mount'] 
     },
     retail: { 
       icon: Building2, 
-      types: ['mall_kiosk', 'window_display', 'gallery_storefront', 'lobby_display'] 
+      types: ['mall_kiosk', 'window_display', 'gallery_storefront', 'lobby_display', 'storefront_window', 'retail_frontage'] 
     },
     transit: { 
       icon: Navigation, 
@@ -130,5 +169,6 @@ export const getAreaCategoryIcon = (area) => {
       return category.icon;
     }
   }
+  
   return Building2; // Default fallback icon
 };
