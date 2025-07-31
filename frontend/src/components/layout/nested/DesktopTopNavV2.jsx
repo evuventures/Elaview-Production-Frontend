@@ -1,5 +1,5 @@
 // Enhanced Navigation with Working Notifications - Elaview Design System
-// ✅ OPTIMIZED: 3-minute polling, better throttling, rate limit handling
+// ✅ UPDATED: UI-only view switching and admin dashboard link
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
@@ -21,10 +21,10 @@ const DesktopTopNavV2 = ({
   pendingInvoices = 0, 
   actionItemsCount = 0, 
   currentUser,
-  userRole = 'buyer', // 'buyer' | 'seller'
-  onRoleChange,
-  isUpdatingRole = false,
-  canSwitchRoles = true,
+  viewMode = 'buyer', // 'buyer' | 'seller' - UI state only
+  onViewModeChange, // Function to change view mode
+  isAdmin = false, // Admin flag from database
+  canSwitchModes = true, // Always true now
   bookingsCount = 0,
   propertiesCount = 0
 }) => {
@@ -41,9 +41,9 @@ const DesktopTopNavV2 = ({
   const [lastFetchTime, setLastFetchTime] = useState(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
 
-  // Role-specific navigation items
-  const getNavigationItems = (role) => {
-    if (role === 'seller') {
+  // View-mode-specific navigation items (not role-specific)
+  const getNavigationItems = (mode) => {
+    if (mode === 'seller') {
       return [
         {
           title: 'My Spaces',
@@ -88,7 +88,7 @@ const DesktopTopNavV2 = ({
     }
   };
 
-  const navigationItems = getNavigationItems(userRole);
+  const navigationItems = getNavigationItems(viewMode);
 
   // ✅ OPTIMIZED: Fetch notification count with better throttling and rate limit handling
   const fetchNotificationCount = async (force = false) => {
@@ -217,21 +217,12 @@ const DesktopTopNavV2 = ({
     }
   }, [isSignedIn]);
 
-  // Direct role switch (no popover)
-  const handleRoleSwitch = (newRole) => {
-    if (isUpdatingRole || !onRoleChange || userRole === newRole) return;
+  // ✅ SIMPLIFIED: Direct view mode switch (no API calls!)
+  const handleViewSwitch = (newMode) => {
+    if (!onViewModeChange || viewMode === newMode) return;
     
-    console.log(`🔄 Switching role from ${userRole} to ${newRole}`);
-    onRoleChange(newRole);
-    
-    // Auto-redirect based on role
-    setTimeout(() => {
-      if (newRole === 'seller') {
-        navigate('/dashboard');
-      } else if (newRole === 'buyer') {
-        navigate('/browse');
-      }
-    }, 100);
+    console.log(`🔄 Switching view from ${viewMode} to ${newMode}`);
+    onViewModeChange(newMode);
   };
 
   // Handle sign out
@@ -325,7 +316,7 @@ const DesktopTopNavV2 = ({
           {/* Left Section: Logo + Navigation */}
           <div className="flex items-center gap-8">
             {/* Logo */}
-            <Link to={userRole === 'seller' ? '/dashboard' : '/browse'} className="flex items-center gap-2 group">
+            <Link to={viewMode === 'seller' ? '/dashboard' : '/browse'} className="flex items-center gap-2 group">
               <img 
                 src={elaviewLogo}
                 alt="Elaview Logo" 
@@ -366,38 +357,56 @@ const DesktopTopNavV2 = ({
                     </Link>
                   );
                 })}
+                
+                {/* ✅ NEW: Admin Dashboard Link */}
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      location.pathname.startsWith('/admin')
+                        ? 'text-purple-700 bg-purple-50 border border-purple-200 shadow-sm'
+                        : 'text-purple-600 hover:text-purple-700 hover:bg-purple-50'
+                    }`}
+                  >
+                    <Shield className="w-4 h-4" />
+                    <span className="hidden xl:inline">Admin</span>
+                    {/* Active indicator for admin */}
+                    {location.pathname.startsWith('/admin') && (
+                      <motion.div
+                        layoutId="activeIndicator"
+                        className="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-purple-500 rounded-full"
+                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                      />
+                    )}
+                  </Link>
+                )}
               </nav>
             )}
           </div>
 
-          {/* Right Section: Role Toggle + Actions + User */}
+          {/* Right Section: View Mode Toggle + Actions + User */}
           <div className="flex items-center gap-3">
             
-            {/* Single Role Toggle Button - Only for authenticated users */}
-            {isSignedIn && canSwitchRoles && (
+            {/* ✅ SIMPLIFIED: View Mode Toggle Button - No loading states! */}
+            {isSignedIn && canSwitchModes && (
               <div className="hidden md:block relative">
                 <button
-                  onClick={() => handleRoleSwitch(userRole === 'buyer' ? 'seller' : 'buyer')}
-                  disabled={isUpdatingRole}
+                  onClick={() => handleViewSwitch(viewMode === 'buyer' ? 'seller' : 'buyer')}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-white/60 backdrop-blur-sm border border-white/40 hover:bg-white/80 shadow-sm ${
-                    userRole === 'seller' 
+                    viewMode === 'seller' 
                       ? 'text-emerald-600 hover:text-emerald-700 hover:border-emerald-200' 
                       : 'text-blue-600 hover:text-blue-700 hover:border-blue-200'
-                  } ${isUpdatingRole ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  }`}
                 >
-                  {isUpdatingRole ? (
-                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                  ) : userRole === 'seller' ? (
+                  {viewMode === 'seller' ? (
                     <Building2 className="w-4 h-4" />
                   ) : (
                     <MapPin className="w-4 h-4" />
                   )}
                   <span>
-                    {isUpdatingRole 
-                      ? 'Switching...' 
-                      : userRole === 'seller' 
-                        ? 'Current Status: Space Owner' 
-                        : 'Current Status: Advertiser'
+                    {viewMode === 'seller' 
+                      ? 'Viewing as: Space Owner' 
+                      : 'Viewing as: Advertiser'
                     }
                   </span>
                 </button>
@@ -454,7 +463,8 @@ const DesktopTopNavV2 = ({
                       {currentUser.firstName}
                     </p>
                     <p className="text-xs text-slate-500 capitalize">
-                      {userRole === 'seller' ? 'Space Owner' : 'Advertiser'}
+                      {viewMode === 'seller' ? 'Space Owner View' : 'Advertiser View'}
+                      {isAdmin && ' • Admin'}
                     </p>
                   </div>
                   <ChevronDown className={`w-4 h-4 text-slate-400 transition-all duration-200 ${userMenuOpen ? 'rotate-180 text-slate-600' : 'group-hover:text-slate-600'}`} />
@@ -497,19 +507,42 @@ const DesktopTopNavV2 = ({
                             </p>
                           </div>
                         </div>
-                        <div className="mt-3">
+                        <div className="mt-3 flex gap-2">
                           <Badge className={`text-xs px-2 py-1 ${
-                            userRole === 'seller' 
+                            viewMode === 'seller' 
                               ? 'bg-teal-100 text-teal-700 border border-teal-200' 
                               : 'bg-blue-100 text-blue-700 border border-blue-200'
                           }`}>
-                            {userRole === 'seller' ? 'Space Owner' : 'Advertiser'}
+                            {viewMode === 'seller' ? 'Space Owner View' : 'Advertiser View'}
                           </Badge>
+                          {isAdmin && (
+                            <Badge className="text-xs px-2 py-1 bg-purple-100 text-purple-700 border border-purple-200">
+                              Admin
+                            </Badge>
+                          )}
                         </div>
                       </div>
 
                       {/* Menu Items */}
                       <div className="p-2">
+                        {/* ✅ Admin Dashboard Link in Menu */}
+                        {isAdmin && (
+                          <>
+                            <Link
+                              to="/admin"
+                              onClick={closeUserMenu}
+                              className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-purple-600 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200 group"
+                            >
+                              <Shield className="w-4 h-4 group-hover:text-purple-600 transition-colors" />
+                              <div className="flex-1">
+                                <div className="font-medium">Admin Dashboard</div>
+                                <div className="text-xs text-purple-500">Manage platform</div>
+                              </div>
+                            </Link>
+                            <div className="border-t border-slate-200 my-2" />
+                          </>
+                        )}
+                        
                         <Link
                           to="/profile"
                           onClick={closeUserMenu}

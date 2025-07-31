@@ -12,7 +12,7 @@ import CreateCampaign from "./campaigns/CreateCampaign.jsx";
 import CreateProperty from "./properties/CreateProperty.tsx"; // Keep the component name
 import PropertyManagement from "./properties/PropertyManagement.jsx";
 import DataSeeder from "./DataSeeder.jsx";
-import Admin from "./dashboard/Admin.tsx";
+import Admin from "./dashboard/admin/Admin.tsx";
 import EditProperty from "./properties/EditProperty.jsx";
 import Checkout from "./payments/Checkout.jsx";
 import CampaignDetails from "./campaigns/CampaignDetails.jsx";
@@ -23,6 +23,16 @@ import SignInPage from "./auth/SignIn.jsx";
 import SignUpPage from "./auth/SignUp.jsx";
 import LearnMore from "./learn-more/LearnMore.jsx"; // ✅ NEW: Learn More page
 import { ChatBotProvider } from "@/contexts/ChatBotContext";
+
+// ✅ ADMIN PAGE IMPORTS - Core Admin Pages
+import UserManagement from "./admin/UserManagement.tsx";
+import PropertyApprovals from "./admin/PropertyApprovals.tsx";
+import BookingOversight from "./admin/BookingOversight.tsx";
+
+// ✅ MATERIAL SOURCING ADMIN PAGE IMPORTS
+import MaterialCatalogManagement from "./admin/MaterialCatalogManagement.tsx";
+import MaterialOrderProcessing from "./admin/MaterialOrderProcessing.tsx";
+import ClientOnboardingSystem from "./admin/ClientOnboardingSystem.tsx";
 
 // 🧪 TEMPORARY DEBUG IMPORTS - Remove after fixing Map component
 import ApiDebugTest from "@/dev/debug/ApiDebugTest.jsx";
@@ -47,6 +57,14 @@ const PAGES = {
     PropertyManagement: PropertyManagement,
     DataSeeder: DataSeeder,
     Admin: Admin,
+    // ✅ CORE ADMIN SUB-PAGES
+    UserManagement: UserManagement,
+    PropertyApprovals: PropertyApprovals,
+    BookingOversight: BookingOversight,
+    // ✅ MATERIAL SOURCING ADMIN PAGES
+    MaterialCatalogManagement: MaterialCatalogManagement,
+    MaterialOrderProcessing: MaterialOrderProcessing,
+    ClientOnboardingSystem: ClientOnboardingSystem,
     EditProperty: EditProperty,
     Checkout: Checkout,
     CampaignDetails: CampaignDetails,
@@ -259,6 +277,57 @@ function PagesContent() {
                     </Layout>
                 </ProtectedRoute>
             } />
+            
+            {/* ✅ CORE ADMIN SUB-PAGES */}
+            <Route path="/admin/users" element={
+                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" key="admin-users-protected">
+                    <Layout currentPageName="User Management" key="admin-users-page">
+                        <UserManagement key="admin-users-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/properties" element={
+                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" key="admin-properties-protected">
+                    <Layout currentPageName="Property Approvals" key="admin-properties-page">
+                        <PropertyApprovals key="admin-properties-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/bookings" element={
+                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" key="admin-bookings-protected">
+                    <Layout currentPageName="Booking Oversight" key="admin-bookings-page">
+                        <BookingOversight key="admin-bookings-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            {/* ✅ MATERIAL SOURCING ADMIN ROUTES */}
+            <Route path="/admin/materials/catalog" element={
+                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" key="admin-materials-catalog-protected">
+                    <Layout currentPageName="Material Catalog" key="admin-materials-catalog-page">
+                        <MaterialCatalogManagement key="admin-materials-catalog-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/admin/materials/orders" element={
+                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" key="admin-materials-orders-protected">
+                    <Layout currentPageName="Material Orders" key="admin-materials-orders-page">
+                        <MaterialOrderProcessing key="admin-materials-orders-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/admin/clients/onboard" element={
+                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" key="admin-clients-onboard-protected">
+                    <Layout currentPageName="Client Onboarding" key="admin-clients-onboard-page">
+                        <ClientOnboardingSystem key="admin-clients-onboard-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+            
             <Route path="/data-seeder" element={
                 <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" key="data-seeder-protected">
                     <Layout currentPageName="DataSeeder" key="data-seeder-page">
@@ -266,8 +335,6 @@ function PagesContent() {
                     </Layout>
                 </ProtectedRoute>
             } />
-
-            
 
             {/* ✅ LEGACY ROUTE REDIRECTS - Handle old uppercase routes */}
             <Route path="/Map" element={<Navigate to="/browse" replace />} />

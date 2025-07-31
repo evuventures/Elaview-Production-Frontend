@@ -3,8 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
-import { updateUserRole } from '../../api/users/update-role';
-import apiClient from '@/api/apiClient'; // ✅ ADD: Import API client
+import apiClient from '@/api/apiClient';
 
 // Import your navigation components
 import DesktopTopNavV2 from './nested/DesktopTopNavV2';
@@ -26,101 +25,25 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     const [actionItemsCount, setActionItemsCount] = useState(0);
     const [theme, setTheme] = useState('light'); // ✅ Default to light theme for Elaview
     
-    // 🆕 ROLE STATE MANAGEMENT
-    const [userRole, setUserRole] = useState<'buyer' | 'seller'>('buyer');
-    const [isUpdatingRole, setIsUpdatingRole] = useState(false);
+    // 🆕 SIMPLIFIED ROLE STATE MANAGEMENT - UI ONLY!
+    const [viewMode, setViewMode] = useState<'buyer' | 'seller'>('buyer'); // UI state only
+    const [isAdmin, setIsAdmin] = useState(false); // Admin flag from database
     const [isLoading, setIsLoading] = useState(true);
     
     // Clerk hooks
-    const { isSignedIn, isLoaded, getToken } = useAuth();
+    const { isSignedIn, isLoaded } = useAuth();
     const { user: currentUser } = useUser();
 
-    // 🆕 MAP DATABASE ROLES TO UI ROLES
-    const mapDatabaseRoleToUI = (dbRole: string): 'buyer' | 'seller' => {
-      const roleMapping: Record<string, 'buyer' | 'seller'> = {
-        'USER': 'buyer',
-        'ADVERTISER': 'buyer',
-        'PROPERTY_OWNER': 'seller',
-        'ADMIN': 'buyer', // Default admins to buyer view
-        'SUPER_ADMIN': 'buyer'
-      };
-      return roleMapping[dbRole] || 'buyer';
-    };
-
-    // ✅ FIXED: Use API client instead of hardcoded URL
-    const fetchUserData = async () => {
-      if (!currentUser) return;
+    // 🆕 SIMPLIFIED: Just change the view mode, no API calls!
+    const handleViewModeChange = (newMode: 'buyer' | 'seller') => {
+      console.log(`🔄 Switching view from ${viewMode} to ${newMode}`);
+      setViewMode(newMode);
       
-      try {
-        console.log('📋 Fetching user data from backend...');
-        
-        // ✅ FIXED: Use API client instead of hardcoded fetch
-        const response = await apiClient.get('/users/profile');
-
-        if (response.success) {
-          const userData = response.data;
-          const backendRole = userData.role;
-          const uiRole = mapDatabaseRoleToUI(backendRole);
-          
-          console.log(`📋 User role from backend: ${backendRole} -> UI role: ${uiRole}`);
-          setUserRole(uiRole);
-        } else {
-          console.error('Failed to fetch user profile:', response.message);
-          setUserRole('buyer'); // Default fallback
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        setUserRole('buyer'); // Default fallback
-      }
-    };
-
-    // 🆕 ENHANCED ROLE CHANGE HANDLER WITH AUTO-REDIRECT
-    const handleRoleChange = async (newRole: 'buyer' | 'seller') => {
-      if (isUpdatingRole) return; // Prevent multiple calls
-      
-      const oldRole = userRole;
-      console.log(`🔄 Switching role from ${oldRole} to ${newRole}`);
-      
-      setIsUpdatingRole(true);
-      
-      // Optimistic update
-      setUserRole(newRole);
-
-      try {
-        // 🔧 FIX: Get token properly and pass it to updateUserRole
-        const token = await getToken();
-        if (!token) {
-          throw new Error('Could not get authentication token');
-        }
-        
-        const result = await updateUserRole(newRole, token);
-        
-        if (result.success) {
-          console.log('✅ Role updated successfully:', result);
-          console.log(`✅ Role successfully changed to: ${newRole}`);
-          
-          // 🆕 AUTO-REDIRECT LOGIC BASED ON NEW ROLE
-          if (newRole === 'seller') {
-            console.log('🧭 Redirecting seller to /dashboard');
-            navigate('/dashboard');
-          } else if (newRole === 'buyer') {
-            console.log('🧭 Redirecting buyer to /browse');
-            navigate('/browse');
-          }
-          
-          // Refresh user data to ensure consistency
-          await fetchUserData();
-        } else {
-          console.error('❌ Role update failed:', result.error);
-          // Revert optimistic update on failure
-          setUserRole(oldRole);
-        }
-      } catch (error) {
-        console.error('❌ Error updating role:', error);
-        // Revert optimistic update on error
-        setUserRole(oldRole);
-      } finally {
-        setIsUpdatingRole(false);
+      // Optional: Navigate to appropriate page
+      if (newMode === 'seller') {
+        navigate('/dashboard');
+      } else if (newMode === 'buyer') {
+        navigate('/browse');
       }
     };
 
@@ -134,7 +57,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     const pageTransition = {
         type: "tween" as const,
         ease: "anticipate" as const,
-        duration: 0.3 // ✅ Faster, more professional transition
+        duration: 0.3
     };
 
     // ✅ Apply light theme for Elaview
@@ -146,7 +69,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
         root.style.colorScheme = 'light';
     };
 
-    // 🆕 FETCH USER DATA ON MOUNT AND WHEN USER CHANGES
+    // 🆕 FETCH USER DATA INCLUDING isAdmin
     useEffect(() => {
         if (!isLoaded) return;
 
@@ -155,8 +78,31 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
             if (isSignedIn && currentUser) {
               console.log('User signed in:', currentUser.firstName, currentUser.lastName);
               
-              // Fetch user role from backend
-              await fetchUserData();
+              // Fetch user data from backend to get isAdmin
+              try {
+                const response = await apiClient.getUserProfile();
+                if (response.success) {
+                  const userData = response.data;
+                  console.log('📋 User data from backend:', {
+                    email: userData.email,
+                    role: userData.role,
+                    isAdmin: userData.isAdmin
+                  });
+                  
+                  // Set admin flag
+                  setIsAdmin(userData.isAdmin || false);
+                  
+                  // Set initial view mode based on role (but this is just UI preference)
+                  if (userData.role === 'PROPERTY_OWNER') {
+                    setViewMode('seller');
+                  } else {
+                    setViewMode('buyer');
+                  }
+                }
+              } catch (error) {
+                console.warn('Failed to fetch user profile:', error);
+                setIsAdmin(false);
+              }
 
               // Mock data for other counts (replace with real API calls)
               setUnreadCount(0);
@@ -168,7 +114,8 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
               applyThemeToDOM('light');
             } else {
               console.log('User not signed in');
-              setUserRole('buyer');
+              setViewMode('buyer');
+              setIsAdmin(false);
               setUnreadCount(0);
               setPendingInvoices(0);
               setActionItemsCount(0);
@@ -185,15 +132,6 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
         };
         
         loadUserData();
-        
-        // Poll for updates every 5 minutes when user is signed in
-        const interval = setInterval(() => {
-          if (isSignedIn && currentUser) {
-            fetchUserData();
-          }
-        }, 300000);
-        
-        return () => clearInterval(interval);
       }, [isLoaded, isSignedIn, currentUser]);
 
     // ✅ Elaview loading state with fallback background
@@ -227,10 +165,10 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                   pendingInvoices={pendingInvoices} 
                   actionItemsCount={actionItemsCount} 
                   currentUser={currentUser}
-                  userRole={userRole}
-                  onRoleChange={handleRoleChange}
-                  isUpdatingRole={isUpdatingRole}
-                  canSwitchRoles={true}
+                  viewMode={viewMode} // Changed from userRole
+                  onViewModeChange={handleViewModeChange} // Changed from onRoleChange
+                  isAdmin={isAdmin} // Pass admin flag
+                  canSwitchModes={true} // Always allow switching views
                 />
               ) : (
                 // ✅ Fallback header with Elaview styling
@@ -243,12 +181,17 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                           Welcome, {currentUser.firstName || currentUser.primaryEmailAddress?.emailAddress}
                         </span>
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                          userRole === 'seller' 
+                          viewMode === 'seller' 
                             ? 'bg-success-100 text-success-800' 
                             : 'bg-teal-100 text-teal-800'
                         }`}>
-                          {userRole === 'seller' ? 'Space Owner' : 'Advertiser'}
+                          {viewMode === 'seller' ? 'Space Owner View' : 'Advertiser View'}
                         </span>
+                        {isAdmin && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            Admin
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -286,16 +229,6 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                           transition={pageTransition}
                           className="w-full"
                       >
-                          {/* ✅ Role Update Notification with correct styling */}
-                          {isUpdatingRole && (
-                            <div className="fixed top-20 right-4 z-50 animate-fade-in">
-                              <div className="card card-compact bg-white border-teal-200 shadow-soft-lg flex items-center gap-3">
-                                <div className="loading-spinner w-4 h-4 text-teal-500"></div>
-                                <span className="body-small font-medium text-slate-700">Switching role...</span>
-                              </div>
-                            </div>
-                          )}
-                          
                           {/* ✅ Child Content - Unaffected by layout styling */}
                           <div className="w-full">
                             {children}
