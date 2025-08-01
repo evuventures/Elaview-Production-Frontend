@@ -36,10 +36,11 @@ interface Property {
   spaceType?: string;
   features?: string[];
   status?: string;
-  advertising_areas?: AdvertisingArea[];
+  spaces?: Space[];
 }
 
-interface AdvertisingArea {
+// MIGRATION: Renamed AdvertisingArea to Space
+interface Space {
   id: string;
   name: string;
   title?: string;
@@ -75,16 +76,18 @@ interface GoogleMapProps {
   onClick?: (event: google.maps.MapMouseEvent) => void;
   marker?: LatLng | null;
   showPropertyMarkers?: boolean;
-  advertisingAreas?: AdvertisingArea[];
-  onAreaClick?: (area: AdvertisingArea) => void;
+  spaces?: Space[];
+  advertisingAreas?: Space[]; // DEPRECATED: Use spaces instead
+  onSpaceClick?: (space: Space) => void;
+  onAreaClick?: (area: Space) => void; // DEPRECATED: Use onSpaceClick
   showAreaMarkers?: boolean;
 }
 
 // ✅ CLEAN: Simplified Space Dropdown
 interface SpaceDropdownProps {
-  spaces: AdvertisingArea[];
+  spaces: Space[];
   position: { lat: number; lng: number };
-  onSpaceClick: (space: AdvertisingArea) => void;
+  onSpaceClick: (space: Space) => void;
   onClose: () => void;
   map: google.maps.Map;
 }
@@ -150,17 +153,17 @@ const SpaceDropdown: React.FC<SpaceDropdownProps> = ({
 
   const currentSpace = spaces[currentIndex];
 
-  const getAreaPrice = (area: AdvertisingArea) => {
-    if (area.baseRate) {
-      const rateType = area.rateType || 'MONTHLY';
+  const getSpacePrice = (space: Space) => {
+    if (space.baseRate) {
+      const rateType = space.rateType || 'MONTHLY';
       const suffix = rateType.toLowerCase().replace('ly', '').replace('y', 'y');
-      return `$${area.baseRate}/${suffix}`;
+      return `$${space.baseRate}/${suffix}`;
     }
     return 'Contact for pricing';
   };
 
-  const getAreaName = (area: AdvertisingArea) => {
-    return area.name || area.title || 'Advertising Space';
+  const getSpaceName = (space: Space) => {
+    return space.name || space.title || 'Advertising Space';
   };
 
   if (!pixelPosition || !currentSpace) return null;
@@ -192,7 +195,7 @@ const SpaceDropdown: React.FC<SpaceDropdownProps> = ({
       <div className="space-y-3">
         <div>
           <h3 className="property-title text-sm mb-1">
-            {getAreaName(currentSpace)}
+            {getSpaceName(currentSpace)}
           </h3>
           <p className="caption text-slate-500 flex items-center gap-1">
             <MapPin className="w-3 h-3" />
@@ -202,7 +205,7 @@ const SpaceDropdown: React.FC<SpaceDropdownProps> = ({
 
         <div className="flex items-center justify-between">
           <span className="property-price bg-teal-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-            {getAreaPrice(currentSpace)}
+            {getSpacePrice(currentSpace)}
           </span>
           <Button 
             onClick={() => onSpaceClick(currentSpace)}
@@ -260,8 +263,10 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   onClick,
   marker,
   showPropertyMarkers = true,
-  advertisingAreas = [],
-  onAreaClick,
+  spaces = [],
+  advertisingAreas = [], // DEPRECATED: Use spaces instead
+  onSpaceClick,
+  onAreaClick, // DEPRECATED: Use onSpaceClick instead
   showAreaMarkers = true,
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -275,7 +280,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   
   // ✅ Simplified dropdown state
   const [activeDropdown, setActiveDropdown] = useState<{
-    spaces: AdvertisingArea[];
+    spaces: Space[];
     position: LatLng;
   } | null>(null);
 
@@ -424,7 +429,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
 
       try {
         const propertiesWithSpaces = properties.filter(property => 
-          property.advertising_areas && property.advertising_areas.length > 0
+          property.spaces && property.spaces.length > 0
         );
         
         const { AdvancedMarkerElement } = await window.google.maps.importLibrary("marker");
@@ -442,7 +447,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
 
           if (!position) continue;
 
-          const spaceCount = property.advertising_areas?.length || 0;
+          const spaceCount = property.spaces?.length || 0;
           
           // ✅ CLEAN: Simple marker design with Deep Teal
           const markerElement = document.createElement('div');
@@ -463,7 +468,9 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
           marker.addListener('click', (e: any) => {
             e.stop();
             
-            const propertySpaces = advertisingAreas.filter(space => 
+            // MIGRATION: Use spaces or fallback to advertisingAreas for backward compatibility
+            const allSpaces = spaces.length > 0 ? spaces : advertisingAreas;
+            const propertySpaces = allSpaces.filter(space => 
               space.propertyId === property.id || 
               space.property?.id === property.id ||
               (space.propertyCoords && 
@@ -492,7 +499,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
     };
 
     createPropertyMarkers();
-  }, [properties, advertisingAreas, isMapReady, onPropertyClick, showPropertyMarkers]);
+  }, [properties, spaces, advertisingAreas, isMapReady, onPropertyClick, showPropertyMarkers]);
 
   // ✅ Create click marker when marker prop changes
   useEffect(() => {
@@ -538,13 +545,18 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
       />
       
       {/* ✅ CLEAN: Simplified space dropdown */}
-      {activeDropdown && mapInstanceRef.current && onAreaClick && (
+      {activeDropdown && mapInstanceRef.current && (onSpaceClick || onAreaClick) && (
         <SpaceDropdown
           spaces={activeDropdown.spaces}
           position={activeDropdown.position}
           onSpaceClick={(space) => {
             setActiveDropdown(null);
-            onAreaClick(space);
+            // MIGRATION: Use onSpaceClick if available, fallback to onAreaClick for backward compatibility
+            if (onSpaceClick) {
+              onSpaceClick(space);
+            } else if (onAreaClick) {
+              onAreaClick(space);
+            }
           }}
           onClose={() => setActiveDropdown(null)}
           map={mapInstanceRef.current}

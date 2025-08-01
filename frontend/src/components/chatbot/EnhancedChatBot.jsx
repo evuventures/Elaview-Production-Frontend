@@ -35,7 +35,7 @@ import {
   FileText,
   Search
 } from 'lucide-react';
-import { Property, AdvertisingArea, Booking, ChatMessage, Campaign, Invoice, Message } from '@/api/entities';
+import { Property, Space, Booking, ChatMessage, Campaign, Invoice, Message } from '@/api/entities';
 import { useUser } from '@clerk/clerk-react';
 import { geminiService } from '@/lib/gemini';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -136,7 +136,7 @@ class WebsiteContextService {
       const [properties, campaigns, areas, messages, invoices] = await Promise.all([
         Property.list().catch(() => []),
         Campaign.list().catch(() => []),
-        AdvertisingArea.list().catch(() => []),
+        Space.list().catch(() => []),
         Message.list().catch(() => []),
         Invoice.list().catch(() => [])
       ]);
@@ -144,13 +144,13 @@ class WebsiteContextService {
       const data = {
         properties: properties.slice(0, 10), // Limit for performance
         campaigns: campaigns.slice(0, 10),
-        areas: areas.slice(0, 10),
+        spaces: areas.slice(0, 10),
         messages: messages.slice(0, 5),
         invoices: invoices.slice(0, 5),
         summary: {
           totalProperties: properties.length,
           totalCampaigns: campaigns.length,
-          totalAreas: areas.length,
+          totalSpaces: areas.length,
           unreadMessages: messages.filter(m => !m.read).length,
           pendingInvoices: invoices.filter(i => i.status === 'pending').length
         }
@@ -163,13 +163,13 @@ class WebsiteContextService {
       return {
         properties: [],
         campaigns: [],
-        areas: [],
+        spaces: [],
         messages: [],
         invoices: [],
         summary: {
           totalProperties: 0,
           totalCampaigns: 0,
-          totalAreas: 0,
+          totalSpaces: 0,
           unreadMessages: 0,
           pendingInvoices: 0
         }
@@ -462,7 +462,7 @@ What would you like to do?`,
         WEBSITE DATA SUMMARY:
         - Total properties: ${websiteData.summary.totalProperties}
         - Total campaigns: ${websiteData.summary.totalCampaigns}
-        - Total advertising areas: ${websiteData.summary.totalAreas}
+        - Total advertising spaces: ${websiteData.summary.totalSpaces}
         - Unread messages: ${websiteData.summary.unreadMessages}
         - Pending invoices: ${websiteData.summary.pendingInvoices}
         

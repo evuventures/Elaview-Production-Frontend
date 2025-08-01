@@ -19,8 +19,8 @@ export interface PhotoUpload {
   error?: string;
 }
 
-// Advertising area interface
-export interface AdvertisingArea {
+// Space interface (replaces AdvertisingArea)
+export interface Space {
   id: string;
   name: string;
   type: 'billboard' | 'digital_display' | 'wall_graphic' | 'floor_graphic' | 'window_display' | 
@@ -40,6 +40,11 @@ export interface AdvertisingArea {
   photos: PhotoUpload[];
 }
 
+// DEPRECATED: Use Space interface instead
+export interface AdvertisingArea extends Space {
+  // This interface is deprecated - use Space instead
+}
+
 // Main property form data interface - REMOVED CONTACT FIELDS
 export interface PropertyFormData {
   // Basic Info - Required fields for form
@@ -54,14 +59,14 @@ export interface PropertyFormData {
   // Photos - Arrays (can be empty)
   main_photos: PhotoUpload[];
   
-  // Advertising Areas - Arrays (can be empty)
-  advertising_areas: AdvertisingArea[];
+  // Spaces - Arrays (can be empty)
+  spaces: Space[];
   
   // Optional metadata
   created_at?: string;
   updated_at?: string;
   is_published?: boolean;
-  status?: 'draft' | 'review' | 'published' | 'archived';
+  status?: PropertyStatus;
 }
 
 // Form validation interfaces - REMOVED CONTACT FIELDS
@@ -83,63 +88,68 @@ export interface FormErrors {
   latitude?: string | null;
   longitude?: string | null;
   
-  // Photos and areas
+  // Photos and spaces
   main_photos?: string | null;
-  advertising_areas?: string | null;
+  spaces?: string | null;
+  
   
   // Generic catch-all for dynamic errors
   [key: string]: string | null | undefined;
 }
 
-// Updated property types to match database enums
+// Updated property types to match backend database enums exactly
 export type PropertyType = 
+  | 'HOUSE'
+  | 'APARTMENT'
+  | 'COMMERCIAL'
   | 'OFFICE'
   | 'RETAIL'
-  | 'COMMERCIAL'
-  | 'WAREHOUSE'
-  | 'VEHICLE_FLEET'  // ← ADD THIS
+  | 'BUILDING'
+  | 'VEHICLE_FLEET'
+  | 'BILLBOARD'
+  | 'DIGITAL_DISPLAY'
   | 'OTHER';
 
-export type AdvertisingAreaType = 
-  | 'billboard'
-  | 'digital_display'
-  | 'wall_graphic'
-  | 'floor_graphic'
-  | 'window_display'
-  | 'super_side_ads'
-  | 'tail_light_ads'
-  | 'wrap_around_ads'
-  | 'digital_display_side'
-  | 'digital_wraps'
+export type SpaceType = 
+  | 'storefront_window'
+  | 'building_exterior'
+  | 'event_space'
+  | 'retail_frontage'
+  | 'pole_mount'
   | 'other';
+
+// DEPRECATED: Use SpaceType instead
+export type AdvertisingAreaType = SpaceType;
 
 export type DimensionUnit = 'ft' | 'in' | 'm' | 'cm';
 
-export type PropertyStatus = 'draft' | 'review' | 'published' | 'archived';
+export type PropertyStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
 
-// Updated constants
+// Updated constants to match backend enums exactly
 export const PROPERTY_TYPES: { value: PropertyType; label: string }[] = [
+  { value: 'HOUSE', label: 'House' },
+  { value: 'APARTMENT', label: 'Apartment' },
+  { value: 'COMMERCIAL', label: 'Commercial' },
   { value: 'OFFICE', label: 'Office Building' },
   { value: 'RETAIL', label: 'Retail Space' },
-  { value: 'COMMERCIAL', label: 'Commercial' },
-  { value: 'WAREHOUSE', label: 'Warehouse' },
-  { value: 'VEHICLE_FLEET', label: 'Semi-Truck' },  // ← ADD THIS
+  { value: 'BUILDING', label: 'Building' },
+  { value: 'VEHICLE_FLEET', label: 'Vehicle Fleet' },
+  { value: 'BILLBOARD', label: 'Billboard' },
+  { value: 'DIGITAL_DISPLAY', label: 'Digital Display' },
   { value: 'OTHER', label: 'Other' },
 ];
 
-export const ADVERTISING_AREA_TYPES: { value: AdvertisingAreaType; label: string }[] = [
-  { value: 'billboard', label: 'Billboard' },
-  { value: 'digital_display', label: 'Digital Display' },
-  { value: 'wall_graphic', label: 'Wall Graphic' },
-  { value: 'floor_graphic', label: 'Floor Graphic' },
-  { value: 'window_display', label: 'Window Display' },
-  { value: 'super_side_ads', label: 'Super Side Ads' },
-  { value: 'tail_light_ads', label: 'Tail Light Ads' },
-  { value: 'wrap_around_ads', label: 'Wrap Around Ads' },
-  { value: 'digital_display_side', label: 'Digital Display (Side)' },
-  { value: 'digital_wraps', label: 'Digital Wraps' },
+export const SPACE_TYPES: { value: SpaceType; label: string }[] = [
+  { value: 'storefront_window', label: 'Storefront Window' },
+  { value: 'building_exterior', label: 'Building Exterior' },
+  { value: 'event_space', label: 'Event Space' },
+  { value: 'retail_frontage', label: 'Retail Frontage' },
+  { value: 'pole_mount', label: 'Pole Mount' },
   { value: 'other', label: 'Other' },
 ];
+
+// DEPRECATED: Use SPACE_TYPES instead
+export const ADVERTISING_AREA_TYPES = SPACE_TYPES;
 
 // Form validation helpers
 export const validateEmail = (email: string): boolean => {
@@ -176,18 +186,18 @@ export const getDefaultFormData = (): PropertyFormData => ({
   
   // Arrays start empty
   main_photos: [],
-  advertising_areas: [],
+  spaces: [],
   
   // Optional metadata
   is_published: false,
-  status: 'draft',
+  status: 'DRAFT',
 });
 
-// Default advertising area for new areas
-export const defaultArea = (): AdvertisingArea => ({
+// Default space for new spaces (replaces defaultArea)
+export const defaultSpace = (): Space => ({
   id: crypto.randomUUID(),
   name: '',
-  type: 'billboard',
+  type: 'storefront_window',
   dimensions: {
     width: 0,
     height: 0,
@@ -202,6 +212,9 @@ export const defaultArea = (): AdvertisingArea => ({
   restrictions: '',
   photos: []
 });
+
+// DEPRECATED: Use defaultSpace instead
+export const defaultArea = defaultSpace;
 
 // Saved form data interface for localStorage
 export interface SavedFormData {

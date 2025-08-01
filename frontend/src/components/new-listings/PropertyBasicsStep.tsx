@@ -112,11 +112,15 @@ const PropertyBasicsStep: React.FC<PropertyBasicsStepProps> = ({
           }`}
         >
           <option value="">Select Property Type</option>
+          <option value="HOUSE">House</option>
+          <option value="APARTMENT">Apartment</option>
+          <option value="COMMERCIAL">Commercial</option>
           <option value="OFFICE">Office Building</option>
           <option value="RETAIL">Retail Space</option>
-          <option value="COMMERCIAL">Commercial</option>
-          <option value="WAREHOUSE">Warehouse</option>
-          <option value="VEHICLE_FLEET">Semi-Truck</option>
+          <option value="BUILDING">Building</option>
+          <option value="VEHICLE_FLEET">Vehicle Fleet</option>
+          <option value="BILLBOARD">Billboard</option>
+          <option value="DIGITAL_DISPLAY">Digital Display</option>
           <option value="OTHER">Other</option>
         </select>
         {errors.property_type && (

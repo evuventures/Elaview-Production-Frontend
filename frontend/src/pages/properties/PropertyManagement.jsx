@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Property, AdvertisingArea } from '@/api/entities';
+import { Property, Space } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -37,7 +37,7 @@ export default function PropertyManagementPage() {
         setIsLoading(true);
         try {
             const prop = await Property.get(propertyId);
-            const adAreas = await AdvertisingArea.filter({ property_id: propertyId });
+            const adAreas = await Space.filter({ property_id: propertyId });
             setProperty(prop);
             setAreas(adAreas || []);
         } catch (error) {
@@ -70,7 +70,7 @@ export default function PropertyManagementPage() {
     const handleDeleteArea = async (areaId) => {
         if (window.confirm("Are you sure you want to delete this advertising area? This cannot be undone.")) {
             try {
-                await AdvertisingArea.delete(areaId);
+                await Space.delete(areaId);
                 loadData();
             } catch (error) {
                 console.error("Error deleting area:", error);
@@ -96,7 +96,7 @@ export default function PropertyManagementPage() {
         if (window.confirm("Are you sure you want to permanently delete this property and all its associated advertising areas? This action cannot be undone.")) {
             try {
                 // First, delete all associated advertising areas
-                await Promise.all(areas.map(area => AdvertisingArea.delete(area.id)));
+                await Promise.all(areas.map(area => Space.delete(area.id)));
                 // Then, delete the property itself
                 await Property.delete(property.id);
                 // Redirect to the dashboard

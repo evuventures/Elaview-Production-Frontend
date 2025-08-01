@@ -84,10 +84,10 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ formData, onEdit }) => {
         </div>
       </div>
 
-      {/* Advertising Areas Review */}
+      {/* Advertising Spaces Review (was Areas) */}
       <div className="border border-border rounded-lg p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Advertising Areas ({formData.advertising_areas.length})</h3>
+          <h3 className="text-lg font-semibold">Advertising Spaces ({(formData.spaces || []).length})</h3>
           <button
             type="button"
             onClick={() => onEdit(2)}
@@ -97,16 +97,16 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ formData, onEdit }) => {
           </button>
         </div>
 
-        {formData.advertising_areas.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No advertising areas defined</p>
+        {(formData.spaces || []).length === 0 ? (
+          <p className="text-muted-foreground text-sm">No advertising spaces defined</p>
         ) : (
           <div className="space-y-4">
-            {formData.advertising_areas.map((area, index) => (
+            {(formData.spaces || []).map((area, index) => (
               <div key={area.id} className="border border-border rounded-md p-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div>
-                    <span className="font-medium text-muted-foreground">Area {index + 1}:</span>
-                    <p className="mt-1">{area.name || 'Unnamed area'}</p>
+                    <span className="font-medium text-muted-foreground">Space {index + 1}:</span>
+                    <p className="mt-1">{area.name || 'Unnamed space'}</p>
                   </div>
                   <div>
                     <span className="font-medium text-muted-foreground">Type:</span>
@@ -136,8 +136,8 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ formData, onEdit }) => {
         <h3 className="text-lg font-semibold mb-4">Summary</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div className="text-center">
-            <p className="text-2xl font-bold text-primary">{formData.advertising_areas.length}</p>
-            <p className="text-muted-foreground">Advertising Areas</p>
+            <p className="text-2xl font-bold text-primary">{(formData.spaces || []).length}</p>
+            <p className="text-muted-foreground">Advertising Spaces</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-primary">
@@ -147,7 +147,7 @@ const ReviewStep: React.FC<ReviewStepProps> = ({ formData, onEdit }) => {
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-primary">
-              ${formData.advertising_areas.reduce((sum, area) => sum + (area.monthly_rate || 0), 0).toLocaleString()}
+              ${(formData.spaces || []).reduce((sum, area) => sum + (area.monthly_rate || 0), 0).toLocaleString()}
             </p>
             <p className="text-muted-foreground">Total Monthly Potential</p>
           </div>

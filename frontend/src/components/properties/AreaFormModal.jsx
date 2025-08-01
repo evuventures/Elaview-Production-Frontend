@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AdvertisingArea } from '@/api/entities';
+import { Space } from '@/api/entities';
 import { Loader2 } from 'lucide-react';
 
 export default function AreaFormModal({ isOpen, onClose, onSuccess, propertyId, initialData }) {
@@ -49,9 +49,11 @@ export default function AreaFormModal({ isOpen, onClose, onSuccess, propertyId, 
         setIsLoading(true);
         try {
             if (isEditing) {
-                await AdvertisingArea.update(initialData.id, formData);
+                console.log('🚀 MIGRATION: Using Space.update instead of AdvertisingArea.update');
+                await Space.update(initialData.id, formData);
             } else {
-                await AdvertisingArea.create({ ...formData, property_id: propertyId });
+                console.log('🚀 MIGRATION: Using Space.create instead of AdvertisingArea.create');
+                await Space.create({ ...formData, property_id: propertyId });
             }
             onSuccess();
         } catch (error) {
@@ -67,13 +69,13 @@ export default function AreaFormModal({ isOpen, onClose, onSuccess, propertyId, 
             <DialogContent className="glass border-[hsl(var(--border))] rounded-3xl shadow-[var(--shadow-brand-lg)]">
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-bold text-[hsl(var(--foreground))]">
-                        {isEditing ? 'Edit' : 'Add New'} Advertising Area
+                        {isEditing ? 'Edit' : 'Add New'} Advertising Space
                     </DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-6 py-4">
                     <div>
                         <Label htmlFor="title" className="text-base font-semibold text-[hsl(var(--muted-foreground))] mb-2 block">
-                            Area Title
+                            Space Title
                         </Label>
                         <Input 
                             id="title" 
@@ -86,18 +88,18 @@ export default function AreaFormModal({ isOpen, onClose, onSuccess, propertyId, 
                     
                     <div>
                         <Label htmlFor="type" className="text-base font-semibold text-[hsl(var(--muted-foreground))] mb-2 block">
-                            Area Type
+                            Space Type
                         </Label>
                         <Select value={formData.type || ''} onValueChange={value => handleChange('type', value)}>
                             <SelectTrigger className="glass border-[hsl(var(--border))] rounded-xl focus-brand transition-brand">
-                                <SelectValue placeholder="Select area type" />
+                                <SelectValue placeholder="Select space type" />
                             </SelectTrigger>
                             <SelectContent className="glass border-[hsl(var(--border))] rounded-xl">
-                                <SelectItem value="billboard">Billboard</SelectItem>
-                                <SelectItem value="digital_display">Digital Display</SelectItem>
-                                <SelectItem value="window_display">Window Display</SelectItem>
-                                <SelectItem value="vehicle_wrap">Vehicle Wrap</SelectItem>
-                                <SelectItem value="poster">Poster</SelectItem>
+                                <SelectItem value="storefront_window">Storefront Window</SelectItem>
+                                <SelectItem value="building_exterior">Building Exterior</SelectItem>
+                                <SelectItem value="event_space">Event Space</SelectItem>
+                                <SelectItem value="retail_frontage">Retail Frontage</SelectItem>
+                                <SelectItem value="pole_mount">Pole Mount</SelectItem>
                                 <SelectItem value="other">Other</SelectItem>
                             </SelectContent>
                         </Select>

@@ -62,16 +62,14 @@ const MapSearchFilter = ({
     { value: 'airport', label: 'Airport' }
   ];
 
-  // Area type options
+  // Space type options aligned with backend
   const areaTypes = [
-    { value: 'billboard', label: 'Billboard' },
-    { value: 'digital_display', label: 'Digital Display' },
-    { value: 'transit_shelter', label: 'Transit Shelter' },
-    { value: 'street_furniture', label: 'Street Furniture' },
-    { value: 'building_wrap', label: 'Building Wrap' },
-    { value: 'window_display', label: 'Window Display' },
-    { value: 'rooftop', label: 'Rooftop' },
-    { value: 'vehicle_wrap', label: 'Vehicle Wrap' }
+    { value: 'storefront_window', label: 'Storefront Window' },
+    { value: 'building_exterior', label: 'Building Exterior' },
+    { value: 'event_space', label: 'Event Space' },
+    { value: 'retail_frontage', label: 'Retail Frontage' },
+    { value: 'pole_mount', label: 'Pole Mount' },
+    { value: 'other', label: 'Other' }
   ];
 
   // Feature options
@@ -104,10 +102,10 @@ const MapSearchFilter = ({
       const propertyTypeMatch = filters.propertyTypes.length === 0 || 
         filters.propertyTypes.includes(property.type);
 
-      // Area types (check if property has areas of these types)
+      // Space types - check if property has spaces of these types
       const areaTypeMatch = filters.areaTypes.length === 0 || 
-        (property.advertising_areas && property.advertising_areas.some(area => 
-          filters.areaTypes.includes(area.type)
+        (property.spaces && property.spaces.some(space => 
+          filters.areaTypes.includes(space.type)
         ));
 
       // Rating

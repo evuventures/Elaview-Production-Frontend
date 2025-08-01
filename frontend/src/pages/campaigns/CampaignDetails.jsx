@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { Campaign, Booking, AdvertisingArea, Property } from '@/api/entities';
+import { Campaign, Booking, Space, Property } from '@/api/entities';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -52,7 +52,7 @@ export default function CampaignDetailsPage() {
       setBookings(campaignBookings);
 
       const spaceIds = [...new Set(campaignBookings.map(b => b.area_id))];
-      const spacesData = await Promise.all(spaceIds.map(id => AdvertisingArea.get(id)));
+      const spacesData = await Promise.all(spaceIds.map(id => Space.get(id)));
       const spacesMap = spacesData.reduce((acc, space) => ({...acc, [space.id]: space}), {});
       setSpaces(spacesMap);
 

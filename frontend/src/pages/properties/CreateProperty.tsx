@@ -378,24 +378,26 @@ export default function CreatePropertyPage(): JSX.Element {
   };
 
   const validateStep2 = (): boolean => {
+    console.log('🚀 MIGRATION: Validating spaces (was areas)');
     const newErrors: Record<string, string | null> = {};
+    const spacesToValidate = formData.spaces || [];
 
-    if (formData.advertising_areas.length === 0) {
-      newErrors.advertising_areas = 'At least one advertising area is required';
+    if (spacesToValidate.length === 0) {
+      newErrors.spaces = 'At least one advertising space is required';
     }
 
-    // Validate each advertising area
-    formData.advertising_areas.forEach((area, index) => {
-      if (!area.name?.trim()) {
-        newErrors[`area_${index}_name`] = `Area ${index + 1}: Name is required`;
+    // Validate each advertising space
+    spacesToValidate.forEach((space, index) => {
+      if (!space.name?.trim()) {
+        newErrors[`space_${index}_name`] = `Space ${index + 1}: Name is required`;
       }
       
-      if (!area.type) {
-        newErrors[`area_${index}_type`] = `Area ${index + 1}: Type is required`;
+      if (!space.type) {
+        newErrors[`space_${index}_type`] = `Space ${index + 1}: Type is required`;
       }
       
-      if (!area.monthly_rate || area.monthly_rate <= 0) {
-        newErrors[`area_${index}_rate`] = `Area ${index + 1}: Monthly rate must be greater than 0`;
+      if (!space.monthly_rate || space.monthly_rate <= 0) {
+        newErrors[`space_${index}_rate`] = `Space ${index + 1}: Monthly rate must be greater than 0`;
       }
     });
 

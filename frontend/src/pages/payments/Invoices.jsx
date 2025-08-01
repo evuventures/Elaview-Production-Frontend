@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 // REMOVE Base44 User import and replace with Clerk
 import { useAuth, useUser } from '@clerk/clerk-react';
-import { Invoice, Booking, AdvertisingArea } from '@/api/entities';
+import { Invoice, Booking, Space } from '@/api/entities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

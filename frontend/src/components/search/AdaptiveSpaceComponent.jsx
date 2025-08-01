@@ -190,7 +190,7 @@ const AdaptiveSpaceComponent = ({
       reviewCount: Math.floor(Math.random() * 50) + 10
     };
 
-    const areasCount = selectedProperty.advertising_areas?.length || 0;
+    const areasCount = selectedProperty.spaces?.length || 0;
 
     return (
       <div className="p-4 space-y-4">

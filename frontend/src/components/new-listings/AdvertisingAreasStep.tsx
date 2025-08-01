@@ -1,6 +1,6 @@
 // src/components/new-listings/AdvertisingAreasStep.tsx
 import React from 'react';
-import { PropertyFormData, AdvertisingArea, defaultArea } from '@/types/property';
+import { PropertyFormData, Space, defaultSpace } from '@/types/property';
 
 interface AdvertisingAreasStepProps {
   formData: PropertyFormData;
@@ -16,52 +16,45 @@ const AdvertisingAreasStep: React.FC<AdvertisingAreasStepProps> = ({
   setErrors
 }) => {
   const addArea = () => {
-    const newArea = defaultArea();
+    console.log('🚀 MIGRATION: Adding new space (was area)');
+    const newSpace = defaultSpace();
     setFormData(prev => ({
       ...prev,
-      advertising_areas: [...prev.advertising_areas, newArea]
+      spaces: [...(prev.spaces || []), newSpace]
     }));
   };
 
   const removeArea = (id: string) => {
+    console.log('🚀 MIGRATION: Removing space (was area):', id);
     setFormData(prev => ({
       ...prev,
-      advertising_areas: prev.advertising_areas.filter(area => area.id !== id)
+      spaces: (prev.spaces || []).filter(space => space.id !== id)
     }));
   };
 
-  const updateArea = (id: string, updates: Partial<AdvertisingArea>) => {
-    setFormData(prev => ({
-      ...prev,
-      advertising_areas: prev.advertising_areas.map(area =>
-        area.id === id ? { ...area, ...updates } : area
-      )
-    }));
+  const updateArea = (id: string, updates: Partial<Space>) => {
+    console.log('🚀 MIGRATION: Updating space (was area):', id, updates);
+    setFormData(prev => {
+      const updatedSpaces = (prev.spaces || []).map(space =>
+        space.id === id ? { ...space, ...updates } : space
+      );
+      return {
+        ...prev,
+        spaces: updatedSpaces
+      };
+    });
   };
 
-  // Dynamic options based on property type
+  // Space type options aligned with backend enum
   const getAdvertisingOptions = () => {
-    const isSemiTruck = formData.property_type === 'VEHICLE_FLEET';
-    
-    if (isSemiTruck) {
-      return [
-        { value: 'super_side_ads', label: 'Super Side Ads' },
-        { value: 'tail_light_ads', label: 'Tail Light Ads' },
-        { value: 'wrap_around_ads', label: 'Wrap Around Ads' },
-        { value: 'digital_display_side', label: 'Digital Display (Side)' },
-        { value: 'digital_wraps', label: 'Digital Wraps' },
-        { value: 'other', label: 'Other' }
-      ];
-    } else {
-      return [
-        { value: 'billboard', label: 'Billboard' },
-        { value: 'digital_display', label: 'Digital Display' },
-        { value: 'wall_graphic', label: 'Wall Graphic' },
-        { value: 'floor_graphic', label: 'Floor Graphic' },
-        { value: 'window_display', label: 'Window Display' },
-        { value: 'other', label: 'Other' }
-      ];
-    }
+    return [
+      { value: 'storefront_window', label: 'Storefront Window' },
+      { value: 'building_exterior', label: 'Building Exterior' },
+      { value: 'event_space', label: 'Event Space' },
+      { value: 'retail_frontage', label: 'Retail Frontage' },
+      { value: 'pole_mount', label: 'Pole Mount' },
+      { value: 'other', label: 'Other' }
+    ];
   };
 
   const advertisingOptions = getAdvertisingOptions();
@@ -101,15 +94,15 @@ const AdvertisingAreasStep: React.FC<AdvertisingAreasStepProps> = ({
   </div>
 )}
 
-      {/* Areas List */}
+      {/* Spaces List (was Areas List) */}
       <div className="space-y-6">
-        {formData.advertising_areas.map((area, index) => (
+        {(formData.spaces || []).map((area, index) => (
           <div key={area.id} className="border border-border rounded-lg p-6">
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-lg font-semibold">
                 {isSemiTruck ? `Vehicle Space ${index + 1}` : `Area ${index + 1}`}
               </h3>
-              {formData.advertising_areas.length > 1 && (
+              {(formData.spaces || []).length > 1 && (
                 <button
                   type="button"
                   onClick={() => removeArea(area.id)}
@@ -252,15 +245,15 @@ const AdvertisingAreasStep: React.FC<AdvertisingAreasStepProps> = ({
       </div>
 
       {/* Errors */}
-      {errors.advertising_areas && (
-        <div className="text-red-500 text-sm">{errors.advertising_areas}</div>
+      {errors.spaces && (
+        <div className="text-red-500 text-sm">{errors.spaces}</div>
       )}
 
       {/* Progress */}
       <div className="bg-muted/30 rounded-lg p-4">
   <div className="flex items-center justify-between text-sm text-muted-foreground">
     <span>Step 2 of 3 - {isSemiTruck ? 'Vehicle Advertising Spaces' : 'Advertising Areas'}</span>
-    <span>{formData.advertising_areas.length} {isSemiTruck ? 'advertising space(s)' : 'area(s)'} defined</span>
+    <span>{(formData.spaces || []).length} {isSemiTruck ? 'advertising space(s)' : 'area(s)'} defined</span>
   </div>
   <div className="w-full bg-muted rounded-full h-2 mt-2">
     <div className="bg-primary h-2 rounded-full w-2/3"></div>

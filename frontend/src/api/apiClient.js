@@ -1,16 +1,90 @@
 // src/api/apiClient.js
-// API client enhanced with Progressive Configuration Checkout endpoints
+// ✅ RATE LIMITING FIXES: Request deduplication, caching, and exponential backoff
 // ✅ FIXED: Business Profile 404 handling + Advertiser Dashboard
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const API_TIMEOUT = 30000;
+const CACHE_DURATION = 60000; // 1 minute cache
+// const DEDUP_DURATION = 5000; // 5 second deduplication window (reserved for future use)
 
-console.log('🚀 API Client initialized:', API_BASE_URL);
+console.log('🚀 API Client initialized with rate limiting:', API_BASE_URL);
 
 class ApiClient {
   constructor() {
     this.baseURL = API_BASE_URL;
     this.timeout = API_TIMEOUT;
+    
+    // ✅ RATE LIMITING: Request deduplication and caching
+    this.pendingRequests = new Map(); // Prevent duplicate requests
+    this.responseCache = new Map(); // Cache responses
+    this.requestQueue = new Map(); // Queue similar requests
+    this.rateLimitBackoff = new Map(); // Track rate limit backoff per endpoint
+    
+    console.log('📊 RATE LIMITING: Initialized request deduplication and caching');
+    
+    // ✅ RATE LIMITING: Periodic cache cleanup
+    this.setupCacheCleanup();
+  }
+
+  // ✅ RATE LIMITING: Setup periodic cache cleanup
+  setupCacheCleanup() {
+    // Clean expired cache entries every 5 minutes
+    this.cacheCleanupInterval = setInterval(() => {
+      this.cleanExpiredCache();
+    }, 5 * 60 * 1000);
+    
+    // Clean rate limit backoffs every minute
+    this.backoffCleanupInterval = setInterval(() => {
+      this.cleanExpiredBackoffs();
+    }, 60 * 1000);
+  }
+
+  // ✅ RATE LIMITING: Clean expired cache entries
+  cleanExpiredCache() {
+    const now = Date.now();
+    let cleaned = 0;
+    
+    for (const [key, value] of this.responseCache) {
+      if (now - value.timestamp > CACHE_DURATION) {
+        this.responseCache.delete(key);
+        cleaned++;
+      }
+    }
+    
+    if (cleaned > 0) {
+      console.log(`🧹 CACHE CLEANUP: Removed ${cleaned} expired entries`);
+    }
+  }
+
+  // ✅ RATE LIMITING: Clean expired rate limit backoffs
+  cleanExpiredBackoffs() {
+    const now = Date.now();
+    let cleaned = 0;
+    
+    for (const [endpoint, backoffUntil] of this.rateLimitBackoff) {
+      if (now >= backoffUntil) {
+        this.rateLimitBackoff.delete(endpoint);
+        cleaned++;
+      }
+    }
+    
+    if (cleaned > 0) {
+      console.log(`🧹 BACKOFF CLEANUP: Removed ${cleaned} expired backoffs`);
+    }
+  }
+
+  // ✅ RATE LIMITING: Cleanup method for component unmount
+  destroy() {
+    if (this.cacheCleanupInterval) {
+      clearInterval(this.cacheCleanupInterval);
+    }
+    if (this.backoffCleanupInterval) {
+      clearInterval(this.backoffCleanupInterval);
+    }
+    this.responseCache.clear();
+    this.pendingRequests.clear();
+    this.rateLimitBackoff.clear();
+    console.log('🧹 API CLIENT: Destroyed and cleaned up');
   }
 
   async getAuthToken() {
@@ -31,7 +105,78 @@ class ApiClient {
     }
   }
 
+  // ✅ RATE LIMITING: Generate cache key for request deduplication
+  getCacheKey(endpoint, method, data) {
+    return `${method}:${endpoint}:${data ? JSON.stringify(data) : ''}`;
+  }
+
+  // ✅ RATE LIMITING: Check if endpoint is under rate limit backoff
+  isRateLimited(endpoint) {
+    const backoffUntil = this.rateLimitBackoff.get(endpoint);
+    if (backoffUntil && Date.now() < backoffUntil) {
+      const remainingMs = backoffUntil - Date.now();
+      console.log(`🚫 RATE LIMIT: ${endpoint} backed off for ${remainingMs}ms`);
+      return true;
+    }
+    return false;
+  }
+
+  // ✅ RATE LIMITING: Set backoff for rate limited endpoint
+  setRateLimitBackoff(endpoint, retryAfter = 60) {
+    const backoffMs = retryAfter * 1000 + Math.random() * 5000; // Add jitter
+    const backoffUntil = Date.now() + backoffMs;
+    this.rateLimitBackoff.set(endpoint, backoffUntil);
+    console.log(`🚫 RATE LIMIT: ${endpoint} backed off until ${new Date(backoffUntil).toISOString()}`);
+  }
+
   async request(endpoint, method = 'GET', data = null, attempt = 1, maxAttempts = 3) {
+    const timestamp = Date.now();
+    const cacheKey = this.getCacheKey(endpoint, method, data);
+    
+    // ✅ RATE LIMITING: Check rate limit backoff first
+    if (this.isRateLimited(endpoint)) {
+      throw new Error(`Rate limited: ${endpoint} is under backoff`);
+    }
+
+    // ✅ RATE LIMITING: Check cache for GET requests
+    if (method === 'GET') {
+      const cached = this.responseCache.get(cacheKey);
+      if (cached && (timestamp - cached.timestamp) < CACHE_DURATION) {
+        console.log(`💾 CACHE HIT: ${endpoint} (${timestamp - cached.timestamp}ms old)`);
+        return cached.data;
+      }
+    }
+
+    // ✅ RATE LIMITING: Check for pending identical request
+    if (this.pendingRequests.has(cacheKey)) {
+      console.log(`🔄 REQUEST DEDUP: Waiting for pending ${method} ${endpoint}`);
+      return this.pendingRequests.get(cacheKey);
+    }
+
+    // ✅ RATE LIMITING: Create and track pending request
+    const requestPromise = this._executeRequest(endpoint, method, data, attempt, maxAttempts, timestamp);
+    this.pendingRequests.set(cacheKey, requestPromise);
+
+    try {
+      const result = await requestPromise;
+      
+      // ✅ RATE LIMITING: Cache successful GET responses
+      if (method === 'GET' && result) {
+        this.responseCache.set(cacheKey, {
+          data: result,
+          timestamp: timestamp
+        });
+        console.log(`💾 CACHE SET: ${endpoint}`);
+      }
+      
+      return result;
+    } finally {
+      // ✅ RATE LIMITING: Clean up pending request
+      this.pendingRequests.delete(cacheKey);
+    }
+  }
+
+  async _executeRequest(endpoint, method, data, attempt, maxAttempts, startTime) {
     const url = `${this.baseURL}${endpoint}`;
     const token = await this.getAuthToken();
     
@@ -45,7 +190,8 @@ class ApiClient {
     };
 
     try {
-      console.log(`${method} ${url}`);
+      const duration = Date.now() - startTime;
+      console.log(`📡 API REQUEST [${attempt}/${maxAttempts}]: ${method} ${endpoint} (+${duration}ms)`);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
@@ -58,40 +204,85 @@ class ApiClient {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        console.log(`❌ API Error Response: ${response.status} ${response.statusText}`);
+        const responseDuration = Date.now() - startTime;
+        console.log(`❌ API ERROR [${response.status}]: ${endpoint} (+${responseDuration}ms)`);
         
-        // ✅ OPTIMIZATION: Don't retry 429 (rate limit) or 4xx errors
-        if (response.status >= 500 && response.status !== 429 && attempt < maxAttempts) {
-          const delay = Math.pow(2, attempt) * 1000;
-          console.log(`⏳ Retrying in ${delay}ms (attempt ${attempt + 1}/${maxAttempts})`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          return this.request(endpoint, method, data, attempt + 1, maxAttempts);
+        // ✅ RATE LIMITING: Handle 429 with exponential backoff
+        if (response.status === 429) {
+          const retryAfter = parseInt(response.headers.get('Retry-After')) || 60;
+          this.setRateLimitBackoff(endpoint, retryAfter);
+          throw new Error(`Rate limited: ${response.status}`);
         }
         
-        // ✅ OPTIMIZATION: Log rate limit specifically
-        if (response.status === 429) {
-          console.warn('🚫 Rate limit hit - not retrying:', endpoint);
+        // ✅ OPTIMIZATION: Don't retry 4xx errors except 429
+        if (response.status >= 500 && attempt < maxAttempts) {
+          const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000; // Add jitter
+          console.log(`⏳ RETRY: ${endpoint} in ${delay}ms (attempt ${attempt + 1}/${maxAttempts})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return this._executeRequest(endpoint, method, data, attempt + 1, maxAttempts, startTime);
         }
         
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
-      console.log(`✅ ${method} ${endpoint} - Success`);
+      const successDuration = Date.now() - startTime;
+      console.log(`✅ API SUCCESS: ${method} ${endpoint} (+${successDuration}ms)`);
       return result;
 
     } catch (error) {
-      // ✅ OPTIMIZATION: Don't retry rate limit errors or aborted requests
-      if (attempt < maxAttempts && !error.message.includes('aborted') && !error.message.includes('429')) {
-        const delay = Math.pow(2, attempt) * 1000;
-        console.log(`⏳ Retrying in ${delay}ms (attempt ${attempt + 1}/${maxAttempts})`);
+      // ✅ OPTIMIZATION: Smart retry logic
+      if (attempt < maxAttempts && 
+          !error.message.includes('aborted') && 
+          !error.message.includes('429') &&
+          !error.message.includes('Rate limited')) {
+        const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+        const errorDuration = Date.now() - startTime;
+        console.log(`⏳ RETRY: ${endpoint} in ${delay}ms (+${errorDuration}ms, attempt ${attempt + 1}/${maxAttempts})`);
         await new Promise(resolve => setTimeout(resolve, delay));
-        return this.request(endpoint, method, data, attempt + 1, maxAttempts);
+        return this._executeRequest(endpoint, method, data, attempt + 1, maxAttempts, startTime);
       }
       
-      console.log(`❌ API Error (attempt ${attempt}/${maxAttempts}): ${endpoint}`, error);
+      const errorDuration = Date.now() - startTime;
+      console.log(`❌ API FAILED: ${endpoint} (+${errorDuration}ms, attempt ${attempt}/${maxAttempts})`, error.message);
       throw error;
     }
+  }
+
+  // ✅ RATE LIMITING: Cache management methods
+  clearCache(pattern = null) {
+    if (pattern) {
+      for (const [key] of this.responseCache) {
+        if (key.includes(pattern)) {
+          this.responseCache.delete(key);
+        }
+      }
+      console.log(`💾 CACHE CLEAR: Cleared entries matching "${pattern}"`);
+    } else {
+      this.responseCache.clear();
+      console.log('💾 CACHE CLEAR: All cache cleared');
+    }
+  }
+
+  getCacheStats() {
+    const now = Date.now();
+    let valid = 0, expired = 0;
+    
+    for (const [, value] of this.responseCache) {
+      if (now - value.timestamp < CACHE_DURATION) {
+        valid++;
+      } else {
+        expired++;
+      }
+    }
+    
+    return {
+      total: this.responseCache.size,
+      valid,
+      expired,
+      pending: this.pendingRequests.size,
+      rateLimited: this.rateLimitBackoff.size
+    };
   }
 
   // ✅ CORE ENDPOINTS
@@ -280,53 +471,59 @@ class ApiClient {
     return this.delete(`/properties/${id}`);
   }
 
-  // ✅ ADVERTISING AREAS (matches your actual schema - baseRate, not price)
+  // ✅ ADVERTISING AREAS - NOW DEPRECATED, USE SPACES INSTEAD
+  // These methods are kept for backward compatibility but route to spaces
   async getAreas(params = {}) {
+    console.log('⚠️ getAreas() is deprecated - use getSpaces() instead');
     const queryString = new URLSearchParams(params).toString();
-    return this.get(`/areas${queryString ? `?${queryString}` : ''}`);
+    return this.get(`/spaces${queryString ? `?${queryString}` : ''}`);
   }
 
   async getArea(id) {
-    return this.get(`/areas/${id}`);
+    console.log('⚠️ getArea() is deprecated - use getSpace() instead');
+    return this.get(`/spaces/${id}`);
   }
 
   async createArea(data) {
-    return this.post('/areas', data);
+    console.log('⚠️ createArea() is deprecated - use createSpace() instead');
+    return this.post('/spaces', data);
   }
 
   async updateArea(id, data) {
-    return this.put(`/areas/${id}`, data);
+    console.log('⚠️ updateArea() is deprecated - use updateSpace() instead');
+    return this.put(`/spaces/${id}`, data);
   }
 
   async deleteArea(id) {
-    return this.delete(`/areas/${id}`);
+    console.log('⚠️ deleteArea() is deprecated - use deleteSpace() instead');
+    return this.delete(`/spaces/${id}`);
   }
 
-  // ✅ SPACES = AREAS (aliases for backward compatibility)
+  // ✅ SPACES (Unified API for all advertising spaces)
   async getSpaces(params = {}) {
-    console.log('🔄 getSpaces() called - routing to spaces endpoint');
+    console.log('🏢 Getting spaces with params:', params);
     const queryString = new URLSearchParams(params).toString();
     return this.get(`/spaces${queryString ? `?${queryString}` : ''}`);
   }
 
   async getSpace(id) {
-    console.log('🔄 getSpace() called - routing to spaces endpoint');
+    console.log('🏢 Getting space:', id);
     return this.get(`/spaces/${id}`);
   }
 
   async createSpace(data) {
-    console.log('🔄 createSpace() called - routing to createArea()');
-    return this.createArea(data);
+    console.log('🏢 Creating space:', data);
+    return this.post('/spaces', data);
   }
 
   async updateSpace(id, data) {
-    console.log('🔄 updateSpace() called - routing to updateArea()');
-    return this.updateArea(id, data);
+    console.log('🏢 Updating space:', id, data);
+    return this.put(`/spaces/${id}`, data);
   }
 
   async deleteSpace(id) {
-    console.log('🔄 deleteSpace() called - routing to deleteArea()');
-    return this.deleteArea(id);
+    console.log('🏢 Deleting space:', id);
+    return this.delete(`/spaces/${id}`);
   }
 
   // ✅ SPACE AVAILABILITY CHECKING (Progressive Configuration)
@@ -558,7 +755,7 @@ class ApiClient {
       return response;
     } catch (error) {
       // Fallback to regular spaces endpoint
-      console.log('🔄 Fallback to regular spaces endpoint');
+      console.log('🔄 Fallback to regular spaces endpoint:', error.message);
       return this.getSpaces(filters);
     }
   }

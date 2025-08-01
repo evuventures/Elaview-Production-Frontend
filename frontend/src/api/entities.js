@@ -21,6 +21,7 @@ const extractData = (response, fallback = []) => {
   if (response.items && Array.isArray(response.items)) return response.items;
   if (response.properties && Array.isArray(response.properties)) return response.properties;
   if (response.areas && Array.isArray(response.areas)) return response.areas;
+  if (response.spaces && Array.isArray(response.spaces)) return response.spaces;
   if (response.results && Array.isArray(response.results)) return response.results;
   
   // For single item responses
@@ -134,62 +135,66 @@ export const Property = {
   }
 };
 
-export const AdvertisingArea = {
+export const Space = {
   async list(params = {}) {
     try {
-      const response = await apiClient.getAreas(params);
-      const areas = extractData(response);
-      console.log(`✅ Advertising areas loaded from database: ${areas.length}`);
-      return areas;
+      const response = await apiClient.getSpaces(params);
+      const spaces = extractData(response);
+      console.log(`✅ Spaces loaded from database: ${spaces.length}`);
+      return spaces;
     } catch (error) {
-      return handleApiError('AdvertisingArea.list', error);
+      return handleApiError('Space.list', error);
     }
   },
 
   async get(id) {
     try {
-      const area = await apiClient.getArea(id);
-      console.log(`✅ Advertising area loaded: ${area.name || area.title || area.id}`);
-      return area;
+      const space = await apiClient.getSpace(id);
+      console.log(`✅ Space loaded: ${space.name || space.title || space.id}`);
+      return space;
     } catch (error) {
-      console.error('❌ AdvertisingArea.get error:', error);
+      console.error('❌ Space.get error:', error);
       return null;
     }
   },
 
   async create(data) {
     try {
-      const area = await apiClient.createArea(data);
-      console.log('✅ Advertising area created:', area.name || area.title);
-      return area;
+      const space = await apiClient.createSpace(data);
+      console.log('✅ Space created:', space.name || space.title);
+      return space;
     } catch (error) {
-      console.error('❌ AdvertisingArea.create error:', error);
+      console.error('❌ Space.create error:', error);
       throw error;
     }
   },
 
   async update(id, data) {
     try {
-      const area = await apiClient.updateArea(id, data);
-      console.log('✅ Advertising area updated:', area.name || area.title);
-      return area;
+      const space = await apiClient.updateSpace(id, data);
+      console.log('✅ Space updated:', space.name || space.title);
+      return space;
     } catch (error) {
-      console.error('❌ AdvertisingArea.update error:', error);
+      console.error('❌ Space.update error:', error);
       throw error;
     }
   },
 
   async delete(id) {
     try {
-      await apiClient.deleteArea(id);
-      console.log('✅ Advertising area deleted:', id);
+      await apiClient.deleteSpace(id);
+      console.log('✅ Space deleted:', id);
       return true;
     } catch (error) {
-      console.error('❌ AdvertisingArea.delete error:', error);
+      console.error('❌ Space.delete error:', error);
       throw error;
     }
   }
 };
+
+// ✅ MIGRATION COMPLETE: AdvertisingArea entity removed
+// All advertising area functionality has been consolidated into Space entity
+// Use Space.list(), Space.get(), Space.create(), Space.update(), Space.delete() instead
 
 export const Campaign = {
   async list(params = {}) {

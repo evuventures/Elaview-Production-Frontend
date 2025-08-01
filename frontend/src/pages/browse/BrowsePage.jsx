@@ -102,8 +102,9 @@ const loadPropertiesData = async () => {
   try {
     console.log('🗺️ Loading spaces from API...');
     
-    // ✅ FIXED: Use getAreas() which calls /api/areas and returns advertising_areas directly
-    const response = await apiClient.getAreas();
+    // 🚀 MIGRATION: Use getSpaces() instead of getAreas() - spaces replaces advertising areas
+    console.log('🚀 MIGRATION: Loading spaces (was areas) from API...');
+    const response = await apiClient.getSpaces();
     
     if (!isMountedRef.current) {
       console.log('🗺️ Component unmounted during loading, aborting');
@@ -147,12 +148,12 @@ const loadPropertiesData = async () => {
           ...area.property,
           latitude: coords.lat,
           longitude: coords.lng,
-          advertising_areas: []
+          spaces: []
         });
       }
 
-      // Add area to property's advertising_areas
-      propertiesMap.get(area.property.id).advertising_areas.push(area);
+      // Add space to property's spaces
+      propertiesMap.get(area.property.id).spaces.push(area);
 
       // Create flattened space object
       flattenedSpaces.push({

@@ -61,7 +61,7 @@ export default function PropertyApprovals() {
             lastName: 'Doe',
             email: 'john@example.com'
           },
-          _count: { advertising_areas: 3 }
+          _count: { spaces: 3 }
         }
       ]);
     } finally {
@@ -180,7 +180,7 @@ export default function PropertyApprovals() {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700">Advertising Areas</label>
-                <p className="text-sm text-gray-900">{property._count?.advertising_areas || 0} spaces</p>
+                <p className="text-sm text-gray-900">{property._count?.spaces || 0} spaces</p>
               </div>
             </div>
 
@@ -342,7 +342,7 @@ export default function PropertyApprovals() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Building2 className="w-4 h-4" />
-                      <span>{property._count?.advertising_areas || 0} advertising spaces</span>
+                      <span>{property._count?.spaces || 0} advertising spaces</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" />

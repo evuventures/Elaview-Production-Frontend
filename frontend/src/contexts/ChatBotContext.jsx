@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Property, AdvertisingArea, Booking, Campaign, Invoice, Message } from '@/api/entities';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { Property, Space, Booking, Campaign, Invoice, Message } from '@/api/entities';
 import { useLocation } from 'react-router-dom';
 import { useAuth, useUser } from '@clerk/clerk-react';
 
@@ -32,17 +32,76 @@ export const ChatBotProvider = ({ children }) => {
   const { isSignedIn, isLoaded } = useAuth();
   const { user } = useUser();
 
-  // ✅ FIXED: Update page context when location changes
-  useEffect(() => {
-    updatePageContext();
-  }, [location.pathname]); // ✅ FIXED: Added proper dependency array
+  const isMountedRef = useRef(true);
+  const loadingTimeoutRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
-  // ✅ FIXED: Initial data load - only when user is signed in
+  // ✅ RATE LIMITING: Track component mount/unmount for React dev mode
   useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      loadAllData();
+    isMountedRef.current = true;
+    console.log('🔄 CHATBOT CONTEXT: Component mounted (dev mode may cause double mount)');
+    
+    return () => {
+      isMountedRef.current = false;
+      
+      // Cancel any pending requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        console.log('🔄 CHATBOT CONTEXT: Aborted pending requests on unmount');
+      }
+      
+      // Clear loading timeout
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+      
+      console.log('🔄 CHATBOT CONTEXT: Component unmounted and cleaned up');
+    };
+  }, []);
+
+  // ✅ RATE LIMITING: Update page context when location changes
+  const updatePageContextCallback = useCallback(() => {
+    if (!isMountedRef.current) return;
+    updatePageContext();
+  }, [location.pathname]);
+
+  useEffect(() => {
+    updatePageContextCallback();
+  }, [updatePageContextCallback]);
+
+  // ✅ RATE LIMITING: Lazy data loading - only when user is signed in and component is mounted
+  useEffect(() => {
+    if (!isMountedRef.current) {
+      console.log('🔄 CHATBOT CONTEXT: Skipping data load - component unmounted');
+      return;
     }
-  }, [isLoaded, isSignedIn]); // ✅ FIXED: Added proper dependency array
+    
+    if (isLoaded && isSignedIn) {
+      console.log('🔄 CHATBOT CONTEXT: User signed in, starting lazy data load');
+      
+      // Delay initial load to avoid React dev mode double-mounting issues
+      loadingTimeoutRef.current = setTimeout(() => {
+        if (isMountedRef.current) {
+          loadDataLazily();
+        }
+      }, 100);
+    } else {
+      console.log('🔄 CHATBOT CONTEXT: User not ready, clearing data');
+      if (isMountedRef.current) {
+        setGlobalContext(prev => ({
+          ...prev,
+          isLoading: false,
+          lastUpdated: new Date()
+        }));
+      }
+    }
+    
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, [isLoaded, isSignedIn]);
 
   const updatePageContext = () => {
     const pathname = location.pathname;
@@ -112,92 +171,191 @@ export const ChatBotProvider = ({ children }) => {
     }
   };
 
-  const loadAllData = async () => {
-    setGlobalContext(prev => ({ ...prev, isLoading: true }));
+  // ✅ RATE LIMITING: Lazy data loading with prioritization and stale-while-revalidate
+  const loadDataLazily = useCallback(async () => {
+    if (!isMountedRef.current || !isSignedIn) {
+      console.log('🔄 CHATBOT CONTEXT: Skipping lazy load - not ready');
+      return;
+    }
+
+    console.log('🔄 CHATBOT CONTEXT: Starting lazy data loading...');
+    const startTime = Date.now();
+    
+    // Create abort controller for this load operation
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    
+    if (isMountedRef.current) {
+      setGlobalContext(prev => ({ ...prev, isLoading: true }));
+    }
     
     try {
-      // Only load data if user is signed in
-      if (!isSignedIn) {
+      // ✅ RATE LIMITING: Load critical data first (staggered loading)
+      console.log('🔄 CHATBOT CONTEXT: Phase 1 - Loading critical data (properties, campaigns)');
+      const criticalStartTime = Date.now();
+      
+      const [properties, campaigns] = await Promise.all([
+        Property.list().catch(err => {
+          console.warn('Failed to load properties:', err.message);
+          return [];
+        }),
+        Campaign.list().catch(err => {
+          console.warn('Failed to load campaigns:', err.message);
+          return [];
+        })
+      ]);
+      
+      const criticalDuration = Date.now() - criticalStartTime;
+      console.log(`🔄 CHATBOT CONTEXT: Phase 1 complete in ${criticalDuration}ms`);
+      
+      // Update with critical data first
+      if (isMountedRef.current) {
+        setGlobalContext(prev => ({
+          ...prev,
+          properties,
+          campaigns,
+          lastUpdated: new Date()
+        }));
+      }
+      
+      // ✅ RATE LIMITING: Load secondary data (delayed to reduce initial load)
+      console.log('🔄 CHATBOT CONTEXT: Phase 2 - Loading secondary data (spaces, messages)');
+      const secondaryStartTime = Date.now();
+      
+      const [areas, messages] = await Promise.all([
+        Space.list().catch(err => {
+          console.warn('Failed to load spaces:', err.message);
+          return [];
+        }),
+        Message.list().catch(err => {
+          console.warn('Failed to load messages:', err.message);
+          return [];
+        })
+      ]);
+      
+      const secondaryDuration = Date.now() - secondaryStartTime;
+      console.log(`🔄 CHATBOT CONTEXT: Phase 2 complete in ${secondaryDuration}ms`);
+      
+      // Update with secondary data
+      if (isMountedRef.current) {
+        setGlobalContext(prev => ({
+          ...prev,
+          areas,
+          messages
+        }));
+      }
+      
+      // ✅ RATE LIMITING: Load tertiary data (least critical)
+      console.log('🔄 CHATBOT CONTEXT: Phase 3 - Loading tertiary data (invoices, bookings)');
+      const tertiaryStartTime = Date.now();
+      
+      const [invoices, bookings] = await Promise.all([
+        Invoice.list().catch(err => {
+          console.warn('Failed to load invoices:', err.message);
+          return [];
+        }),
+        Booking.list().catch(err => {
+          console.warn('Failed to load bookings:', err.message);
+          return [];
+        })
+      ]);
+      
+      const tertiaryDuration = Date.now() - tertiaryStartTime;
+      const totalDuration = Date.now() - startTime;
+      console.log(`🔄 CHATBOT CONTEXT: Phase 3 complete in ${tertiaryDuration}ms (total: ${totalDuration}ms)`);
+      
+      // Final update with all data
+      if (isMountedRef.current) {
+        setGlobalContext(prev => ({
+          ...prev,
+          user: null, // Will be handled by Clerk context
+          invoices,
+          bookings,
+          lastUpdated: new Date(),
+          isLoading: false
+        }));
+      }
+      
+      console.log(`🔄 CHATBOT CONTEXT: Lazy loading complete in ${totalDuration}ms`);
+      
+    } catch (error) {
+      const errorDuration = Date.now() - startTime;
+      console.error(`🔄 CHATBOT CONTEXT: Lazy loading failed after ${errorDuration}ms:`, error);
+      
+      if (isMountedRef.current) {
         setGlobalContext(prev => ({ 
           ...prev, 
           isLoading: false,
           lastUpdated: new Date()
         }));
-        return;
       }
-
-      const [
-        properties,
-        campaigns,
-        areas,
-        messages,
-        invoices,
-        bookings
-      ] = await Promise.all([
-        Property.list().catch(() => []),
-        Campaign.list().catch(() => []),
-        AdvertisingArea.list().catch(() => []),
-        Message.list().catch(() => []),
-        Invoice.list().catch(() => []),
-        Booking.list().catch(() => [])
-      ]);
-
-      setGlobalContext(prev => ({
-        ...prev,
-        user: null, // Will be handled by Clerk context
-        properties,
-        campaigns,
-        areas,
-        messages,
-        invoices,
-        bookings,
-        lastUpdated: new Date(),
-        isLoading: false
-      }));
-    } catch (error) {
-      console.error('Error loading global context:', error);
-      setGlobalContext(prev => ({ ...prev, isLoading: false }));
+    } finally {
+      // Clear the abort controller
+      if (abortControllerRef.current) {
+        abortControllerRef.current = null;
+      }
     }
-  };
+  }, [isSignedIn]);
 
-  const refreshData = async (dataType = 'all') => {
-    if (!isSignedIn) {
-      console.log('Cannot refresh data: User not signed in');
+  const refreshData = useCallback(async (dataType = 'all') => {
+    if (!isMountedRef.current || !isSignedIn) {
+      console.log('🔄 CHATBOT CONTEXT: Cannot refresh data - component unmounted or user not signed in');
       return;
     }
 
     if (dataType === 'all') {
-      return loadAllData();
+      console.log('🔄 CHATBOT CONTEXT: Refreshing all data...');
+      return loadDataLazily();
     }
+    
+    console.log(`🔄 CHATBOT CONTEXT: Refreshing ${dataType} data...`);
+    const startTime = Date.now();
 
     try {
       let newData;
       switch (dataType) {
         case 'properties':
           newData = await Property.list();
-          setGlobalContext(prev => ({ ...prev, properties: newData }));
+          if (isMountedRef.current) {
+            setGlobalContext(prev => ({ ...prev, properties: newData }));
+          }
           break;
         case 'campaigns':
           newData = await Campaign.list();
-          setGlobalContext(prev => ({ ...prev, campaigns: newData }));
+          if (isMountedRef.current) {
+            setGlobalContext(prev => ({ ...prev, campaigns: newData }));
+          }
           break;
         case 'messages':
           newData = await Message.list();
-          setGlobalContext(prev => ({ ...prev, messages: newData }));
+          if (isMountedRef.current) {
+            setGlobalContext(prev => ({ ...prev, messages: newData }));
+          }
           break;
         case 'invoices':
           newData = await Invoice.list();
-          setGlobalContext(prev => ({ ...prev, invoices: newData }));
+          if (isMountedRef.current) {
+            setGlobalContext(prev => ({ ...prev, invoices: newData }));
+          }
           break;
         case 'bookings':
           newData = await Booking.list();
-          setGlobalContext(prev => ({ ...prev, bookings: newData }));
+          if (isMountedRef.current) {
+            setGlobalContext(prev => ({ ...prev, bookings: newData }));
+          }
           break;
       }
+      
+      const refreshDuration = Date.now() - startTime;
+      console.log(`🔄 CHATBOT CONTEXT: Refreshed ${dataType} in ${refreshDuration}ms`);
+      
     } catch (error) {
-      console.error(`Error refreshing ${dataType}:`, error);
+      const errorDuration = Date.now() - startTime;
+      console.error(`🔄 CHATBOT CONTEXT: Failed to refresh ${dataType} after ${errorDuration}ms:`, error);
     }
-  };
+  }, [isSignedIn, loadDataLazily]);
 
   const getContextSummary = () => {
     const summary = {

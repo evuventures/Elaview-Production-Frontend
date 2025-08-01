@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Campaign, Booking, Invoice, AdvertisingArea, Property } from '@/api/entities';
+import { Campaign, Booking, Invoice, Space, Property } from '@/api/entities';
 import { useUser } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,7 +45,7 @@ export default function PaymentTestPage() {
 
       // Step 2: Get available spaces for testing
       addResult("Step 2", "info", "Finding available advertising spaces...");
-      const availableSpaces = await AdvertisingArea.filter({ status: 'active' });
+      const availableSpaces = await Space.filter({ status: 'active' });
       if (availableSpaces.length < 2) {
         addResult("Step 2", "error", "Not enough available spaces for testing");
         return;

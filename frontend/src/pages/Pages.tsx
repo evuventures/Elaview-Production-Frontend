@@ -22,7 +22,7 @@ import ProtectedRoute from "../components/auth/ProtectedRoute.jsx";
 import SignInPage from "./auth/SignIn.jsx";
 import SignUpPage from "./auth/SignUp.jsx";
 import LearnMore from "./learn-more/LearnMore.jsx"; // ✅ NEW: Learn More page
-import { ChatBotProvider } from "@/contexts/ChatBotContext";
+// ❌ TEMPORARILY DISABLED: import { ChatBotProvider } from "@/contexts/ChatBotContext";
 
 // ✅ ADMIN PAGE IMPORTS - Core Admin Pages
 import UserManagement from "./admin/UserManagement.tsx";
@@ -352,9 +352,9 @@ function PagesContent() {
 export default function Pages() {
     return (
         <Router>
-            <ChatBotProvider>
+            {/* ❌ TEMPORARILY DISABLED: <ChatBotProvider> */}
                 <PagesContent />
-            </ChatBotProvider>
+            {/* ❌ TEMPORARILY DISABLED: </ChatBotProvider> */}
         </Router>
     );
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Property, AdvertisingArea, Booking, Message, Invoice, Campaign } from '@/api/entities';
+import { Property, Space, Booking, Message, Invoice, Campaign } from '@/api/entities';
 import { useUser } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -156,7 +156,7 @@ export default function DataSeederPage() {
     const loadExistingData = async () => {
         try {
             const [properties, areas, bookings, messages, invoices, campaigns] = await Promise.all([
-                Property.list(), AdvertisingArea.list(), Booking.list(), Message.list(), Invoice.list(), Campaign.list()
+                Property.list(), Space.list(), Booking.list(), Message.list(), Invoice.list(), Campaign.list()
             ]);
             setExistingData({ 
                 users: 0, // User count not available without backend API
@@ -208,7 +208,7 @@ export default function DataSeederPage() {
                     } 
                 }))
             );
-            const createdAreas = await AdvertisingArea.bulkCreate(areasToCreate);
+            const createdAreas = await Space.bulkCreate(areasToCreate);
             setCreatedData(prev => ({ ...prev, areas: createdAreas.length }));
             setProgress(totalProgress += 40);
             await sleep(500);

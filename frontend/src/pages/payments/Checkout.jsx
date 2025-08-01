@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Campaign, Invoice, Booking, Message, AdvertisingArea, Property } from '@/api/entities';
+import { Campaign, Invoice, Booking, Message, Space, Property } from '@/api/entities';
 import { useUser } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -124,7 +124,7 @@ export default function CheckoutPage() {
             if (spaceIds.length > 0) {
                 await Promise.all(spaceIds.map(async (id) => {
                     try {
-                        const area = await AdvertisingArea.get(id);
+                        const area = await Space.get(id);
                         spacesMap[id] = area;
                     } catch (error) {
                         console.warn(`Failed to load area ${id}:`, error);
@@ -190,7 +190,7 @@ export default function CheckoutPage() {
 
                     // 3. If auto-approved, update space status
                     if (!needsApproval) {
-                        await AdvertisingArea.update(booking.area_id, {
+                        await Space.update(booking.area_id, {
                             status: 'booked'
                         });
                     }
