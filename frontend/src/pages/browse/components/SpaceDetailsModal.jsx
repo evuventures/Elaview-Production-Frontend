@@ -67,6 +67,7 @@ export default function EnhancedSpaceDetailsModal({
   addToCart,
   handleBookingNavigation
 }) {
+  // ALL HOOKS MUST BE DECLARED BEFORE ANY CONDITIONAL RETURNS
   // Material Configuration State
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [dimensions, setDimensions] = useState({ width: '', height: '' });
@@ -75,8 +76,35 @@ export default function EnhancedSpaceDetailsModal({
   const [configurationValid, setConfigurationValid] = useState(false);
   const [showMaterialConfig, setShowMaterialConfig] = useState(false);
 
+  // Real-time pricing calculation - MOVED BEFORE EARLY RETURN
+  useEffect(() => {
+    // Only run if we have selectedSpace to avoid errors
+    if (selectedSpace) {
+      if (selectedMaterial && dimensions.width && dimensions.height) {
+        const area = parseFloat(dimensions.width) * parseFloat(dimensions.height);
+        const materialCost = area * selectedMaterial.basePrice;
+        const spaceCost = getNumericPrice(selectedSpace) || 0;
+        setEstimatedCost(materialCost + spaceCost);
+      } else {
+        setEstimatedCost(getNumericPrice(selectedSpace) || 0);
+      }
+    }
+  }, [selectedMaterial, dimensions, selectedSpace]);
+
+  // Configuration validation - MOVED BEFORE EARLY RETURN
+  useEffect(() => {
+    const isValid = selectedMaterial && 
+                   dimensions.width && 
+                   dimensions.height && 
+                   parseFloat(dimensions.width) > 0 && 
+                   parseFloat(dimensions.height) > 0;
+    setConfigurationValid(isValid);
+  }, [selectedMaterial, dimensions]);
+
+  // NOW we can safely do early return - all hooks are declared above
   if (!selectedSpace || !detailsExpanded) return null;
 
+  // Rest of component logic
   const roi = calculateROI(selectedSpace, getNumericPrice);
   const insights = getBusinessInsights(selectedSpace.property);
   const trust = getTrustIndicators(selectedSpace.property);
@@ -86,28 +114,6 @@ export default function EnhancedSpaceDetailsModal({
   const compatibleMaterials = MATERIAL_CATEGORIES.filter(material => 
     material.compatibility.includes(selectedSpace.surfaceType || 'OTHER')
   );
-
-  // Real-time pricing calculation
-  useEffect(() => {
-    if (selectedMaterial && dimensions.width && dimensions.height) {
-      const area = parseFloat(dimensions.width) * parseFloat(dimensions.height);
-      const materialCost = area * selectedMaterial.basePrice;
-      const spaceCost = getNumericPrice(selectedSpace) || 0;
-      setEstimatedCost(materialCost + spaceCost);
-    } else {
-      setEstimatedCost(getNumericPrice(selectedSpace) || 0);
-    }
-  }, [selectedMaterial, dimensions, selectedSpace]);
-
-  // Configuration validation
-  useEffect(() => {
-    const isValid = selectedMaterial && 
-                   dimensions.width && 
-                   dimensions.height && 
-                   parseFloat(dimensions.width) > 0 && 
-                   parseFloat(dimensions.height) > 0;
-    setConfigurationValid(isValid);
-  }, [selectedMaterial, dimensions]);
 
   const closeModal = () => {
     setSelectedSpace(null);
