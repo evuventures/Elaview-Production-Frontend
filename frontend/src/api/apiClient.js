@@ -1,6 +1,6 @@
 // src/api/apiClient.js
 // API client updated to match your ACTUAL database structure
-// ✅ OPTIMIZED: No retries on 429 errors, reduced request load
+// ✅ COMPLETE: All Phase 1-3 endpoints properly organized
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const API_TIMEOUT = 30000;
@@ -212,6 +212,13 @@ class ApiClient {
     return this.deleteArea(id);
   }
 
+  // ✅ SPACE SEARCH (MISSING METHOD YOUR DASHBOARD NEEDS)
+  async searchAvailableSpaces(filters = {}) {
+    console.log('🔍 Searching available spaces with filters:', filters);
+    const queryString = new URLSearchParams(filters).toString();
+    return this.get(`/spaces/search${queryString ? `?${queryString}` : ''}`);
+  }
+
   // ✅ CAMPAIGNS (matches your actual schema)
   async getCampaigns(params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -262,6 +269,12 @@ class ApiClient {
 
   async declineBooking(id, reason = '') {
     return this.patch(`/bookings/${id}/decline`, { reason });
+  }
+
+  // ✅ BOOKING WITH MATERIALS (MISSING METHOD YOUR DASHBOARD CALLS)
+  async createBookingWithMaterials(bookingData) {
+    console.log('📋 Creating booking with materials:', bookingData);
+    return this.post('/bookings/with-materials', bookingData);
   }
 
   // ✅ MESSAGES (matches your actual schema - recipientId, conversationId)
@@ -503,6 +516,124 @@ class ApiClient {
     const params = { q: query, type };
     const queryString = new URLSearchParams(params).toString();
     return this.get(`/search?${queryString}`);
+  }
+
+  // ✅ MATERIAL ORDERS (PHASE 3 ENDPOINTS - PROPERLY ORGANIZED)
+  async getMaterialOrders(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/material-orders${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getMaterialOrder(orderId) {
+    return this.get(`/material-orders/${orderId}`);
+  }
+
+  async getMaterialOrderStatus(orderId) {
+    return this.get(`/material-orders/${orderId}/status`);
+  }
+
+  async createMaterialOrder(data) {
+    return this.post('/material-orders', data);
+  }
+
+  async updateMaterialOrder(orderId, data) {
+    return this.put(`/material-orders/${orderId}`, data);
+  }
+
+  async cancelMaterialOrder(orderId, reason = '') {
+    return this.patch(`/material-orders/${orderId}/cancel`, { reason });
+  }
+
+  // ✅ SUPPLIERS (PHASE 3 ENDPOINTS)  
+  async getSuppliers(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/suppliers${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getSupplier(supplierId) {
+    return this.get(`/suppliers/${supplierId}`);
+  }
+
+  async requestQuote(supplierId, data) {
+    return this.post(`/suppliers/${supplierId}/quote`, data);
+  }
+
+  async contactSupplier(supplierId, message) {
+    return this.post(`/suppliers/${supplierId}/contact`, { message });
+  }
+
+  // ✅ ORDER TIMELINE (PHASE 3 ENDPOINTS)
+  async getOrderTimeline(orderId) {
+    return this.get(`/material-orders/${orderId}/timeline`);
+  }
+
+  async addTimelineEvent(orderId, eventData) {
+    return this.post(`/material-orders/${orderId}/timeline`, eventData);
+  }
+
+  // ✅ DELIVERY COORDINATION (PHASE 3 ENDPOINTS)
+  async scheduleDelivery(orderId, data) {
+    return this.post(`/material-orders/${orderId}/delivery/schedule`, data);
+  }
+
+  async updateDeliveryInstructions(orderId, instructions) {
+    return this.patch(`/material-orders/${orderId}/delivery/instructions`, { instructions });
+  }
+
+  async trackDelivery(orderId) {
+    return this.get(`/material-orders/${orderId}/delivery/track`);
+  }
+
+  // ✅ COST OPTIMIZATION (PHASE 3 ENDPOINTS)
+  async getCostAlternatives(orderId) {
+    return this.get(`/material-orders/${orderId}/alternatives`);
+  }
+
+  async getCostRecommendations(orderId) {
+    return this.get(`/material-orders/${orderId}/recommendations`);
+  }
+
+  async applyOptimization(orderId, optimizationId) {
+    return this.post(`/material-orders/${orderId}/optimize`, { optimizationId });
+  }
+
+  // ✅ INSTALLATIONS (PHASE 2 ENDPOINTS)
+  async getInstallations(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/installations${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getInstallation(installationId) {
+    return this.get(`/installations/${installationId}`);
+  }
+
+  async updateInstallationStatus(installationId, status, data = {}) {
+    return this.patch(`/installations/${installationId}/status`, { status, ...data });
+  }
+
+  async uploadInstallationPhoto(installationId, file, type = 'after') {
+    const formData = new FormData();
+    formData.append('photo', file);
+    formData.append('type', type); // 'before' or 'after'
+
+    const token = await this.getAuthToken();
+    const response = await fetch(`${this.baseURL}/installations/${installationId}/photos`, {
+      method: 'POST',
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error(`Photo upload failed: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  async scheduleInstallation(installationId, data) {
+    return this.post(`/installations/${installationId}/schedule`, data);
   }
 
   // ✅ FILE UPLOAD

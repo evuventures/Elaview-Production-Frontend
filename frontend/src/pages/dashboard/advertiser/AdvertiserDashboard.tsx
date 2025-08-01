@@ -5,78 +5,31 @@ import {
   Calendar, Eye, Download, Clock, CheckCircle,
   Calculator, FileImage, ShoppingCart, Info,
   Truck, AlertCircle, Navigation, Building2,
-  Camera, ChevronRight, X, Plus
+  Camera, ChevronRight, X, Plus, Bell
 } from 'lucide-react';
 
 // ✅ FIXED: Import real apiClient instead of mock
 import apiClient from '../../../api/apiClient.js';
 
-// Types (inline for now)
-interface DashboardStats {
-  totalSpent: number;
-  activeCampaigns: number;
-  pendingMaterials: number;
-  completedCampaigns: number;
-}
+// Import enhanced components
+import { EnhancedBookingCard } from './components/EnhancedBookingCard';
+import { StatCard } from './components/StatCard';
+import { EmptyState } from './components/EmptyState';
+import { SpaceSearchCard } from './components/SpaceSearchCard';
+import { MaterialSelectionModal } from './components/MaterialSelectionModal';
 
-interface Space {
-  id: string;
-  name?: string;
-  location?: string;
-  address?: string;
-  dimensions?: string;
-  price?: number;
-  estimatedMaterialCost?: number;
-  imageUrl?: string;
-  availability?: string;
-  surfaceType?: string;
-  materialCompatibility?: string[];
-  propertyId?: string;
-}
+// Types
+import {
+  DashboardStats, Booking, Material, Space, BookingData,
+  CustomDimensions, Notification
+} from './types';
 
-interface Material {
-  id: string;
-  name?: string;
-  description?: string;
-  category: string;
-  pricePerUnit?: number;
-  imageUrl?: string;
-  skillLevel?: string;
-}
-
-interface Booking {
-  id: string;
-  spaceName?: string;
-  location?: string;
-  status?: 'materials_ordered' | 'materials_shipped' | 'active';
-  startDate?: string;
-  endDate?: string;
-  totalCost?: number;
-  spaceCost?: number;
-  materialCost?: number;
-  platformFee?: number;
-  materialType?: string;
-  dimensions?: string;
-  materialStatus?: string;
-  installationStatus?: string;
-  trackingNumber?: string;
-  trackingUrl?: string;
-  estimatedDelivery?: string;
-}
-
-interface CustomDimensions {
-  width: string;
-  height: string;
-}
-
-interface BookingData {
-  spaceId: string;
-  propertyId?: string;
-  materialItemId: string;
-  dimensions: CustomDimensions;
-  designFileUrl: string;
-  totalCost: number;
-}
+// Utility functions
+import {
+  formatStatValue, calculateMaterialCost, calculateTotalCost,
+  isBookingDataComplete, filterCompatibleMaterials,
+  getBookingUrgencyLevel
+} from './utils';
 
 export default function AdvertiserDashboard() {
   const { user, isLoaded: userLoaded } = useUser();
@@ -95,6 +48,7 @@ export default function AdvertiserDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [availableMaterials, setAvailableMaterials] = useState<Material[]>([]);
   const [searchResults, setSearchResults] = useState<Space[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [materialsLoading, setMaterialsLoading] = useState(false);
@@ -105,68 +59,13 @@ export default function AdvertiserDashboard() {
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
   const [customDimensions, setCustomDimensions] = useState<CustomDimensions>({ width: '', height: '' });
 
-  // Utility functions with safety checks
-  const formatStatValue = (value: number | string | undefined | null, label: string): string => {
-    // Handle undefined, null, or invalid values
-    if (value === null || value === undefined) return '0';
-    
-    if (typeof value === 'number' && label.includes('Spent')) {
-      return `$${value.toLocaleString()}`;
-    }
-    
-    // Safely convert to string
-    if (typeof value === 'string') return value;
-    if (typeof value === 'number') return value.toString();
-    
-    return '0';
-  };
-
-  const calculateMaterialCost = (material: Material, dimensions: CustomDimensions): number => {
-    if (!dimensions.width || !dimensions.height || !material) return 0;
-    const sqFt = (parseFloat(dimensions.width) * parseFloat(dimensions.height));
-    const materialCost = sqFt * (material.pricePerUnit || 0);
-    const markup = materialCost * 0.15; // 15% markup
-    return Math.round((materialCost + markup) * 100) / 100;
-  };
-
-  const calculateTotalCost = (): number => {
-    if (!selectedSpace || !selectedMaterial) return 0;
-    const spaceCost = selectedSpace.price || 0;
-    const materialCost = calculateMaterialCost(selectedMaterial, customDimensions);
-    const subtotal = spaceCost + materialCost;
-    const platformFee = subtotal * 0.05;
-    return subtotal + platformFee;
-  };
-
-  const getStatusBadge = (status?: Booking['status']) => {
-    const badges = {
-      'materials_ordered': {
-        color: 'bg-blue-100 text-blue-800',
-        icon: Package,
-        text: 'Materials Ordered'
-      },
-      'materials_shipped': {
-        color: 'bg-purple-100 text-purple-800',
-        icon: Truck,
-        text: 'Materials Shipped'
-      },
-      'active': {
-        color: 'bg-green-100 text-green-800',
-        icon: CheckCircle,
-        text: 'Campaign Active'
-      }
-    };
-    
-    // Always return a valid badge, defaulting to 'active' if status is undefined or invalid
-    return badges[status || 'active'] || badges['active'];
-  };
-
   // Fetch dashboard data on mount
   useEffect(() => {
     console.log('👤 User loaded:', userLoaded, 'User ID:', user?.id);
     if (userLoaded && user?.id) {
       fetchDashboardData();
       fetchMaterialsCatalog();
+      fetchNotifications();
     } else if (userLoaded && !user) {
       console.error('❌ User not authenticated');
       setError('Please sign in to view your dashboard');
@@ -260,6 +159,23 @@ export default function AdvertiserDashboard() {
     }
   };
 
+  const fetchNotifications = async () => {
+    try {
+      console.log('🔔 Fetching notifications...');
+      const response = await apiClient.getNotifications();
+      
+      if (response.success) {
+        console.log('✅ Notifications received:', response.data);
+        setNotifications(response.data.notifications || []);
+      } else {
+        console.error('❌ Notifications fetch failed:', response.error);
+      }
+    } catch (err) {
+      console.error('❌ Notifications error:', err);
+      setNotifications([]);
+    }
+  };
+
   // Handle booking with materials
   const handleBookingConfirm = async () => {
     if (!selectedSpace || !selectedMaterial || !customDimensions.width || !customDimensions.height || !uploadedCreative) {
@@ -273,7 +189,7 @@ export default function AdvertiserDashboard() {
       materialItemId: selectedMaterial.id,
       dimensions: customDimensions,
       designFileUrl: uploadedCreative,
-      totalCost: calculateTotalCost()
+      totalCost: calculateTotalCost(selectedSpace, selectedMaterial, customDimensions)
     };
 
     try {
@@ -284,6 +200,10 @@ export default function AdvertiserDashboard() {
         console.log('✅ Booking created successfully');
         alert('Booking confirmed! You will receive installation instructions via email.');
         setShowMaterialModal(false);
+        setSelectedSpace(null);
+        setSelectedMaterial(null);
+        setCustomDimensions({ width: '', height: '' });
+        setUploadedCreative(null);
         fetchDashboardData(); // Refresh data
       } else {
         console.error('❌ Booking creation failed:', response.error);
@@ -295,67 +215,25 @@ export default function AdvertiserDashboard() {
     }
   };
 
-  // Safe Inline Components
-  const StatCard = ({ icon: Icon, value, label, color, subValue, actionText, onAction }: any) => {
-    const colorClasses = {
-      green: 'bg-green-100 text-green-600',
-      blue: 'bg-blue-100 text-blue-600',
-      yellow: 'bg-yellow-100 text-yellow-600',
-      teal: 'bg-teal-100 text-teal-600'
-    };
+  // Calculate derived stats for better insights
+  const urgentBookings = bookings.filter(b => getBookingUrgencyLevel(b) === 'high' || getBookingUrgencyLevel(b) === 'critical');
+  const unreadNotifications = notifications.filter(n => !n.isRead);
 
-    // Safety check for value
-    const safeValue = value !== null && value !== undefined ? value : 0;
-
-    return (
-      <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-white/50 shadow-sm hover:shadow-md transition-all duration-200">
-        <div className="flex items-center justify-between mb-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${colorClasses[color]}`}>
-            <Icon className="w-5 h-5" />
-          </div>
-          {actionText && (
-            <button 
-              onClick={onAction}
-              className="text-sm text-teal-600 hover:text-teal-700 font-medium"
-            >
-              {actionText}
-            </button>
-          )}
-        </div>
-        <p className="text-2xl font-bold text-gray-900">
-          {formatStatValue(safeValue, label)}
-        </p>
-        <p className="text-sm text-gray-600">{label}</p>
-        {subValue && <p className="text-xs text-gray-500 mt-1">{subValue}</p>}
-      </div>
-    );
-  };
-
-  const EmptyState = ({ icon: Icon, title, description, actionText, onAction }: any) => (
-    <div className="text-center py-12">
-      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <Icon className="w-8 h-8 text-gray-400" />
-      </div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-600 mb-6 max-w-sm mx-auto">{description}</p>
-      <button 
-        onClick={onAction}
-        className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 inline-flex items-center"
-      >
-        <Plus className="w-4 h-4 mr-2" />
-        {actionText}
-      </button>
-    </div>
-  );
-
-  // Rest of your original component logic...
   const renderContent = () => {
     switch(activeTab) {
       case 'campaigns':
         return bookings.length > 0 ? (
           <div className="space-y-4">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-semibold text-gray-900">Your Active Campaigns</h3>
+              <div>
+                <h3 className="font-semibold text-gray-900">Your Active Campaigns</h3>
+                {urgentBookings.length > 0 && (
+                  <p className="text-sm text-amber-600 flex items-center mt-1">
+                    <AlertCircle className="w-4 h-4 mr-1" />
+                    {urgentBookings.length} campaign{urgentBookings.length > 1 ? 's' : ''} need{urgentBookings.length === 1 ? 's' : ''} attention
+                  </p>
+                )}
+              </div>
               <button 
                 onClick={() => setActiveTab('browse')}
                 className="text-teal-600 hover:text-teal-700 text-sm font-medium"
@@ -363,105 +241,29 @@ export default function AdvertiserDashboard() {
                 Browse More Spaces →
               </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {bookings.map(booking => {
-                const statusBadge = getStatusBadge(booking.status);
-                // Placeholder logic - will replace with actual field later
-                const verificationImage = booking.verificationImageUrl || null; // Replace with actual field name
-                const hasVerificationImage = !!verificationImage;
-                
-                return (
-                  <div key={booking.id} className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-                    {/* Image Section */}
-                    <div className="aspect-video w-full bg-gray-100 relative">
-                      {hasVerificationImage ? (
-                        <img 
-                          src={verificationImage} 
-                          alt="Campaign verification" 
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-50">
-                          <div className="text-center px-4">
-                            <Camera className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                            <p className="text-xs text-gray-500">Awaiting photo upload from owner</p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Status Badge Overlay */}
-                      <div className="absolute top-3 right-3">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusBadge.color} shadow-sm`}>
-                          <statusBadge.icon className="w-3 h-3 mr-1" />
-                          {statusBadge.text}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Content Section */}
-                    <div className="p-4">
-                      <div className="mb-3">
-                        <h3 className="font-semibold text-gray-900 mb-1">{booking.spaceName || 'Space Name'}</h3>
-                        <p className="text-sm text-gray-600 flex items-center">
-                          <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
-                          {booking.location || 'Location'}
-                        </p>
-                      </div>
-
-                      {/* Campaign Details */}
-                      <div className="space-y-2 text-sm mb-3">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Duration:</span>
-                          <span className="font-medium">
-                            {booking.startDate && booking.endDate 
-                              ? `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}`
-                              : '30 days'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Total Cost:</span>
-                          <span className="font-bold text-green-600">
-                            {typeof booking.totalCost === 'number' ? `${booking.totalCost}` : 'N/A'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => console.log('👁️ View campaign details:', booking.id)}
-                          className="flex-1 bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 text-sm font-medium transition-colors"
-                        >
-                          View Details
-                        </button>
-                        <button 
-                          onClick={() => console.log('📊 View analytics:', booking.id)}
-                          className="flex-1 bg-teal-600 text-white px-3 py-2 rounded-lg hover:bg-teal-700 text-sm font-medium transition-colors"
-                        >
-                          Analytics
-                        </button>
-                      </div>
-
-                      {/* Installation Status */}
-                      {booking.materialStatus === 'SHIPPED' && booking.estimatedDelivery && (
-                        <div className="mt-3 p-2 bg-blue-50 rounded-lg">
-                          <p className="text-xs text-blue-800 flex items-center">
-                            <Truck className="w-3 h-3 mr-1" />
-                            Materials arriving by {new Date(booking.estimatedDelivery).toLocaleDateString()}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            
+            {/* Sort bookings by urgency */}
+            <div className="space-y-4">
+              {bookings
+                .sort((a, b) => {
+                  const urgencyOrder = { 'critical': 0, 'high': 1, 'medium': 2, 'low': 3 };
+                  return urgencyOrder[getBookingUrgencyLevel(a)] - urgencyOrder[getBookingUrgencyLevel(b)];
+                })
+                .map(booking => (
+                  <EnhancedBookingCard 
+                    key={booking.id} 
+                    booking={booking}
+                    expandedBooking={expandedBooking}
+                    onToggleExpand={setExpandedBooking}
+                  />
+                ))}
             </div>
           </div>
         ) : (
           <EmptyState
             icon={Calendar}
             title="No active campaigns"
-            description="Browse available spaces to start your first advertising campaign"
+            description="Browse available spaces to start your first advertising campaign with integrated materials"
             actionText="Browse Ad Spaces"
             onAction={() => setActiveTab('browse')}
           />
@@ -475,7 +277,7 @@ export default function AdvertiserDashboard() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <p className="text-sm text-blue-800">
                   <Info className="w-4 h-4 inline mr-1" />
-                  Use our full browse experience for advanced search and map view
+                  All spaces include material sourcing and installation coordination
                 </p>
                 <button 
                   onClick={() => window.location.href = '/browse'}
@@ -496,21 +298,14 @@ export default function AdvertiserDashboard() {
               ) : searchResults.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {searchResults.map(space => (
-                    <div key={space.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200">
-                      <div className="p-4">
-                        <h3 className="font-semibold text-gray-900">{space.name || 'Space Name'}</h3>
-                        <p className="text-sm text-gray-600">{space.location || 'Location'}</p>
-                        <button 
-                          onClick={() => {
-                            setSelectedSpace(space);
-                            setShowMaterialModal(true);
-                          }}
-                          className="w-full bg-teal-600 text-white py-2 rounded-lg hover:bg-teal-700 transition-colors mt-2"
-                        >
-                          Book Space + Materials
-                        </button>
-                      </div>
-                    </div>
+                    <SpaceSearchCard 
+                      key={space.id} 
+                      space={space}
+                      onSelect={(space) => {
+                        setSelectedSpace(space);
+                        setShowMaterialModal(true);
+                      }}
+                    />
                   ))}
                 </div>
               ) : (
@@ -563,18 +358,55 @@ export default function AdvertiserDashboard() {
     >
       <div className="max-w-7xl mx-auto">
         
-        {/* Header */}
+        {/* Header with Notifications */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Advertiser Dashboard</h1>
-          <p className="text-gray-600">Manage your campaigns and materials</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Advertiser Dashboard</h1>
+              <p className="text-gray-600">Manage your campaigns and materials</p>
+            </div>
+            
+            {/* Notification Bell */}
+            {unreadNotifications.length > 0 && (
+              <button className="relative p-2 text-gray-600 hover:text-gray-900">
+                <Bell className="w-6 h-6" />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {unreadNotifications.length}
+                </span>
+              </button>
+            )}
+          </div>
+          
+          {/* Urgent Alerts */}
+          {urgentBookings.length > 0 && (
+            <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <div className="flex items-center">
+                <AlertCircle className="w-5 h-5 text-amber-600 mr-2" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-800">
+                    Action Required: {urgentBookings.length} campaign{urgentBookings.length > 1 ? 's' : ''} need{urgentBookings.length === 1 ? 's' : ''} immediate attention
+                  </p>
+                  <p className="text-xs text-amber-700">
+                    Installation deadlines approaching or materials delivered
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setActiveTab('campaigns')}
+                  className="text-amber-700 hover:text-amber-800 text-sm font-medium"
+                >
+                  View →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Stats Grid */}
+        {/* Enhanced Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <StatCard 
             icon={DollarSign} 
             value={stats.totalSpent} 
-            label="Total Spent"
+            label="Total Invested"
             color="green"
             subValue="This month"
           />
@@ -583,7 +415,7 @@ export default function AdvertiserDashboard() {
             value={stats.activeCampaigns} 
             label="Active Campaigns"
             color="blue"
-            actionText="View All"
+            actionText={urgentBookings.length > 0 ? `${urgentBookings.length} urgent` : "View All"}
             onAction={() => setActiveTab('campaigns')}
           />
           <StatCard 
@@ -608,7 +440,7 @@ export default function AdvertiserDashboard() {
           <div className="border-b border-gray-200">
             <nav className="flex space-x-8 px-6">
               {[
-                { id: 'campaigns', label: 'My Campaigns', icon: Calendar },
+                { id: 'campaigns', label: 'My Campaigns', icon: Calendar, badge: urgentBookings.length },
                 { id: 'browse', label: 'Browse Spaces', icon: Search }
               ].map(tab => (
                 <button
@@ -622,6 +454,11 @@ export default function AdvertiserDashboard() {
                 >
                   <tab.icon className="w-4 h-4 mr-2" />
                   {tab.label}
+                  {tab.badge && tab.badge > 0 && (
+                    <span className="ml-2 bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full">
+                      {tab.badge}
+                    </span>
+                  )}
                 </button>
               ))}
             </nav>
@@ -634,48 +471,30 @@ export default function AdvertiserDashboard() {
         </div>
       </div>
       
-      {/* Simplified Modal for now */}
+      {/* Material Selection Modal */}
       {showMaterialModal && selectedSpace && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Book Space</h2>
-              <button 
-                onClick={() => {
-                  setShowMaterialModal(false);
-                  setSelectedSpace(null);
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <p className="text-gray-600 mb-4">
-              Booking: {selectedSpace.name || 'Space'}
-            </p>
-            <div className="flex gap-3">
-              <button 
-                onClick={() => {
-                  setShowMaterialModal(false);
-                  setSelectedSpace(null);
-                }}
-                className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={() => {
-                  alert('Booking functionality coming soon!');
-                  setShowMaterialModal(false);
-                  setSelectedSpace(null);
-                }}
-                className="flex-1 bg-teal-600 text-white py-2 rounded-lg"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
+        <MaterialSelectionModal
+          selectedSpace={selectedSpace}
+          showModal={showMaterialModal}
+          availableMaterials={availableMaterials}
+          materialsLoading={materialsLoading}
+          selectedMaterial={selectedMaterial}
+          customDimensions={customDimensions}
+          uploadedCreative={uploadedCreative}
+          onClose={() => {
+            setShowMaterialModal(false);
+            setSelectedSpace(null);
+            setSelectedMaterial(null);
+            setCustomDimensions({ width: '', height: '' });
+            setUploadedCreative(null);
+          }}
+          onMaterialSelect={setSelectedMaterial}
+          onDimensionsChange={setCustomDimensions}
+          onCreativeUpload={(file) => setUploadedCreative(file)}
+          onConfirmBooking={handleBookingConfirm}
+          calculateTotalCost={() => calculateTotalCost(selectedSpace, selectedMaterial, customDimensions)}
+          calculateMaterialCost={calculateMaterialCost}
+        />
       )}
     </div>
   );
