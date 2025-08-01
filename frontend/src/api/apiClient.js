@@ -1,6 +1,6 @@
 // src/api/apiClient.js
-// API client updated to match your ACTUAL database structure
-// ✅ COMPLETE: All Phase 1-3 endpoints properly organized
+// API client enhanced with Progressive Configuration Checkout endpoints
+// ✅ STEP 2: Business Profile Methods Enhanced
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const API_TIMEOUT = 30000;
@@ -142,6 +142,136 @@ class ApiClient {
     return this.delete(`/users/${id}`);
   }
 
+  // ✅ ENHANCED: BUSINESS PROFILE MANAGEMENT (Progressive Configuration)
+  async getUserBusinessProfile() {
+    console.log('🏢 Fetching user business profile...');
+    try {
+      const response = await this.get('/users/business-profile');
+      
+      if (response.success && response.data) {
+        console.log('✅ Business profile retrieved:', response.data);
+        return {
+          success: true,
+          data: response.data
+        };
+      } else {
+        console.log('ℹ️ No business profile found');
+        return {
+          success: false,
+          error: 'Business profile not found'
+        };
+      }
+    } catch (error) {
+      console.error('❌ Get business profile error:', error);
+      return {
+        success: false,
+        error: 'Failed to get business profile'
+      };
+    }
+  }
+
+  async updateBusinessProfile(profileData) {
+    console.log('🏢 Updating business profile:', profileData);
+    try {
+      // Validate required fields before sending
+      const requiredFields = ['businessName', 'businessIndustry', 'businessAddress'];
+      for (const field of requiredFields) {
+        if (!profileData[field]) {
+          return {
+            success: false,
+            error: `Missing required field: ${field}`
+          };
+        }
+      }
+      
+      // Validate business address
+      if (!profileData.businessAddress.street || !profileData.businessAddress.city) {
+        return {
+          success: false,
+          error: 'Business address must include street and city'
+        };
+      }
+      
+      const response = await this.put('/users/business-profile', profileData);
+      
+      if (response.success) {
+        console.log('✅ Business profile updated successfully');
+        return {
+          success: true,
+          data: response.data
+        };
+      } else {
+        console.error('❌ Business profile update failed:', response.error);
+        return {
+          success: false,
+          error: response.error || 'Failed to update business profile'
+        };
+      }
+    } catch (error) {
+      console.error('❌ Update business profile error:', error);
+      return {
+        success: false,
+        error: 'Failed to update business profile'
+      };
+    }
+  }
+
+  async checkBusinessProfileStatus() {
+    console.log('📋 Checking business profile status...');
+    try {
+      const response = await this.get('/users/business-profile/status');
+      
+      return {
+        success: true,
+        data: {
+          isComplete: response.data?.isComplete || false,
+          missingFields: response.data?.missingFields || [],
+          completionPercentage: response.data?.completionPercentage || 0
+        }
+      };
+    } catch (error) {
+      console.error('❌ Check business profile status error:', error);
+      return {
+        success: false,
+        error: 'Failed to check business profile status'
+      };
+    }
+  }
+
+  async validateBusinessProfile() {
+    console.log('🔍 Validating business profile completeness...');
+    try {
+      const response = await this.get('/users/business-profile/validate');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('❌ Validate business profile error:', error);
+      return {
+        success: false,
+        error: 'Failed to validate business profile'
+      };
+    }
+  }
+
+  async checkBusinessProfileRequired() {
+    console.log('❓ Checking if business profile setup is required...');
+    try {
+      const response = await this.get('/users/business-profile/required');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('❌ Check business profile required error:', error);
+      return {
+        success: false,
+        error: 'Failed to check if business profile is required'
+      };
+    }
+  }
+
   // ✅ PROPERTIES (matches your actual schema)
   async getProperties(params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -184,6 +314,22 @@ class ApiClient {
 
   async deleteArea(id) {
     return this.delete(`/areas/${id}`);
+  }
+
+  // ✅ NEW: SPACE AVAILABILITY CHECKING (Progressive Configuration)
+  async checkSpaceAvailability(spaceId, startDate, endDate) {
+    console.log('📅 Checking availability for space:', spaceId, 'from', startDate, 'to', endDate);
+    return this.get(`/spaces/${spaceId}/availability?start=${startDate}&end=${endDate}`);
+  }
+
+  async checkMultipleSpaceAvailability(spaceAvailabilityData) {
+    console.log('📅 Checking availability for multiple spaces:', spaceAvailabilityData);
+    return this.post('/spaces/availability/bulk', spaceAvailabilityData);
+  }
+
+  async getSpaceBookedDates(spaceId, monthYear) {
+    console.log('📅 Getting booked dates for space:', spaceId, 'for month:', monthYear);
+    return this.get(`/spaces/${spaceId}/booked-dates?month=${monthYear}`);
   }
 
   // ✅ SPACES = AREAS (aliases for backward compatibility)
@@ -275,6 +421,194 @@ class ApiClient {
   async createBookingWithMaterials(bookingData) {
     console.log('📋 Creating booking with materials:', bookingData);
     return this.post('/bookings/with-materials', bookingData);
+  }
+
+  // ✅ NEW: PROGRESSIVE CONFIGURATION CHECKOUT ENDPOINTS
+  
+  // Material Configuration Phase
+  async getMaterialsForSpace(spaceId) {
+    console.log('📦 Getting compatible materials for space:', spaceId);
+    return this.get(`/spaces/${spaceId}/materials`);
+  }
+
+  async calculateMaterialPricing(configurationData) {
+    console.log('💰 Calculating material pricing:', configurationData);
+    return this.post('/materials/calculate-pricing', configurationData);
+  }
+
+  async validateMaterialConfiguration(configData) {
+    console.log('✅ Validating material configuration:', configData);
+    return this.post('/materials/validate-configuration', configData);
+  }
+
+  // Cart & Multi-Space Management
+  async validateCartItems(cartData) {
+    console.log('🛒 Validating cart items and configurations:', cartData);
+    return this.post('/cart/validate', cartData);
+  }
+
+  async calculateCartTotal(cartData) {
+    console.log('💰 Calculating total cart pricing:', cartData);
+    return this.post('/cart/calculate-total', cartData);
+  }
+
+  async saveCartState(cartData) {
+    console.log('💾 Saving cart state for user session:', cartData);
+    return this.post('/cart/save-state', cartData);
+  }
+
+  async getCartState() {
+    console.log('📥 Retrieving saved cart state...');
+    return this.get('/cart/state');
+  }
+
+  // ✅ ENHANCED: CHECKOUT VALIDATION WITH BUSINESS PROFILE
+  async validateCheckoutRequirements(checkoutData) {
+    console.log('✅ Validating checkout requirements...');
+    try {
+      const validations = await Promise.all([
+        this.checkBusinessProfileStatus(),
+        this.validateCartItems(checkoutData.cartItems || []),
+        this.validatePaymentMethod(checkoutData.paymentMethod || {})
+      ]);
+      
+      const [businessProfile, cartValidation, paymentValidation] = validations;
+      
+      const requirements = {
+        businessProfileComplete: businessProfile.data?.isComplete || false,
+        cartValid: cartValidation.success,
+        paymentMethodValid: paymentValidation.success,
+        readyForCheckout: false
+      };
+      
+      // Determine if checkout can proceed
+      requirements.readyForCheckout = 
+        requirements.businessProfileComplete && 
+        requirements.cartValid && 
+        requirements.paymentMethodValid;
+      
+      if (!requirements.readyForCheckout) {
+        const issues = [];
+        if (!requirements.businessProfileComplete) {
+          issues.push('Business profile incomplete');
+        }
+        if (!requirements.cartValid) {
+          issues.push('Cart validation failed');
+        }
+        if (!requirements.paymentMethodValid) {
+          issues.push('Payment method invalid');
+        }
+        
+        return {
+          success: false,
+          error: `Checkout requirements not met: ${issues.join(', ')}`,
+          data: requirements
+        };
+      }
+      
+      return {
+        success: true,
+        data: requirements
+      };
+    } catch (error) {
+      console.error('❌ Checkout validation error:', error);
+      return {
+        success: false,
+        error: 'Failed to validate checkout requirements'
+      };
+    }
+  }
+
+  async validateCartItems(cartItems) {
+    try {
+      if (!cartItems || cartItems.length === 0) {
+        return {
+          success: false,
+          error: 'Cart is empty'
+        };
+      }
+      
+      // Check each cart item
+      for (const item of cartItems) {
+        if (!item.spaceId || !item.dates || !item.materialConfiguration) {
+          return {
+            success: false,
+            error: 'Cart contains incomplete items'
+          };
+        }
+      }
+      
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: 'Failed to validate cart'
+      };
+    }
+  }
+
+  async validatePaymentMethod(paymentMethod) {
+    try {
+      if (!paymentMethod || !paymentMethod.type) {
+        return {
+          success: false,
+          error: 'No payment method specified'
+        };
+      }
+      
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: 'Failed to validate payment method'
+      };
+    }
+  }
+
+  // Stripe Payment Processing
+  async createPaymentIntent(paymentData) {
+    console.log('💳 Creating Stripe payment intent:', paymentData);
+    return this.post('/checkout/create-payment-intent', paymentData);
+  }
+
+  async confirmPayment(paymentIntentId, paymentDetails) {
+    console.log('✅ Confirming payment:', paymentIntentId);
+    return this.post('/checkout/confirm-payment', {
+      paymentIntentId,
+      ...paymentDetails
+    });
+  }
+
+  async getPaymentStatus(paymentIntentId) {
+    console.log('🔍 Checking payment status:', paymentIntentId);
+    return this.get(`/checkout/payment-status/${paymentIntentId}`);
+  }
+
+  // Multi-Booking Creation (Progressive Configuration)
+  async createMultipleBookings(bookingsData) {
+    console.log('📋 Creating multiple bookings from cart:', bookingsData);
+    return this.post('/checkout/create-multi-bookings', bookingsData);
+  }
+
+  async validateBookingData(bookingData) {
+    console.log('✅ Validating booking data before creation:', bookingData);
+    return this.post('/checkout/validate-booking', bookingData);
+  }
+
+  // Checkout Process Management
+  async initializeCheckout(cartData) {
+    console.log('🚀 Initializing checkout process:', cartData);
+    return this.post('/checkout/initialize', cartData);
+  }
+
+  async finalizeCheckout(checkoutData) {
+    console.log('🎯 Finalizing checkout and creating orders:', checkoutData);
+    return this.post('/checkout/finalize', checkoutData);
+  }
+
+  async getCheckoutSession(sessionId) {
+    console.log('📊 Getting checkout session details:', sessionId);
+    return this.get(`/checkout/session/${sessionId}`);
   }
 
   // ✅ MESSAGES (matches your actual schema - recipientId, conversationId)
