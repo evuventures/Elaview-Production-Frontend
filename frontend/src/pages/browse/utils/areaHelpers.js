@@ -1,9 +1,9 @@
 // src/pages/browse/utils/areaHelpers.js
-// ✅ UPDATED: Handle real data structure with monthly pricing
+// ✅ FIXED: Handle ILS currency and daily pricing from Kfar Kama seed data
+// ✅ FIXED: Removed non-existent 'Storefront' icon from lucide-react
 
 import { 
-  Building2, Camera, Zap, Eye, Navigation, Monitor, 
-  Zap as Lightning 
+  Building2, Monitor, Store, MapPin, Zap, Building
 } from "lucide-react";
 
 /**
@@ -26,13 +26,13 @@ export const getAreaType = (area) => {
   
   const type = area.type;
   const typeLabels = {
-    // ✅ MVP types from seed data
+    // ✅ Kfar Kama space types from seed data
     'storefront_window': 'Storefront Window',
     'building_exterior': 'Building Exterior',
     'retail_frontage': 'Retail Frontage',
-    'pole_mount': 'Pole-Mounted Display',
+    'pole_mount': 'Billboard',
     
-    // Legacy types (in case they exist)
+    // Additional types
     'billboard': 'Billboard',
     'digital_display': 'Digital Display',
     'digital_marquee': 'Digital Marquee', 
@@ -58,34 +58,66 @@ export const getAreaType = (area) => {
 
 /**
  * Get formatted price string for advertising area
+ * ✅ FIXED: Handle ILS currency and daily pricing from Kfar Kama data
  * @param {Object} area - Advertising area object
  * @returns {string} Formatted price string
  */
 export const getAreaPrice = (area) => {
   if (!area) return 'Price on request';
   
-  // ✅ FIXED: Handle monthly rates from seed data
-  if (area.baseRate) {
-    const rateType = area.rateType || 'MONTHLY';
-    
-    // ✅ FIXED: Proper rate type mapping
-    const rateTypeMap = {
-      'DAILY': 'day',
-      'WEEKLY': 'week', 
-      'MONTHLY': 'month',
-      'YEARLY': 'year'
+  // ✅ FIXED: Handle ILS currency properly
+  const currency = area.currency || 'USD';
+  const baseRate = area.baseRate;
+  const rateType = area.rateType || 'DAILY';
+  
+  if (baseRate) {
+    // Format currency symbol
+    const formatCurrency = (amount, curr) => {
+      if (curr === 'ILS') {
+        return `₪${Math.round(amount)}`;
+      } else if (curr === 'USD') {
+        return `$${Math.round(amount)}`;
+      } else if (curr === 'EUR') {
+        return `€${Math.round(amount)}`;
+      }
+      return `${curr} ${Math.round(amount)}`;
     };
     
-    const suffix = rateTypeMap[rateType.toUpperCase()] || 'month';
-    return `$${area.baseRate}/${suffix}`;
+    // Rate type suffixes
+    const suffixMap = {
+      'HOURLY': '/hr',
+      'DAILY': '/day', 
+      'WEEKLY': '/week',
+      'MONTHLY': '/month',
+      'YEARLY': '/year'
+    };
+    
+    const suffix = suffixMap[rateType.toUpperCase()] || '/day';
+    return `${formatCurrency(baseRate, currency)}${suffix}`;
   }
   
+  // Fallback to pricing object if available
   if (area.pricing) {
     try {
       const pricing = typeof area.pricing === 'string' ? JSON.parse(area.pricing) : area.pricing;
-      if (pricing.daily) return `$${pricing.daily}/day`;
-      if (pricing.weekly) return `$${pricing.weekly}/week`;
-      if (pricing.monthly) return `$${pricing.monthly}/month`;
+      
+      if (pricing.daily && currency === 'ILS') {
+        return `₪${Math.round(pricing.daily)}/day`;
+      } else if (pricing.daily) {
+        return `$${Math.round(pricing.daily)}/day`;
+      }
+      
+      if (pricing.weekly && currency === 'ILS') {
+        return `₪${Math.round(pricing.weekly)}/week`;
+      } else if (pricing.weekly) {
+        return `$${Math.round(pricing.weekly)}/week`;
+      }
+      
+      if (pricing.monthly && currency === 'ILS') {
+        return `₪${Math.round(pricing.monthly)}/month`;
+      } else if (pricing.monthly) {
+        return `$${Math.round(pricing.monthly)}/month`;
+      }
     } catch (e) {
       console.warn('Error parsing area pricing:', e);
     }
@@ -96,26 +128,29 @@ export const getAreaPrice = (area) => {
 
 /**
  * Get numeric price for calculations (daily rate)
+ * ✅ FIXED: Handle daily pricing from Kfar Kama data
  * @param {Object} area - Advertising area object
- * @returns {number} Daily price in dollars
+ * @returns {number} Daily price in base currency
  */
 export const getNumericPrice = (area) => {
   if (!area) return 150;
   
-  // ✅ FIXED: Handle monthly rates from seed data
-  if (area.baseRate) {
-    const rateType = area.rateType || 'MONTHLY';
-    
+  const baseRate = area.baseRate;
+  const rateType = area.rateType || 'DAILY';
+  
+  if (baseRate) {
     // Convert to daily rate based on rate type
     switch (rateType.toUpperCase()) {
-      case 'DAILY': return area.baseRate;
-      case 'WEEKLY': return Math.round(area.baseRate / 7);
-      case 'MONTHLY': return Math.round(area.baseRate / 30);
-      case 'YEARLY': return Math.round(area.baseRate / 365);
-      default: return Math.round(area.baseRate / 30); // Default to monthly
+      case 'DAILY': return baseRate;
+      case 'WEEKLY': return Math.round(baseRate / 7);
+      case 'MONTHLY': return Math.round(baseRate / 30);
+      case 'YEARLY': return Math.round(baseRate / 365);
+      case 'HOURLY': return baseRate * 8; // Assume 8 hours per day
+      default: return baseRate; // Default to base rate as daily
     }
   }
   
+  // Fallback to pricing object
   if (area.pricing) {
     try {
       const pricing = typeof area.pricing === 'string' ? JSON.parse(area.pricing) : area.pricing;
@@ -132,6 +167,7 @@ export const getNumericPrice = (area) => {
 
 /**
  * Get appropriate icon component for advertising area category
+ * ✅ FIXED: Include icons for Kfar Kama space types and replace Storefront with Store
  * @param {Object} area - Advertising area object
  * @returns {React.Component} Icon component
  */
@@ -140,35 +176,137 @@ export const getAreaCategoryIcon = (area) => {
   
   const type = area.type?.toLowerCase() || '';
   
-  // ✅ Updated for MVP space types
-  const categories = {
-    digital: { 
-      icon: Lightning, 
-      types: ['digital_display', 'digital_marquee', 'luxury_video_wall', 'elevator_display', 'concourse_display'] 
-    },
-    outdoor: { 
-      icon: Eye, 
-      types: ['billboard', 'coastal_billboard', 'building_wrap', 'parking_totem', 'bus_shelter', 'building_exterior', 'pole_mount'] 
-    },
-    retail: { 
-      icon: Building2, 
-      types: ['mall_kiosk', 'window_display', 'gallery_storefront', 'lobby_display', 'storefront_window', 'retail_frontage'] 
-    },
-    transit: { 
-      icon: Navigation, 
-      types: ['platform_display', 'bus_shelter', 'parking_structure'] 
-    },
-    indoor: { 
-      icon: Monitor, 
-      types: ['wall_graphic', 'floor_graphic', 'other'] 
-    }
+  // Icon mapping for space types
+  const iconMap = {
+    // Kfar Kama space types - ✅ FIXED: Replaced Storefront with Store
+    'storefront_window': Store,
+    'building_exterior': Building,
+    'retail_frontage': Store,
+    'pole_mount': Monitor,
+    
+    // Additional types
+    'digital_display': Zap,
+    'digital_marquee': Zap,
+    'luxury_video_wall': Monitor,
+    'billboard': Monitor,
+    'wall_graphic': Building2,
+    'floor_graphic': Building2,
+    'window_display': Store,
+    'mall_kiosk': Store,
+    'building_wrap': Building,
+    'elevator_display': Monitor,
+    'parking_totem': Monitor,
+    'platform_display': Monitor,
+    'bus_shelter': Building2,
+    'gallery_storefront': Store,
+    'coastal_billboard': Monitor,
+    'lobby_display': Monitor,
+    'concourse_display': Monitor,
+    'other': MapPin
   };
   
-  for (const [key, category] of Object.entries(categories)) {
-    if (category.types.some(t => type.includes(t))) {
-      return category.icon;
-    }
+  return iconMap[type] || Building2;
+};
+
+/**
+ * Get formatted dimensions string
+ * @param {Object} area - Advertising area object
+ * @returns {string} Formatted dimensions
+ */
+export const getAreaDimensions = (area) => {
+  if (!area || !area.dimensions) return null;
+  
+  const dims = area.dimensions;
+  
+  if (dims.width && dims.height) {
+    const unit = dims.unit || 'm';
+    return `${dims.width} × ${dims.height} ${unit}`;
   }
   
-  return Building2; // Default fallback icon
+  if (dims.area) {
+    const unit = dims.unit || 'm';
+    return `${dims.area} ${unit}²`;
+  }
+  
+  return null;
 };
+
+/**
+ * Get space features array
+ * @param {Object} area - Advertising area object
+ * @returns {Array} Array of feature strings
+ */
+export const getAreaFeatures = (area) => {
+  if (!area || !area.features) return [];
+  
+  const features = area.features;
+  
+  // Handle array format
+  if (Array.isArray(features)) {
+    return features;
+  }
+  
+  // Handle object format
+  if (typeof features === 'object') {
+    return Object.keys(features).filter(key => features[key]);
+  }
+  
+  return [];
+};
+
+/**
+ * Check if space is available
+ * @param {Object} area - Advertising area object
+ * @returns {boolean} Whether space is available
+ */
+export const isAreaAvailable = (area) => {
+  if (!area) return false;
+  
+  return area.isActive && area.status === 'active';
+};
+
+/**
+ * Get material compatibility info
+ * @param {Object} area - Advertising area object
+ * @returns {Array} Array of compatible material types
+ */
+export const getAreaMaterialCompatibility = (area) => {
+  if (!area || !area.materialCompatibility) return [];
+  
+  return Array.isArray(area.materialCompatibility) 
+    ? area.materialCompatibility 
+    : [];
+};
+
+/**
+ * Get installation difficulty level
+ * @param {Object} area - Advertising area object
+ * @returns {Object} Installation difficulty info
+ */
+export const getInstallationInfo = (area) => {
+  if (!area) return { difficulty: 1, label: 'Easy' };
+  
+  const difficulty = area.accessDifficulty || 1;
+  
+  const labels = {
+    1: 'Easy',
+    2: 'Moderate', 
+    3: 'Difficult',
+    4: 'Expert',
+    5: 'Professional Only'
+  };
+  
+  return {
+    difficulty,
+    label: labels[difficulty] || 'Unknown',
+    permitsRequired: area.permitsRequired || false,
+    estimatedCost: area.estimatedMaterialCost || 0
+  };
+};
+
+// ✅ VERIFICATION: Test icon mapping after fix
+console.log('Testing area icon mapping:', {
+  storefront_window: getAreaCategoryIcon({ type: 'storefront_window' }),
+  retail_frontage: getAreaCategoryIcon({ type: 'retail_frontage' }),
+  building_exterior: getAreaCategoryIcon({ type: 'building_exterior' })
+});
