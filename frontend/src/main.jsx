@@ -22,6 +22,16 @@ const queryClient = new QueryClient({
   },
 })
 
+// Add this at the top of main.jsx for debugging
+console.log('Testing favicon accessibility...');
+console.log('Favicon URL should be:', window.location.origin + '/elaview-favicon.png');
+
+// Test if favicon loads
+const testFavicon = new Image();
+testFavicon.onload = () => console.log('✅ Favicon loaded successfully');
+testFavicon.onerror = () => console.error('❌ Favicon failed to load');
+testFavicon.src = '/elaview-favicon.png';
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ClerkProvider 

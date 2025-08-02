@@ -1,4 +1,5 @@
 // src/components/layout/Layout.tsx
+// ✅ UPDATED: Added viewMode and isAdmin props to mobile components
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, useUser, useClerk } from '@clerk/clerk-react';
@@ -31,7 +32,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     const [theme, setTheme] = useState('light'); // ✅ Default to light theme for Elaview
     
     // 🆕 Enhanced loading and auth state management
-    const [viewMode, setViewMode] = useState<'buyer' | 'seller'>('buyer'); // UI state only
+    const [viewMode, setViewMode] = useState<'buyer' | 'seller'>('buyer'); // ✅ Default to buyer (advertiser)
     const [isAdmin, setIsAdmin] = useState(false); // Admin flag from database
     const [isLoading, setIsLoading] = useState(true);
     const [apiReady, setApiReady] = useState(false);
@@ -146,13 +147,14 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                     if (userData.role === 'PROPERTY_OWNER') {
                         setViewMode('seller');
                     } else {
-                        setViewMode('buyer');
+                        setViewMode('buyer'); // ✅ Default to buyer (advertiser)
                     }
                     
                     setUserDataLoaded(true);
                 } else {
                     console.warn('⚠️ LAYOUT: Failed to load user profile:', response.error);
                     setIsAdmin(false);
+                    setViewMode('buyer'); // ✅ Default to buyer (advertiser)
                 }
 
                 // Mock data for other counts (replace with real API calls when ready)
@@ -163,6 +165,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
             } catch (error) {
                 console.error('❌ LAYOUT: Error loading user data:', error);
                 setIsAdmin(false);
+                setViewMode('buyer'); // ✅ Default to buyer (advertiser)
             } finally {
                 setIsLoading(false);
             }
@@ -181,7 +184,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     useEffect(() => {
         if (isFullyLoaded && !isSignedIn) {
             console.log('🔄 LAYOUT: User not signed in, setting defaults');
-            setViewMode('buyer');
+            setViewMode('buyer'); // ✅ Default to buyer (advertiser)
             setIsAdmin(false);
             setUnreadCount(0);
             setPendingInvoices(0);
@@ -224,54 +227,63 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
             )}
             
             <div className="relative z-[9999]">
-              {/* ✅ Enhanced Top Navigation with Elaview styling */}
+              {/* ✅ Enhanced Top Navigation with Elaview styling - DESKTOP ONLY */}
               {typeof DesktopTopNavV2 !== 'undefined' ? (
-                <DesktopTopNavV2
-                  unreadCount={unreadCount} 
-                  pendingInvoices={pendingInvoices} 
-                  actionItemsCount={actionItemsCount} 
-                  currentUser={currentUser}
-                  viewMode={viewMode} // Changed from userRole
-                  onViewModeChange={handleViewModeChange} // Changed from onRoleChange
-                  isAdmin={isAdmin} // Pass admin flag
-                  canSwitchModes={true} // Always allow switching views
-                />
+                <div className="hidden lg:block">
+                  <DesktopTopNavV2
+                    unreadCount={unreadCount} 
+                    pendingInvoices={pendingInvoices} 
+                    actionItemsCount={actionItemsCount} 
+                    currentUser={currentUser}
+                    viewMode={viewMode} // Changed from userRole
+                    onViewModeChange={handleViewModeChange} // Changed from onRoleChange
+                    isAdmin={isAdmin} // Pass admin flag
+                    canSwitchModes={true} // Always allow switching views
+                  />
+                </div>
               ) : (
-                // ✅ Fallback header with Elaview styling
-                <header className="bg-white border-b border-slate-200 shadow-soft px-6 py-4">
-                  <div className="flex items-center justify-between max-w-7xl mx-auto">
-                    <h1 className="text-2xl font-bold text-slate-900">Elaview</h1>
-                    {currentUser && (
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm text-slate-600">
-                          Welcome, {currentUser.firstName || currentUser.primaryEmailAddress?.emailAddress}
-                        </span>
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                          viewMode === 'seller' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-teal-100 text-teal-800'
-                        }`}>
-                          {viewMode === 'seller' ? 'Space Owner View' : 'Advertiser View'}
-                        </span>
-                        {isAdmin && (
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                            Admin
+                // ✅ Fallback header with Elaview styling - DESKTOP ONLY  
+                <div className="hidden lg:block">
+                  <header className="bg-white border-b border-slate-200 shadow-soft px-6 py-4">
+                    <div className="flex items-center justify-between max-w-7xl mx-auto">
+                      <h1 className="text-2xl font-bold text-slate-900">Elaview</h1>
+                      {currentUser && (
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm text-slate-600">
+                            Welcome, {currentUser.firstName || currentUser.primaryEmailAddress?.emailAddress}
                           </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </header>
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                            viewMode === 'seller' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-teal-100 text-teal-800'
+                          }`}>
+                            {viewMode === 'seller' ? 'Space Owner View' : 'Advertiser View'}
+                          </span>
+                          {isAdmin && (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                              Admin
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </header>
+                </div>
               )}
             </div>
 
             <div className="flex-1 relative z-10">
               {/* Main Content Area */}
               <main className="flex-1 relative">
-                  {/* ✅ Mobile Components with proper z-index */}
+                  {/* ✅ UPDATED: Mobile Components with viewMode and admin props */}
                   {typeof MobileTopBar !== 'undefined' && (
                     <div className="lg:hidden">
-                      <MobileTopBar currentUser={currentUser} />
+                      <MobileTopBar 
+                        currentUser={currentUser}
+                        viewMode={viewMode}
+                        onViewModeChange={handleViewModeChange}
+                        isAdmin={isAdmin}
+                      />
                     </div>
                   )}
                   {typeof MobileNav !== 'undefined' && (
@@ -281,6 +293,8 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                         pendingInvoices={pendingInvoices} 
                         actionItemsCount={actionItemsCount} 
                         currentUser={currentUser}
+                        viewMode={viewMode}
+                        onViewModeChange={handleViewModeChange}
                       />
                     </div>
                   )}

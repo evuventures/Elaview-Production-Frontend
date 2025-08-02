@@ -1,13 +1,20 @@
 // src/components/layout/MobileNav.jsx
-// ✅ OPTIMIZED: 3-minute polling, rate limit protection, better error handling
+// ✅ UPDATED: Added viewMode support and dynamic label switching
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import { Badge } from '@/components/ui/badge';
-import { getNavigationItems, formatBadgeCount } from '@/lib/navigation';
+import { LayoutDashboard, MapPin, Mail } from 'lucide-react';
 import apiClient from '@/api/apiClient';
 
-const MobileNav = ({ unreadCount, pendingInvoices, actionItemsCount, currentUser }) => {
+const MobileNav = ({ 
+  unreadCount, 
+  pendingInvoices, 
+  actionItemsCount, 
+  currentUser,
+  viewMode = 'buyer', // Default to advertiser/buyer view
+  onViewModeChange // Function to change view mode
+}) => {
   const location = useLocation();
   const { isSignedIn } = useAuth();
   const [notificationCount, setNotificationCount] = useState(0);
@@ -72,16 +79,61 @@ const MobileNav = ({ unreadCount, pendingInvoices, actionItemsCount, currentUser
     }
   }, [isSignedIn]);
 
-  // ✅ OPTIMIZED: Include notification count in unread count for Messages badge
-  const totalUnreadCount = (unreadCount || 0) + notificationCount;
+  // ✅ UPDATED: Dynamic navigation items based on view mode
+  const getNavigationItems = (mode) => {
+    const totalUnreadCount = (unreadCount || 0) + notificationCount;
+    
+    if (mode === 'seller') {
+      return [
+        {
+          title: 'Listings', // Changed from Dashboard to Listings for space owner
+          url: '/dashboard',
+          icon: LayoutDashboard,
+          badge: pendingInvoices || 0
+        },
+        {
+          title: 'Browse',
+          url: '/browse', 
+          icon: MapPin,
+          badge: 0
+        },
+        {
+          title: 'Messages',
+          url: '/messages',
+          icon: Mail,
+          badge: totalUnreadCount
+        }
+      ];
+    } else {
+      return [
+        {
+          title: 'Bookings', // Changed from Dashboard to Bookings for advertiser
+          url: '/advertise',
+          icon: LayoutDashboard,
+          badge: actionItemsCount || 0
+        },
+        {
+          title: 'Browse',
+          url: '/browse',
+          icon: MapPin,
+          badge: 0
+        },
+        {
+          title: 'Messages',
+          url: '/messages',
+          icon: Mail,
+          badge: totalUnreadCount
+        }
+      ];
+    }
+  };
 
-  const navigationItems = getNavigationItems({
-    currentUser,
-    unreadCount: totalUnreadCount, // Include notifications in Messages badge
-    pendingInvoices,
-    actionItemsCount,
-    isMobile: true
-  });
+  const navigationItems = getNavigationItems(viewMode);
+
+  const formatBadgeCount = (count, maxCount = 99) => {
+    if (count > maxCount) return `${maxCount}+`;
+    return count.toString();
+  };
 
   return (
     <div 
