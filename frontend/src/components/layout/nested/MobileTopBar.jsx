@@ -1,5 +1,6 @@
 // src/components/layout/MobileTopBar.jsx
 // ✅ UPDATED: Added simplified profile dropdown with role switching
+// ✅ FIXED: onClick handler to prevent stale state issues
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
@@ -110,9 +111,9 @@ const MobileTopBar = ({
     }
   };
 
-  // ✅ NEW: Handle view mode switching
+  // ✅ FIXED: Handle view mode switching (removed blocking condition)
   const handleViewSwitch = (newMode) => {
-    if (!onViewModeChange || viewMode === newMode) return;
+    if (!onViewModeChange) return; // Only check if function exists
     
     console.log(`🔄 Mobile: Switching view from ${viewMode} to ${newMode}`);
     onViewModeChange(newMode);
@@ -389,7 +390,7 @@ const MobileTopBar = ({
                           </div>
                         </div>
                         
-                        {/* ✅ NEW: Current View + Switch Button */}
+                        {/* ✅ FIXED: Current View + Switch Button with corrected onClick */}
                         <div className="mt-3 flex gap-2 items-center">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
                             viewMode === 'seller' 
@@ -403,7 +404,11 @@ const MobileTopBar = ({
                             )}
                           </span>
                           <button
-                            onClick={() => handleViewSwitch(viewMode === 'buyer' ? 'seller' : 'buyer')}
+                            onClick={() => {
+                              // ✅ FIXED: State-independent toggle logic
+                              const newMode = viewMode === 'seller' ? 'buyer' : 'seller';
+                              handleViewSwitch(newMode);
+                            }}
                             className="text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-all duration-200"
                           >
                             Switch

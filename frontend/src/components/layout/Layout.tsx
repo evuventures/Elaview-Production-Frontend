@@ -1,6 +1,6 @@
 // src/components/layout/Layout.tsx
-// ✅ UPDATED: Added viewMode and isAdmin props to mobile components
-import React, { useState, useEffect } from 'react';
+// ✅ FINAL FIX: Persist viewMode across navigation to prevent remount issues
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, useUser, useClerk } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
@@ -15,6 +15,10 @@ interface LayoutProps {
   children: React.ReactNode;
   currentPageName?: string;
 }
+
+// ✅ SOLUTION: Persist viewMode outside component to survive remounts
+let persistedViewMode: 'buyer' | 'seller' = 'buyer';
+let viewModeSetByUser = false; // Track if user manually changed it
 
 export default function Layout({ children, currentPageName }: LayoutProps) {
     const navigate = useNavigate();
@@ -32,7 +36,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     const [theme, setTheme] = useState('light'); // ✅ Default to light theme for Elaview
     
     // 🆕 Enhanced loading and auth state management
-    const [viewMode, setViewMode] = useState<'buyer' | 'seller'>('buyer'); // ✅ Default to buyer (advertiser)
+    const [viewMode, setViewMode] = useState<'buyer' | 'seller'>(persistedViewMode); // ✅ Initialize from persisted value
     const [isAdmin, setIsAdmin] = useState(false); // Admin flag from database
     const [isLoading, setIsLoading] = useState(true);
     const [apiReady, setApiReady] = useState(false);
@@ -41,17 +45,25 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     // ✅ Check if everything is ready for API calls
     const isFullyLoaded = authLoaded && userLoaded;
 
-    // 🆕 SIMPLIFIED: Just change the view mode, no API calls!
+    // ✅ FINAL FIX: Update viewMode and persist it
     const handleViewModeChange = (newMode: 'buyer' | 'seller') => {
-      console.log(`🔄 Switching view from ${viewMode} to ${newMode}`);
+      console.log(`🔄 PERSISTENT: Switching view from ${viewMode} to ${newMode}`);
+      
+      // Update component state
       setViewMode(newMode);
       
-      // Optional: Navigate to appropriate page
-      if (newMode === 'seller') {
-        navigate('/dashboard');
-      } else if (newMode === 'buyer') {
-        navigate('/browse');
-      }
+      // ✅ CRITICAL: Persist outside component to survive remounts
+      persistedViewMode = newMode;
+      viewModeSetByUser = true; // Mark as user-initiated change
+      
+      // Navigation with slight delay for state propagation
+      setTimeout(() => {
+        if (newMode === 'seller') {
+          navigate('/dashboard');
+        } else if (newMode === 'buyer') {
+          navigate('/browse');
+        }
+      }, 0);
     };
 
     // ✅ Elaview page transition animations
@@ -120,7 +132,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
         };
 
         checkApiReadiness();
-            }, [authLoaded, userLoaded, isSignedIn, currentUser, isFullyLoaded]);
+    }, [authLoaded, userLoaded, isSignedIn, currentUser, isFullyLoaded]);
 
     // 🆕 ENHANCED: Fetch user data only when API is ready
     useEffect(() => {
@@ -143,18 +155,25 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                     // Set admin flag
                     setIsAdmin(userData.isAdmin || false);
                     
-                    // Set initial view mode based on role (but this is just UI preference)
-                    if (userData.role === 'PROPERTY_OWNER') {
-                        setViewMode('seller');
+                    // ✅ CRITICAL FIX: Only set initial view mode if user hasn't manually changed it
+                    if (!viewModeSetByUser) {
+                        const initialMode = userData.role === 'PROPERTY_OWNER' ? 'seller' : 'buyer';
+                        console.log(`🎯 LAYOUT: Setting initial viewMode to ${initialMode} (user hasn't manually changed it)`);
+                        setViewMode(initialMode);
+                        persistedViewMode = initialMode;
                     } else {
-                        setViewMode('buyer'); // ✅ Default to buyer (advertiser)
+                        console.log(`🎯 LAYOUT: Keeping user-selected viewMode: ${persistedViewMode} (user manually changed it)`);
+                        setViewMode(persistedViewMode); // Ensure component state matches persisted state
                     }
                     
                     setUserDataLoaded(true);
                 } else {
                     console.warn('⚠️ LAYOUT: Failed to load user profile:', response.error);
                     setIsAdmin(false);
-                    setViewMode('buyer'); // ✅ Default to buyer (advertiser)
+                    if (!viewModeSetByUser) {
+                        setViewMode('buyer');
+                        persistedViewMode = 'buyer';
+                    }
                 }
 
                 // Mock data for other counts (replace with real API calls when ready)
@@ -165,7 +184,10 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
             } catch (error) {
                 console.error('❌ LAYOUT: Error loading user data:', error);
                 setIsAdmin(false);
-                setViewMode('buyer'); // ✅ Default to buyer (advertiser)
+                if (!viewModeSetByUser) {
+                    setViewMode('buyer');
+                    persistedViewMode = 'buyer';
+                }
             } finally {
                 setIsLoading(false);
             }
@@ -184,7 +206,9 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     useEffect(() => {
         if (isFullyLoaded && !isSignedIn) {
             console.log('🔄 LAYOUT: User not signed in, setting defaults');
-            setViewMode('buyer'); // ✅ Default to buyer (advertiser)
+            setViewMode('buyer');
+            persistedViewMode = 'buyer';
+            viewModeSetByUser = false; // Reset the flag
             setIsAdmin(false);
             setUnreadCount(0);
             setPendingInvoices(0);
@@ -208,6 +232,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                         <div className="mt-2 text-xs text-slate-400">
                             <p>Auth: {authLoaded ? '✅' : '⏳'} | User: {userLoaded ? '✅' : '⏳'}</p>
                             <p>API Ready: {apiReady ? '✅' : '⏳'} | User Data: {userDataLoaded ? '✅' : '⏳'}</p>
+                            <p>ViewMode: {viewMode} | Persisted: {persistedViewMode} | UserSet: {viewModeSetByUser ? 'Yes' : 'No'}</p>
                         </div>
                     )}
                 </div>
@@ -235,10 +260,10 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                     pendingInvoices={pendingInvoices} 
                     actionItemsCount={actionItemsCount} 
                     currentUser={currentUser}
-                    viewMode={viewMode} // Changed from userRole
-                    onViewModeChange={handleViewModeChange} // Changed from onRoleChange
-                    isAdmin={isAdmin} // Pass admin flag
-                    canSwitchModes={true} // Always allow switching views
+                    viewMode={viewMode}
+                    onViewModeChange={handleViewModeChange}
+                    isAdmin={isAdmin}
+                    canSwitchModes={true}
                   />
                 </div>
               ) : (
@@ -275,7 +300,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
             <div className="flex-1 relative z-10">
               {/* Main Content Area */}
               <main className="flex-1 relative">
-                  {/* ✅ UPDATED: Mobile Components with viewMode and admin props */}
+                  {/* ✅ UPDATED: Mobile Components */}
                   {typeof MobileTopBar !== 'undefined' && (
                     <div className="lg:hidden">
                       <MobileTopBar 

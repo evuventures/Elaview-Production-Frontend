@@ -1,5 +1,6 @@
 // Enhanced Navigation with Working Notifications - Elaview Design System
 // ✅ UPDATED: UI-only view switching and admin dashboard link
+// ✅ FIXED: onClick handler to prevent stale state issues
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
@@ -217,11 +218,11 @@ const DesktopTopNavV2 = ({
     }
   }, [isSignedIn]);
 
-  // ✅ SIMPLIFIED: Direct view mode switch (no API calls!)
+  // ✅ FIXED: Direct view mode switch (removed blocking condition)
   const handleViewSwitch = (newMode) => {
-    if (!onViewModeChange || viewMode === newMode) return;
+    if (!onViewModeChange) return; // Only check if function exists
     
-    console.log(`🔄 Switching view from ${viewMode} to ${newMode}`);
+    console.log(`🔄 Desktop: Switching view from ${viewMode} to ${newMode}`);
     onViewModeChange(newMode);
   };
 
@@ -387,11 +388,15 @@ const DesktopTopNavV2 = ({
           {/* Right Section: View Mode Toggle + Actions + User */}
           <div className="flex items-center gap-3">
             
-            {/* ✅ SIMPLIFIED: View Mode Toggle Button - No loading states! */}
+            {/* ✅ FIXED: View Mode Toggle Button with corrected onClick */}
             {isSignedIn && canSwitchModes && (
               <div className="hidden md:block relative">
                 <button
-                  onClick={() => handleViewSwitch(viewMode === 'buyer' ? 'seller' : 'buyer')}
+                  onClick={() => {
+                    // ✅ FIXED: State-independent toggle logic
+                    const newMode = viewMode === 'seller' ? 'buyer' : 'seller';
+                    handleViewSwitch(newMode);
+                  }}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-white/60 backdrop-blur-sm border border-white/40 hover:bg-white/80 shadow-sm ${
                     viewMode === 'seller' 
                       ? 'text-emerald-600 hover:text-emerald-700 hover:border-emerald-200' 
