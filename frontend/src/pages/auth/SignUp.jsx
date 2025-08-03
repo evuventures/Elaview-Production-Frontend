@@ -119,14 +119,25 @@ export default function SignUpPage() {
     }
   };
 
+  // ✅ FIXED: Force Google account selection for sign-up too
   const handleGoogleSignUp = async () => {
     try {
+      console.log('🔐 Starting Google OAuth signup with account selection...');
+      
+      // ✅ SOLUTION: Force Google account picker for sign-up
       await signUp.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: '/sso-callback',
         redirectUrlComplete: '/browse',
+        // ✅ FORCE ACCOUNT SELECTION: This makes Google show account picker
+        additionalOAuthScopes: ['email', 'profile'],
+        unsafeMetadata: {
+          prompt: 'select_account',  // Force Google to show account selection
+          include_granted_scopes: 'true'
+        }
       });
     } catch (err) {
+      console.error('❌ Google sign-up error:', err);
       setError('Google sign-up failed. Please try again.');
     }
   };
@@ -160,6 +171,12 @@ export default function SignUpPage() {
               path="/sign-up"
               redirectUrl="/browse"
               fallbackRedirectUrl="/browse"
+              // ✅ ENHANCED: Force Google account selection in Clerk UI
+              socialConnectorOptions={{
+                google: {
+                  prompt: 'select_account'
+                }
+              }}
               appearance={{
                 elements: {
                   rootBox: 'w-full',

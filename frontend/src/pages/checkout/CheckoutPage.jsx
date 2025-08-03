@@ -58,7 +58,7 @@ function CheckoutPage({ cartData, onBack, onSuccess }) {
     spaceId
   });
 
-  // 🏢 BUSINESS PROFILE CHECK
+  // 🏢 BUSINESS PROFILE CHECK - COMPLETELY FIXED
   const checkBusinessProfile = async () => {
     if (!user?.id) {
       console.log('🏢 No user - skipping business profile check');
@@ -85,25 +85,49 @@ function CheckoutPage({ cartData, onBack, onSuccess }) {
         console.log('📝 Step 4a: Existing profile found');
         setBusinessProfile(response.data);
         
-        // ✅ ENHANCED PROFILE VALIDATION
+        // ✅ COMPLETELY FIXED: Correct field names matching backend response
         const isComplete = response.data.businessName && 
-                          response.data.industry && 
-                          response.data.address?.street &&
-                          response.data.address?.city &&
-                          response.data.address?.state &&
-                          response.data.address?.zipCode;
+                          response.data.businessIndustry &&           // ✅ FIXED: Was 'industry', now 'businessIndustry'
+                          response.data.businessAddress?.street &&   // ✅ FIXED: Was 'address', now 'businessAddress'
+                          response.data.businessAddress?.city &&
+                          response.data.businessAddress?.state &&
+                          response.data.businessAddress?.zipCode;
         
         console.log('📝 Step 4b: Profile completeness check:', {
           hasBusinessName: !!response.data.businessName,
-          hasIndustry: !!response.data.industry,
-          hasAddress: !!response.data.address?.street,
+          hasIndustry: !!response.data.businessIndustry,        // ✅ FIXED: Field name
+          hasAddress: !!response.data.businessAddress?.street,  // ✅ FIXED: Field name
+          hasCity: !!response.data.businessAddress?.city,
+          hasState: !!response.data.businessAddress?.state,
+          hasZipCode: !!response.data.businessAddress?.zipCode,
           isComplete
         });
+
+        // ✅ ENHANCED: Better logging for debugging
+        if (!isComplete) {
+          const missingFields = [];
+          if (!response.data.businessName) missingFields.push('Business Name');
+          if (!response.data.businessIndustry) missingFields.push('Industry');
+          if (!response.data.businessAddress?.street) missingFields.push('Street Address');
+          if (!response.data.businessAddress?.city) missingFields.push('City');
+          if (!response.data.businessAddress?.state) missingFields.push('State');
+          if (!response.data.businessAddress?.zipCode) missingFields.push('ZIP Code');
+          
+          console.log('📋 Missing required fields:', missingFields);
+        }
 
         if (isComplete) {
           console.log('📝 Step 4c: Profile is complete - proceeding');
           setIsProfileComplete(true);
           setShowBusinessModal(false);
+          
+          // ✅ ENHANCED: Double-check localStorage consistency
+          const completionKey = `businessProfile_${user.id}`;
+          if (localStorage.getItem(completionKey) !== 'completed') {
+            console.log('✅ Updating localStorage to match database state');
+            localStorage.setItem(completionKey, 'completed');
+            localStorage.setItem(`businessProfileCompletedAt_${user.id}`, new Date().toISOString());
+          }
         } else {
           console.log('📝 Step 4d: Profile incomplete - need more info');
           setIsProfileComplete(false);
@@ -254,7 +278,12 @@ function CheckoutPage({ cartData, onBack, onSuccess }) {
   // 💳 PAYMENT INTENT CREATION
   const createPaymentIntent = async () => {
     if (!isProfileComplete || !orderData || clientSecret || isCreatingPaymentIntent) {
-      console.log('💳 Conditions not met - skipping payment intent creation');
+      console.log('💳 Conditions not met - skipping payment intent creation:', {
+        isProfileComplete,
+        hasOrderData: !!orderData,
+        hasClientSecret: !!clientSecret,
+        isCreatingPaymentIntent
+      });
       return;
     }
 
@@ -281,13 +310,40 @@ function CheckoutPage({ cartData, onBack, onSuccess }) {
     }
   };
 
-  // ✅ BUSINESS PROFILE COMPLETION HANDLER
+  // ✅ BUSINESS PROFILE COMPLETION HANDLER - ENHANCED
   const handleBusinessProfileComplete = async (profileData) => {
     console.log('📝 Business profile completed:', profileData);
     setBusinessProfile(profileData);
     setIsProfileComplete(true);
     setShowBusinessModal(false);
     setCheckoutError(null);
+    
+    // ✅ ENHANCED: Ensure localStorage is updated
+    const completionKey = `businessProfile_${user.id}`;
+    localStorage.setItem(completionKey, 'completed');
+    localStorage.setItem(`businessProfileCompletedAt_${user.id}`, new Date().toISOString());
+    console.log('✅ Profile completion stored in localStorage');
+  };
+
+  // ✅ ENHANCED: Better modal close handling
+  const handleBusinessModalClose = () => {
+    console.log('🚪 Business modal close requested');
+    
+    // Check if profile is actually complete (might have been updated in localStorage)
+    const completionKey = `businessProfile_${user.id}`;
+    const hasCompletedProfile = localStorage.getItem(completionKey) === 'completed';
+    
+    if (hasCompletedProfile) {
+      console.log('✅ Profile completion found in localStorage, proceeding');
+      setIsProfileComplete(true);
+      setShowBusinessModal(false);
+      return;
+    }
+    
+    setShowBusinessModal(false);
+    if (!isProfileComplete) {
+      setCheckoutError('Business profile is required to complete checkout');
+    }
   };
 
   // 🎯 USEEFFECTS
@@ -305,6 +361,14 @@ function CheckoutPage({ cartData, onBack, onSuccess }) {
   useEffect(() => {
     console.log('🔄 Business profile check useEffect triggered:', { user: user?.id });
     if (user?.id) {
+      // ✅ ENHANCED: Check localStorage first for quick response
+      const completionKey = `businessProfile_${user.id}`;
+      const hasCompletedProfile = localStorage.getItem(completionKey) === 'completed';
+      
+      if (hasCompletedProfile) {
+        console.log('⚡ Profile completion found in localStorage, checking database...');
+      }
+      
       checkBusinessProfile();
     }
   }, [user?.id]);
@@ -462,19 +526,9 @@ function CheckoutPage({ cartData, onBack, onSuccess }) {
           {shouldShowBusinessModal && (
             <BusinessDetailsModal
               isOpen={shouldShowBusinessModal}
-              onClose={() => {
-                setShowBusinessModal(false);
-                if (!isProfileComplete) {
-                  setCheckoutError('Business profile is required to complete checkout');
-                }
-              }}
+              onClose={handleBusinessModalClose}
               onComplete={handleBusinessProfileComplete}
-              existingData={businessProfile}
               required={true}
-              requiredMessage={!businessProfile ? 
-                "Welcome! We need your business details to create your first booking." :
-                "Please complete your business profile to proceed with checkout."
-              }
             />
           )}
         </AnimatePresence>
@@ -603,7 +657,7 @@ function CheckoutForm({ orderData, businessProfile, onSuccess }) {
           </CardContent>
         </Card>
 
-        {/* Business Profile Summary */}
+        {/* Business Profile Summary - ENHANCED */}
         <Card className="mt-4">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -614,11 +668,11 @@ function CheckoutForm({ orderData, businessProfile, onSuccess }) {
           <CardContent>
             <div className="text-sm space-y-1">
               <p className="font-medium">{businessProfile.businessName}</p>
-              <p className="text-slate-600">{businessProfile.industry}</p>
-              {businessProfile.address && (
+              <p className="text-slate-600">{businessProfile.businessIndustry}</p>
+              {businessProfile.businessAddress && (
                 <div className="text-slate-600">
-                  <p>{businessProfile.address.street}</p>
-                  <p>{businessProfile.address.city}, {businessProfile.address.state} {businessProfile.address.zipCode}</p>
+                  <p>{businessProfile.businessAddress.street}</p>
+                  <p>{businessProfile.businessAddress.city}, {businessProfile.businessAddress.state} {businessProfile.businessAddress.zipCode}</p>
                 </div>
               )}
             </div>

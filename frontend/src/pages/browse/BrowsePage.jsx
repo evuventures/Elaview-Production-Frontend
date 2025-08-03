@@ -1,8 +1,9 @@
-// src/pages/browse/BrowsePage.jsx - Updated with SignIn page background color
-// ✅ UPDATED: Changed background to match SignIn page (#f7f5e6)
-// ✅ MOBILE: Full-screen map with bottom navigation
+// src/pages/browse/BrowsePage.jsx - Complete Business Profile Integration
+// ✅ UPDATED: Complete mobile cart integration with FloatingCartButton and MobileCartDrawer
+// ✅ FIXED: Improved mobile detection and property click handlers
+// ✅ NEW: Business profile integration with smart booking navigation
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Navigation } from "lucide-react";
@@ -13,6 +14,7 @@ import { useUser } from '@clerk/clerk-react';
 import CartModal from './components/CartModal';
 import FiltersModal from './components/FiltersModal';
 import SpaceDetailsModal from './components/SpaceDetailsModal';
+import MobileBottomSheet from './components/mobile/MobileBottomSheet';
 import ROICalculatorModal from './components/ROICalculatorModal';
 import PaginationControls from './components/PaginationControls';
 import SpacesGrid from './components/SpacesGrid';
@@ -20,35 +22,51 @@ import LoadingState from './components/LoadingState';
 import ErrorState from './components/ErrorState';
 import EmptyState from './components/EmptyState';
 
-// ✅ Import utility functions from browse/utils
+// ✅ NEW: Mobile cart components
+import FloatingCartButton from './components/mobile/FloatingCartButton';
+import MobileCartDrawer from './components/mobile/MobileCartDrawer';
+
+// ✅ NEW: Business Profile Components
+import BusinessDetailsModal from '../checkout/components/BusinessDetailsModal';
+import { useBusinessProfile, checkBusinessProfileRequired } from '../checkout/hooks/useBusinessProfile';
+
+// ✅ Import utility functions
 import { getDistanceInKm } from './utils/distance';
 import { getPropertyCoords, getPropertyAddress, getPropertyName } from './utils/propertyHelpers';
 import { getNumericPrice } from './utils/areaHelpers';
 import { applyPriceFilter, applySpaceTypeFilter, applyAudienceFilter, applyFeaturesFilter } from './utils/filterHelpers';
+
+// ✅ Import constants
 import { 
   CARDS_PER_PAGE, 
-  DEFAULT_MAP_CENTER, 
-  DEFAULT_MAP_ZOOM, 
-  LOCATION_ZOOM 
+  LOCATION_ZOOM,
+  ZOOM_LEVELS,
+  MAP_OPTIONS,
+  MAP_CENTERS,
+  DEFAULT_MAP_CENTER,
+  DEFAULT_MAP_ZOOM
 } from './utils/mapConstants';
 
-// ✅ Import the working API client
+// ✅ Import intelligent location service
+import locationService from './services/locationService';
 import apiClient from '@/api/apiClient';
 
 export default function BrowsePage() {
   const navigate = useNavigate();
   
-  // ✅ Core state with dynamic map center and zoom
+  // ✅ Core state with intelligent map center and zoom
   const [properties, setProperties] = useState([]);
   const [allSpaces, setAllSpaces] = useState([]);
   const [selectedSpace, setSelectedSpace] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // ✅ Dynamic map center and zoom (can be changed by location button)
+  // ✅ ENHANCED: Dynamic map location with Israeli fallback
   const [mapCenter, setMapCenter] = useState(DEFAULT_MAP_CENTER);
   const [mapZoom, setMapZoom] = useState(DEFAULT_MAP_ZOOM);
   const [userLocation, setUserLocation] = useState(null);
+  const [mapLocationSource, setMapLocationSource] = useState('loading');
+  const [mapLocationName, setMapLocationName] = useState('Loading...');
   
   // ✅ Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,6 +74,9 @@ export default function BrowsePage() {
   // Cart state
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
+  
+  // ✅ NEW: Mobile cart state
+  const [showMobileCartDrawer, setShowMobileCartDrawer] = useState(false);
   
   // Filter state
   const [showFilters, setShowFilters] = useState(false);
@@ -71,126 +92,174 @@ export default function BrowsePage() {
   const [animatingSpace, setAnimatingSpace] = useState(null);
   const [savedSpaces, setSavedSpaces] = useState(new Set());
   const [detailsExpanded, setDetailsExpanded] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768); // ✅ FIXED: Initialize immediately
   const [showROICalculator, setShowROICalculator] = useState(false);
+  
+  // ✅ NEW: Mobile bottom sheet state
+  const [showMobileSheet, setShowMobileSheet] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [sheetTitle, setSheetTitle] = useState("Available Spaces");
+  
+  // ✅ NEW: Business Profile state
+  const [showBusinessProfileModal, setShowBusinessProfileModal] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState(null);
   
   const { user: currentUser } = useUser();
   const isMountedRef = useRef(true);
+  const mobileSheetRef = useRef(null);
 
-  // Detect mobile view
+  // ✅ NEW: Business Profile hook integration
+  const {
+    businessProfile,
+    isProfileComplete,
+    isLoading: profileLoading,
+    needsBusinessProfile,
+    updateBusinessProfile,
+    completionPercentage,
+    missingFields
+  } = useBusinessProfile();
+
+  // ✅ IMPROVED: Mobile detection with debugging
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
+      console.log(`📱 Screen resize: ${window.innerWidth}px, Mobile: ${mobile}`);
       setIsMobile(mobile);
     };
     
+    // ✅ Call immediately to ensure correct initial state
     handleResize();
+    
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // ✅ API call to backend using the working apiClient
- // ✅ FIXED: Updated loadPropertiesData function to handle real API structure
-// Replace the loadPropertiesData function in your BrowsePage.jsx with this:
-
-const loadPropertiesData = async () => {
-  if (!isMountedRef.current) return;
-  
-  setIsLoading(true);
-  setError(null);
-  
-  try {
-    console.log('🗺️ Loading spaces from API...');
-    
-    // 🚀 MIGRATION: Use getSpaces() instead of getAreas() - spaces replaces advertising areas
-    console.log('🚀 MIGRATION: Loading spaces (was areas) from API...');
-    const response = await apiClient.getSpaces();
-    
-    if (!isMountedRef.current) {
-      console.log('🗺️ Component unmounted during loading, aborting');
-      return;
-    }
-
-    // Handle response format (check if it has success/data structure)
-    const areasData = response.success ? response.data : response;
-    console.log(`🎯 API returned ${areasData.length} advertising areas`);
-
-    if (!Array.isArray(areasData)) {
-      throw new Error('API did not return an array of areas');
-    }
-
-    // ✅ FIXED: Process advertising areas directly (they already have property data included)
-    const validAreas = areasData.filter(area => {
-      // Check if area has property and coordinates
-      const hasProperty = area.property && area.property.id;
-      const hasCoords = area.coordinates && 
-                       (area.coordinates.lat || area.property?.latitude) && 
-                       (area.coordinates.lng || area.property?.longitude);
-      const isActive = area.isActive && area.status === 'active';
+  // ✅ Initialize intelligent map location on component mount
+  useEffect(() => {
+    const initializeMapLocation = async () => {
+      console.log('🗺️ Initializing intelligent map location...');
       
-      return hasProperty && hasCoords && isActive;
-    });
+      try {
+        const locationData = await locationService.getBestLocation();
+        
+        if (isMountedRef.current) {
+          console.log('✅ Setting map location:', locationData);
+          setMapCenter(locationData.center);
+          setMapZoom(locationData.zoom);
+          setMapLocationSource(locationData.source);
+          setMapLocationName(locationData.name);
+          
+          if (locationData.source === 'user_geolocation') {
+            setUserLocation(locationData.center);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Failed to get intelligent location:', error);
+        if (isMountedRef.current) {
+          setMapCenter(DEFAULT_MAP_CENTER);
+          setMapZoom(DEFAULT_MAP_ZOOM);
+          setMapLocationSource('error_fallback');
+          setMapLocationName('Kfar Kama, Israel');
+        }
+      }
+    };
 
-    // ✅ FIXED: Create properties map from areas and flatten spaces
-    const propertiesMap = new Map();
-    const flattenedSpaces = [];
+    initializeMapLocation();
+  }, []);
 
-    validAreas.forEach(area => {
-      // Get coordinates from area or fallback to property
-      const coords = {
-        lat: area.coordinates?.lat || area.property?.latitude,
-        lng: area.coordinates?.lng || area.property?.longitude
-      };
-
-      // Add property to map if not already there
-      if (!propertiesMap.has(area.property.id)) {
-        propertiesMap.set(area.property.id, {
-          ...area.property,
-          latitude: coords.lat,
-          longitude: coords.lng,
-          spaces: []
-        });
+  // ✅ API call to backend using the working apiClient
+  const loadPropertiesData = async () => {
+    if (!isMountedRef.current) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      console.log('🗺️ Loading spaces from API...');
+      
+      const response = await apiClient.getSpaces();
+      
+      if (!isMountedRef.current) {
+        console.log('🗺️ Component unmounted during loading, aborting');
+        return;
       }
 
-      // Add space to property's spaces
-      propertiesMap.get(area.property.id).spaces.push(area);
+      const areasData = response.success ? response.data : response;
+      console.log(`🎯 API returned ${areasData.length} advertising areas`);
 
-      // Create flattened space object
-      flattenedSpaces.push({
-        ...area,
-        // Add property context to each space
-        propertyId: area.property.id,
-        propertyName: getPropertyName(area.property),
-        propertyAddress: getPropertyAddress(area.property),
-        propertyCoords: coords,
-        propertyType: area.property.propertyType,
-        property: area.property,
-        distance: null
+      if (!Array.isArray(areasData)) {
+        throw new Error('API did not return an array of areas');
+      }
+
+      const validAreas = areasData.filter(area => {
+        const hasProperty = area.property && area.property.id;
+        const hasCoords = area.coordinates && 
+                         (area.coordinates.lat || area.property?.latitude) && 
+                         (area.coordinates.lng || area.property?.longitude);
+        const isActive = area.isActive && area.status === 'active';
+        
+        return hasProperty && hasCoords && isActive;
       });
-    });
 
-    // Convert properties map to array
-    const validProperties = Array.from(propertiesMap.values());
+      const propertiesMap = new Map();
+      const flattenedSpaces = [];
 
-    console.log(`🏢 Processed ${validProperties.length} properties with ${flattenedSpaces.length} total spaces`);
-    
-    if (isMountedRef.current) {
-      setProperties(validProperties);
-      setAllSpaces(flattenedSpaces);
+      validAreas.forEach(area => {
+        const coords = {
+          lat: area.coordinates?.lat || area.property?.latitude,
+          lng: area.coordinates?.lng || area.property?.longitude
+        };
+
+        if (!propertiesMap.has(area.property.id)) {
+          propertiesMap.set(area.property.id, {
+            ...area.property,
+            latitude: coords.lat,
+            longitude: coords.lng,
+            spaces: []
+          });
+        }
+
+        propertiesMap.get(area.property.id).spaces.push(area);
+
+        flattenedSpaces.push({
+          ...area,
+          propertyId: area.property.id,
+          propertyName: getPropertyName(area.property),
+          propertyAddress: getPropertyAddress(area.property),
+          propertyCoords: coords,
+          propertyType: area.property.propertyType,
+          property: area.property,
+          distance: null
+        });
+      });
+
+      const validProperties = Array.from(propertiesMap.values());
+
+      console.log(`🏢 Processed ${validProperties.length} properties with ${flattenedSpaces.length} total spaces`);
+      
+      if (isMountedRef.current) {
+        setProperties(validProperties);
+        setAllSpaces(flattenedSpaces);
+        
+        // ✅ NEW: Auto-open mobile sheet with closest spaces
+        if (isMobile && flattenedSpaces.length > 0) {
+          setShowMobileSheet(true);
+          setSheetTitle("Spaces Near You");
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error loading data:", error);
+      if (isMountedRef.current) {
+        setError(error.message);
+        setProperties([]);
+        setAllSpaces([]);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
-  } catch (error) {
-    console.error("❌ Error loading data:", error);
-    if (isMountedRef.current) {
-      setError(error.message);
-      setProperties([]);
-      setAllSpaces([]);
-    }
-  } finally {
-    if (isMountedRef.current) {
-      setIsLoading(false);
-    }
-  }
-};
+  };
 
   // Component mount/unmount
   useEffect(() => {
@@ -208,42 +277,15 @@ const loadPropertiesData = async () => {
     };
   }, []);
 
-  // ✅ User location detection (NO auto-centering)
-  useEffect(() => {
-    if (!isMountedRef.current) return;
-    
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          if (!isMountedRef.current) return;
-          
-          const userCoords = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            accuracy: position.coords.accuracy
-          };
-          console.log('📍 User location detected:', userCoords);
-          setUserLocation(userCoords);
-          // ✅ NO AUTO-CENTERING - map stays put unless user clicks location button
-        },
-        (error) => {
-          console.log("⚠️ Could not get user location:", error.message);
-        }
-      );
-    }
-  }, []);
-
   // ✅ Advanced filtering for spaces with pagination
   const { filteredSpaces, totalPages, paginatedSpaces } = useMemo(() => {
     let filtered = allSpaces;
 
-    // Apply filters using extracted utility functions
     filtered = applyPriceFilter(filtered, filters.priceRange);
     filtered = applySpaceTypeFilter(filtered, filters.spaceType);
     filtered = applyAudienceFilter(filtered, filters.audience);
     filtered = applyFeaturesFilter(filtered, filters.features);
 
-    // Calculate distances and sort by proximity
     if (mapCenter) {
       const spacesWithDistance = filtered
         .map(space => ({
@@ -257,7 +299,6 @@ const loadPropertiesData = async () => {
       filtered = spacesWithDistance;
     }
 
-    // ✅ PAGINATION LOGIC
     const totalSpaces = filtered.length;
     const totalPages = Math.ceil(totalSpaces / CARDS_PER_PAGE);
     const startIndex = (currentPage - 1) * CARDS_PER_PAGE;
@@ -276,7 +317,7 @@ const loadPropertiesData = async () => {
     setCurrentPage(1);
   }, [filters]);
 
-  // Cart functions
+  // ✅ ENHANCED: Cart functions with mobile logging
   const addToCart = (space, duration = 30) => {
     const cartItem = {
       id: `${space.id}_${Date.now()}`,
@@ -289,10 +330,12 @@ const loadPropertiesData = async () => {
     };
     
     setCart(prev => [...prev, cartItem]);
+    console.log('🛒 Item added to cart for mobile:', cartItem);
   };
 
   const removeFromCart = (cartItemId) => {
     setCart(prev => prev.filter(item => item.id !== cartItemId));
+    console.log('🗑️ Item removed from cart for mobile:', cartItemId);
   };
 
   const updateCartItemDuration = (cartItemId, newDuration) => {
@@ -301,6 +344,7 @@ const loadPropertiesData = async () => {
         ? { ...item, duration: newDuration, totalPrice: item.pricePerDay * newDuration }
         : item
     ));
+    console.log('⏱️ Cart item duration updated for mobile:', cartItemId, newDuration);
   };
 
   const getTotalCartValue = () => {
@@ -311,37 +355,239 @@ const loadPropertiesData = async () => {
     return cart.some(item => item.spaceId === spaceId);
   };
 
-  // ✅ Event handlers with NO automatic map movement
+  const clearCart = () => {
+    setCart([]);
+    console.log('🗑️ Cart cleared for mobile');
+  };
+
+  // ✅ NEW: Business Profile Integration Functions
+  
+  /**
+   * Check if business profile is complete before proceeding to booking
+   * Research-backed: Only show modal when actually needed
+   */
+  const checkBusinessProfileBeforeBooking = async (space) => {
+    if (!currentUser?.id) {
+      console.log('❌ No user authenticated, redirecting to login');
+      // Handle unauthenticated user
+      return false;
+    }
+
+    console.log('🔍 Checking business profile completion for booking...');
+    
+    try {
+      // Check localStorage first for quick response
+      const completionKey = `businessProfile_${currentUser.id}`;
+      const hasCompletedProfile = localStorage.getItem(completionKey) === 'completed';
+      
+      if (hasCompletedProfile) {
+        console.log('✅ Profile marked complete in localStorage, proceeding to booking');
+        return true;
+      }
+      
+      // Check database for actual profile completion
+      console.log('🔄 Checking profile completion in database...');
+      const profileRequired = await checkBusinessProfileRequired(currentUser.id);
+      
+      if (!profileRequired) {
+        console.log('✅ Profile complete in database, proceeding to booking');
+        return true;
+      }
+      
+      console.log('❌ Business profile incomplete, showing modal');
+      
+      // Store pending navigation
+      setPendingNavigation({
+        type: 'booking',
+        space: space,
+        timestamp: Date.now()
+      });
+      
+      // Show business profile modal
+      setShowBusinessProfileModal(true);
+      
+      return false;
+      
+    } catch (error) {
+      console.error('❌ Error checking business profile:', error);
+      
+      // On error, still try to proceed but show profile modal as fallback
+      if (needsBusinessProfile) {
+        console.log('⚠️ Error checking profile, but hook indicates profile needed');
+        setPendingNavigation({
+          type: 'booking',
+          space: space,
+          timestamp: Date.now()
+        });
+        setShowBusinessProfileModal(true);
+        return false;
+      }
+      
+      return true; // Proceed if no clear indication profile is needed
+    }
+  };
+
+  /**
+   * Handle successful business profile completion
+   */
+  const handleBusinessProfileComplete = (profileData) => {
+    console.log('✅ Business profile completed successfully:', profileData);
+    
+    setShowBusinessProfileModal(false);
+    
+    // Process pending navigation
+    if (pendingNavigation) {
+      console.log('🚀 Processing pending navigation:', pendingNavigation);
+      
+      if (pendingNavigation.type === 'booking' && pendingNavigation.space) {
+        // Proceed with booking navigation
+        const space = pendingNavigation.space;
+        console.log('📅 Proceeding to booking after profile completion:', space.id);
+        navigate(`/checkout/${space.property.id}/${space.id}`);
+      }
+      
+      setPendingNavigation(null);
+    }
+  };
+
+  /**
+   * Handle business profile modal close/skip
+   */
+  const handleBusinessProfileClose = () => {
+    console.log('🚪 Business profile modal closed');
+    
+    setShowBusinessProfileModal(false);
+    
+    // Clear pending navigation
+    if (pendingNavigation) {
+      console.log('❌ Clearing pending navigation due to profile modal close');
+      setPendingNavigation(null);
+    }
+  };
+
+  // ✅ NEW: Mobile cart handlers
+  const handleMobileCartOpen = () => {
+    console.log('🛒 Opening mobile cart drawer with items:', cart.length);
+    setShowMobileCartDrawer(true);
+  };
+
+  const handleMobileCartClose = () => {
+    console.log('🛒 Closing mobile cart drawer');
+    setShowMobileCartDrawer(false);
+  };
+
+  const handleProceedToCheckout = async () => {
+    console.log('🛒 Proceeding to checkout with cart:', cart);
+    
+    if (cart.length === 0) {
+      alert('Your cart is empty. Please add some spaces first.');
+      return;
+    }
+    
+    // Check business profile before checkout
+    const firstItem = cart[0];
+    const canProceed = await checkBusinessProfileBeforeBooking(firstItem.space);
+    
+    if (canProceed) {
+      navigate(`/checkout/${firstItem.space.property.id}/${firstItem.space.id}`);
+      setShowMobileCartDrawer(false);
+    }
+    // If can't proceed, modal will be shown by checkBusinessProfileBeforeBooking
+  };
+
+  // ✅ FIXED: Property click handler with real-time mobile detection
+  const handlePropertyClick = (property) => {
+    if (!isMountedRef.current) return;
+    
+    // ✅ DEBUGGING: Log current state
+    console.log('🏢 Property clicked:', property);
+    console.log('📱 Current isMobile state:', isMobile);
+    console.log('📐 Current window width:', window.innerWidth);
+    
+    // ✅ FIXED: Use real-time mobile detection instead of state
+    const isCurrentlyMobile = window.innerWidth < 768;
+    
+    if (isCurrentlyMobile) {
+      console.log('✅ Handling as mobile click');
+      // ✅ Mobile: Show property spaces in bottom sheet
+      setSelectedProperty(property);
+      setSelectedSpace(null); // Clear individual space selection
+      setShowMobileSheet(true);
+      setSheetTitle(`${property.name || property.title}`);
+    } else {
+      console.log('🖥️ Handling as desktop click');
+      // Desktop: Keep existing behavior
+      console.log('Desktop property click - implement as needed');
+    }
+  };
+
+  // ✅ FIXED: Space click handler with real-time mobile detection
   const handleSpaceClick = (space) => {
     if (!isMountedRef.current) return;
     
     console.log('📍 Space clicked:', space);
-    setSelectedSpace(space);
-    setDetailsExpanded(true);
-    // ✅ NO MAP MOVEMENT - map stays stationary unless user uses location button
+    console.log('📱 Current isMobile state:', isMobile);
+    
+    // ✅ FIXED: Use real-time mobile detection
+    const isCurrentlyMobile = window.innerWidth < 768;
+    
+    if (isCurrentlyMobile) {
+      console.log('✅ Handling as mobile space click');
+      // ✅ Mobile: Set selected space and ensure sheet is open
+      setSelectedSpace(space);
+      setShowMobileSheet(true);
+      setSelectedProperty(null); // Clear property selection
+      setSheetTitle("Space Details");
+    } else {
+      console.log('🖥️ Handling as desktop space click');
+      // Desktop: Use existing modal
+      setSelectedSpace(space);
+      setDetailsExpanded(true);
+    }
   };
 
   const handleSpaceCardClick = (space) => {
     if (!isMountedRef.current) return;
     
     console.log('📱 Space card clicked:', space);
-    setAnimatingSpace(space.id);
-    setSelectedSpace(space);
     
-    setTimeout(() => {
-      setDetailsExpanded(true);
-      setAnimatingSpace(null);
-    }, 600);
+    // ✅ Use real-time mobile detection here too
+    const isCurrentlyMobile = window.innerWidth < 768;
     
-    // ✅ NO MAP MOVEMENT - only card animation
+    if (isCurrentlyMobile) {
+      handleSpaceClick(space);
+    } else {
+      setAnimatingSpace(space.id);
+      setSelectedSpace(space);
+      
+      setTimeout(() => {
+        setDetailsExpanded(true);
+        setAnimatingSpace(null);
+      }, 600);
+    }
   };
 
-  const handlePropertyClick = (property) => {
-    if (!isMountedRef.current) return;
-    
-    console.log('🏢 Property clicked:', property);
-    // ✅ NO MAP MOVEMENT - map stays stationary unless user uses location button
+  // ✅ NEW: Handle mobile sheet space selection
+  const handleMobileSpaceSelect = (space) => {
+    setSelectedSpace(space);
+    // Keep sheet open but update content to show space details
   };
+
+  // ✅ NEW: Handle mobile sheet close
+  const handleMobileSheetClose = () => {
+    setShowMobileSheet(false);
+    setSelectedSpace(null);
+    setSelectedProperty(null);
+    setSheetTitle("Available Spaces");
+  };
+
+  // ✅ NEW: Map click handler to close sheet
+  const handleMapClick = useCallback(() => {
+    console.log('🗺️ Map clicked - closing sheet');
+    if (mobileSheetRef.current) {
+      mobileSheetRef.current.minimize();
+    }
+  }, []);
 
   // Filter handlers
   const toggleFilter = (filterType, value) => {
@@ -382,92 +628,65 @@ const loadPropertiesData = async () => {
     });
   };
 
-  // ✅ Actually center map on user location
-  const handleCenterOnLocation = () => {
-    if (userLocation) {
-      console.log('📍 Centering map on user location:', userLocation);
+  // ✅ Handle location button click
+  const handleCenterOnLocation = async () => {
+    console.log('📍 Location button clicked');
+    
+    try {
+      setMapLocationName('Getting your location...');
       
-      // Close any open modals/dropdowns
-      setSelectedSpace(null);
-      setDetailsExpanded(false);
+      const locationData = await locationService.requestUserLocation();
       
-      // Center map on user location
-      setMapCenter({
-        lat: userLocation.lat,
-        lng: userLocation.lng
-      });
-      
-      // Zoom to a good level for local viewing
-      setMapZoom(LOCATION_ZOOM);
-      
-    } else if (!userLocation) {
-      // Request location permission and get user location
-      console.log('📍 Requesting user location...');
-      
-      if (!navigator.geolocation) {
-        alert('Geolocation is not supported by this browser.');
-        return;
-      }
-      
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const coords = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            accuracy: position.coords.accuracy
-          };
-          
-          console.log('📍 Got user location:', coords);
-          setUserLocation(coords);
-          
-          // Close any open modals/dropdowns
+      if (locationData && isMountedRef.current) {
+        console.log('✅ Got user location:', locationData);
+        
+        setUserLocation(locationData.coordinates);
+        
+        // ✅ Mobile: Close modals/sheets when centering location
+        const isCurrentlyMobile = window.innerWidth < 768;
+        if (isCurrentlyMobile) {
+          setShowMobileSheet(false);
+          setSelectedSpace(null);
+          setSelectedProperty(null);
+        } else {
           setSelectedSpace(null);
           setDetailsExpanded(false);
-          
-          // Center map on user location
-          setMapCenter({
-            lat: coords.lat,
-            lng: coords.lng
-          });
-          
-          // Zoom to a good level for local viewing
-          setMapZoom(LOCATION_ZOOM);
-        },
-        (error) => {
-          console.error('Could not get location:', error);
-          let message = 'Unable to access your location. ';
-          
-          switch(error.code) {
-            case error.PERMISSION_DENIED:
-              message += 'Please allow location access in your browser settings.';
-              break;
-            case error.POSITION_UNAVAILABLE:
-              message += 'Location information is unavailable.';
-              break;
-            case error.TIMEOUT:
-              message += 'Location request timed out.';
-              break;
-            default:
-              message += 'An unknown error occurred.';
-              break;
-          }
-          
-          alert(message);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000 // Cache for 5 minutes
         }
-      );
+        
+        setMapCenter(locationData.coordinates);
+        setMapZoom(LOCATION_ZOOM);
+        setMapLocationSource('user_location_button');
+        setMapLocationName('Your Location');
+      }
+    } catch (error) {
+      console.error('❌ Location request failed:', error);
+      alert(error.message);
+      setMapLocationName(mapLocationName === 'Getting your location...' ? 'Location Unavailable' : mapLocationName);
     }
   };
 
-  const handleBookingNavigation = (space) => {
-    navigate(`/booking/${space.propertyId}/${space.id}`);
+  // ✅ ENHANCED: Booking navigation with business profile check
+  const handleBookingNavigation = async (space) => {
+    console.log('📅 Booking navigation requested:', space.id, space.property?.id || space.propertyId);
+    
+    // Check business profile completion before proceeding
+    const canProceed = await checkBusinessProfileBeforeBooking(space);
+    
+    if (canProceed) {
+      // Profile is complete, proceed to checkout
+      const propertyId = space.property?.id || space.propertyId;
+      console.log('✅ Profile complete, navigating to checkout:', `/checkout/${propertyId}/${space.id}`);
+      navigate(`/checkout/${propertyId}/${space.id}`);
+    }
+    // If profile incomplete, modal will be shown by checkBusinessProfileBeforeBooking
   };
 
-  // Active filters count for UI
+  // ✅ ENHANCED: Mobile booking handler
+  const handleMobileBooking = async (space) => {
+    console.log('📱 Mobile booking for space:', space.id);
+    await handleBookingNavigation(space);
+  };
+
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (filters.priceRange !== 'all') count++;
@@ -477,7 +696,7 @@ const loadPropertiesData = async () => {
     return count;
   }, [filters]);
 
-  // ✅ MOBILE LAYOUT: Full-screen map only (uses existing MobileNav component)
+  // ✅ MOBILE LAYOUT: Enhanced with complete cart system and business profile
   if (isMobile) {
     return (
       <div 
@@ -486,12 +705,13 @@ const loadPropertiesData = async () => {
       >
         {/* ✅ MOBILE: Full-screen Map Container */}
         <div className="w-full h-full relative">
-          <div className="w-full h-full bg-white overflow-hidden touch-none">
+          <div className="w-full h-full bg-white overflow-hidden">
             <GoogleMap
               properties={properties.filter(property => 
                 property.latitude && property.longitude
               )}
               onPropertyClick={handlePropertyClick}
+              onClick={handleMapClick} // ✅ NEW: Map click handler
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"
@@ -500,7 +720,7 @@ const loadPropertiesData = async () => {
               showAreaMarkers={true}
             />
 
-            {/* ✅ Mobile Map Controls - Fixed position (stays in same spot regardless of map movement) */}
+            {/* ✅ Mobile Map Controls */}
             <div className="fixed top-[5rem] right-4 z-20 flex flex-col gap-2">
               <Button 
                 size="sm" 
@@ -530,23 +750,26 @@ const loadPropertiesData = async () => {
               </Button>
             </div>
 
-           {/* ✅ Mobile Map Info Card - Left positioned */}
-{!isLoading && !error && (
-  <div className="fixed top-20 left-4 z-20">
-    <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg px-4 py-3 shadow-lg min-w-[120px] max-w-[200px]">
-      <div className="text-center">
-        <p className="text-xl font-semibold text-teal-600">
-          {filteredSpaces.length}
-        </p>
-        <p className="text-sm text-slate-600 leading-tight">
-          {filteredSpaces.length === 1 ? 'Space' : 'Spaces'}
-        </p>
-      </div>
-    </div>
-  </div>
-)}
+           {/* ✅ Mobile Map Info Card */}
+           {!isLoading && !error && (
+              <div className="fixed top-20 left-4 z-20">
+                <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg px-4 py-3 shadow-lg min-w-[140px] max-w-[220px]">
+                  <div className="text-center">
+                    <p className="text-xl font-semibold text-teal-600">
+                      {filteredSpaces.length}
+                    </p>
+                    <p className="text-sm text-slate-600 leading-tight">
+                      {filteredSpaces.length === 1 ? 'Space' : 'Spaces'}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      📍 {mapLocationName}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
-            {/* ✅ Mobile Loading State - Fixed position overlay */}
+            {/* ✅ Mobile Loading State */}
             {isLoading && (
               <div className="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-30">
                 <div className="bg-white rounded-lg p-4 text-center shadow-lg">
@@ -558,7 +781,51 @@ const loadPropertiesData = async () => {
           </div>
         </div>
 
-        {/* ✅ Modal Components for Mobile */}
+        {/* ✅ NEW: Mobile Bottom Sheet with enhanced props */}
+        <MobileBottomSheet
+          ref={mobileSheetRef}
+          isOpen={showMobileSheet}
+          onClose={handleMobileSheetClose}
+          spaces={filteredSpaces}
+          selectedProperty={selectedProperty}
+          mapCenter={mapCenter}
+          onSpaceSelect={handleMobileSpaceSelect}
+          savedSpaces={savedSpaces}
+          toggleSavedSpace={toggleSavedSpace}
+          // ✅ Enhanced cart functionality props
+          onBookNow={handleBookingNavigation} // ✅ UPDATED: Now includes business profile check
+          onAddToCart={addToCart}
+          isInCart={isInCart}
+          cartCount={cart.length}
+          title={sheetTitle}
+        />
+
+        {/* ✅ NEW: Mobile Cart System */}
+        <FloatingCartButton
+          cartItems={cart}
+          onOpenCart={handleMobileCartOpen}
+          totalValue={getTotalCartValue()}
+        />
+
+        <MobileCartDrawer
+          isOpen={showMobileCartDrawer}
+          onClose={handleMobileCartClose}
+          cartItems={cart}
+          onUpdateQuantity={updateCartItemDuration}
+          onRemoveItem={removeFromCart}
+          onProceedToCheckout={handleProceedToCheckout} // ✅ UPDATED: Now includes business profile check
+          onClearCart={clearCart}
+        />
+
+        {/* ✅ NEW: Business Profile Modal for Mobile */}
+        <BusinessDetailsModal
+          isOpen={showBusinessProfileModal}
+          onClose={handleBusinessProfileClose}
+          onProfileComplete={handleBusinessProfileComplete}
+          required={true} // Required for booking/checkout
+        />
+
+        {/* ✅ Other Mobile Modals */}
         <CartModal 
           showCart={showCart}
           setShowCart={setShowCart}
@@ -579,30 +846,19 @@ const loadPropertiesData = async () => {
           filteredSpaces={filteredSpaces}
         />
 
-        <SpaceDetailsModal 
-          selectedSpace={selectedSpace}
-          detailsExpanded={detailsExpanded}
-          setSelectedSpace={setSelectedSpace}
-          setDetailsExpanded={setDetailsExpanded}
-          isInCart={isInCart}
-          addToCart={addToCart}
-          handleBookingNavigation={handleBookingNavigation}
-          setShowROICalculator={setShowROICalculator}
-        />
-
         <ROICalculatorModal 
           showROICalculator={showROICalculator}
           setShowROICalculator={setShowROICalculator}
           selectedSpace={selectedSpace}
           isInCart={isInCart}
           addToCart={addToCart}
-          handleBookingNavigation={handleBookingNavigation}
+          handleBookingNavigation={handleBookingNavigation} // ✅ UPDATED: Now includes business profile check
         />
       </div>
     );
   }
 
-  // ✅ DESKTOP LAYOUT: Original side-by-side layout with updated background
+  // ✅ DESKTOP LAYOUT: Enhanced with business profile integration
   return (
     <div 
       className="h-screen overflow-hidden"
@@ -610,14 +866,11 @@ const loadPropertiesData = async () => {
     >
       <div className="flex h-full">
         
-        {/* ✅ LEFT CONTAINER: Content (55%) - Updated with cream background theme */}
+        {/* ✅ LEFT CONTAINER: Content (55%) */}
         <div className="w-[55%] h-full flex flex-col">
-  
-          {/* ✅ CONTENT: Scrollable area with updated styling for cream background */}
           <div className="flex-1 flex flex-col min-h-0 bg-white/60 backdrop-blur-sm rounded-2xl m-4 shadow-lg border border-white/50">
             <div className="flex-1 overflow-y-auto scrollbar-hide rounded-t-2xl">
               <div className="p-6">
-                {/* ✅ Combined Header with Controls */}
                 {!isLoading && !error && (
                   <div className="mb-6">
                     <div className="flex items-start justify-between gap-4">
@@ -630,6 +883,9 @@ const loadPropertiesData = async () => {
                             ? `${filteredSpaces.length} ${filteredSpaces.length === 1 ? 'space' : 'spaces'} available`
                             : 'No spaces found with current filters'
                           }
+                        </p>
+                        <p className="text-sm text-slate-500 mt-1">
+                          📍 Showing spaces near: {mapLocationName}
                         </p>
                         {activeFiltersCount > 0 && (
                           <button
@@ -674,13 +930,12 @@ const loadPropertiesData = async () => {
                       </div>
                     </div>
                     
-                    {activeFiltersCount > 0 && (
+                    {(activeFiltersCount > 0 || mapLocationSource !== 'loading') && (
                       <div className="divider"></div>
                     )}
                   </div>
                 )}
 
-                {/* ✅ State Components with Elaview styling */}
                 {error ? (
                   <div className="py-12">
                     <ErrorState error={error} onRetry={loadPropertiesData} />
@@ -710,7 +965,6 @@ const loadPropertiesData = async () => {
               </div>
             </div>
   
-            {/* ✅ PAGINATION: Fixed at bottom with updated styling */}
             {!isLoading && !error && totalPages > 1 && (
               <div className="bg-white/90 backdrop-blur-sm border-t border-slate-200/60 shadow-lg px-6 py-4 rounded-b-2xl mx-4 mb-4">
                 <PaginationControls 
@@ -724,7 +978,7 @@ const loadPropertiesData = async () => {
           </div>
         </div>
   
-        {/* ✅ RIGHT CONTAINER: Fixed Map (45%) - Updated background */}
+        {/* ✅ RIGHT CONTAINER: Fixed Map (45%) */}
         <div className="w-[45%] h-full p-4 fixed right-0">
           <div className="relative w-full h-[calc(100%-75px)] bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-lg">
             <GoogleMap
@@ -740,7 +994,6 @@ const loadPropertiesData = async () => {
               showAreaMarkers={true}
             />
 
-            {/* ✅ Map Controls - Styled with Elaview design */}
             <div className="absolute top-4 right-4 z-20">
               <Button 
                 size="sm" 
@@ -753,7 +1006,6 @@ const loadPropertiesData = async () => {
               </Button>
             </div>
 
-            {/* ✅ Map Legend - Enhanced with Elaview styling */}
             <div className="absolute bottom-4 left-4 z-20">
               <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg">
                 <h4 className="font-medium text-xs text-slate-800 mb-3">Map Legend</h4>
@@ -776,7 +1028,6 @@ const loadPropertiesData = async () => {
               </div>
             </div>
 
-            {/* ✅ Map Status Indicator */}
             {isLoading && (
               <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-30">
                 <div className="bg-white rounded-lg p-4 text-center shadow-lg">
@@ -786,16 +1037,18 @@ const loadPropertiesData = async () => {
               </div>
             )}
 
-            {/* ✅ Map Info Card - Floating summary */}
             {!isLoading && !error && (
               <div className="absolute top-4 left-4 z-20">
-                <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg max-w-48">
+                <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg max-w-56">
                   <div className="text-center">
                     <p className="text-lg font-semibold text-teal-600">
                       {filteredSpaces.length}
                     </p>
                     <p className="text-xs text-slate-600">
                       {filteredSpaces.length === 1 ? 'Space Available' : 'Spaces Available'}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      📍 {mapLocationName}
                     </p>
                     {activeFiltersCount > 0 && (
                       <p className="text-xs text-slate-500 mt-1">
@@ -809,8 +1062,16 @@ const loadPropertiesData = async () => {
           </div>
         </div>
       </div>
+
+      {/* ✅ NEW: Business Profile Modal for Desktop */}
+      <BusinessDetailsModal
+        isOpen={showBusinessProfileModal}
+        onClose={handleBusinessProfileClose}
+        onProfileComplete={handleBusinessProfileComplete}
+        required={true} // Required for booking/checkout
+      />
   
-      {/* ✅ Modal Components - Desktop */}
+      {/* ✅ Desktop Modal Components */}
       <CartModal 
         showCart={showCart}
         setShowCart={setShowCart}
@@ -838,7 +1099,7 @@ const loadPropertiesData = async () => {
         setDetailsExpanded={setDetailsExpanded}
         isInCart={isInCart}
         addToCart={addToCart}
-        handleBookingNavigation={handleBookingNavigation}
+        handleBookingNavigation={handleBookingNavigation} // ✅ UPDATED: Now includes business profile check
         setShowROICalculator={setShowROICalculator}
       />
   
@@ -848,7 +1109,7 @@ const loadPropertiesData = async () => {
         selectedSpace={selectedSpace}
         isInCart={isInCart}
         addToCart={addToCart}
-        handleBookingNavigation={handleBookingNavigation}
+        handleBookingNavigation={handleBookingNavigation} // ✅ UPDATED: Now includes business profile check
       />
     </div>
   );

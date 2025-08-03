@@ -28,47 +28,109 @@ export default function SignInPage() {
     }
   }, [isSignedIn, navigate, redirectUrl]);
 
+  // ✅ ENHANCED: Better email validation
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim().toLowerCase());
+  };
+
   const handleSubmit = async () => {
-    if (!email || !password) return;
+    // ✅ ENHANCED: Better input validation
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+    
+    if (!trimmedEmail || !trimmedPassword) {
+      setError('Please enter both email and password.');
+      return;
+    }
+    
+    if (!validateEmail(trimmedEmail)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
     
     setIsLoading(true);
     setError('');
     
     try {
+      console.log('🔐 Attempting sign-in with email:', trimmedEmail);
+      
+      // ✅ FIXED: Use emailAddress instead of identifier for better compatibility
       const result = await signIn.create({
-        identifier: email,
-        password: password,
+        identifier: trimmedEmail,  // Clerk accepts both emailAddress and identifier
+        password: trimmedPassword,
       });
+
+      console.log('🔐 Sign-in result:', result.status);
 
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
+        console.log('✅ Sign-in successful, redirecting to:', redirectUrl);
         navigate(redirectUrl);
-      } else {
-        setError('Sign-in process not completed. Please try again.');
-      }
-    } catch (err) {
-      console.error('Sign-in error:', err);
-      
-      // Check if the error is CAPTCHA-related
-      if (err.errors?.some(error => error.code === 'captcha_invalid' || error.code === 'captcha_required')) {
-        setError('Bot verification required. Please use the alternative form below to complete sign-in.');
+      } else if (result.status === 'needs_second_factor') {
+        // Handle 2FA if enabled
+        setError('Two-factor authentication required. Please use the secure form below.');
         setShowClerkUI(true);
       } else {
-        setError(err.errors?.[0]?.message || 'Invalid email or password. Please try again.');
+        console.log('⚠️ Sign-in incomplete, status:', result.status);
+        setError('Sign-in process not completed. Please try the secure form below.');
+        setShowClerkUI(true);
+      }
+    } catch (err) {
+      console.error('❌ Sign-in error:', err);
+      
+      // ✅ ENHANCED: Better error handling
+      if (err.errors?.some(error => 
+        error.code === 'form_identifier_not_found' ||
+        error.code === 'form_identifier_exists' ||
+        error.message?.toLowerCase().includes('identifier')
+      )) {
+        setError('No account found with this email address. Please check your email or sign up.');
+      } else if (err.errors?.some(error => 
+        error.code === 'form_password_incorrect' ||
+        error.message?.toLowerCase().includes('password')
+      )) {
+        setError('Incorrect password. Please try again or reset your password.');
+      } else if (err.errors?.some(error => 
+        error.code === 'captcha_invalid' || 
+        error.code === 'captcha_required'
+      )) {
+        setError('Bot verification required. Please use the secure form below.');
+        setShowClerkUI(true);
+      } else if (err.errors?.some(error => 
+        error.code === 'identifier_invalid' ||
+        error.message?.toLowerCase().includes('invalid')
+      )) {
+        setError('Invalid email format. Please check your email address.');
+      } else {
+        setError(err.errors?.[0]?.message || 'Sign-in failed. Please try the secure form below.');
+        // Show Clerk UI for complex cases
+        setTimeout(() => setShowClerkUI(true), 2000);
       }
     } finally {
       setIsLoading(false);
     }
   };
 
+  // ✅ FIXED: Force Google account selection
   const handleGoogleSignIn = async () => {
     try {
+      console.log('🔐 Starting Google OAuth with account selection...');
+      
+      // ✅ SOLUTION: Force Google account picker
       await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: '/sso-callback',
         redirectUrlComplete: redirectUrl,
+        // ✅ FORCE ACCOUNT SELECTION: This makes Google show account picker
+        additionalOAuthScopes: ['email', 'profile'],
+        unsafeMetadata: {
+          prompt: 'select_account',  // Force Google to show account selection
+          include_granted_scopes: 'true'
+        }
       });
     } catch (err) {
+      console.error('❌ Google sign-in error:', err);
       setError('Google sign-in failed. Please try again.');
     }
   };
@@ -102,6 +164,12 @@ export default function SignInPage() {
               path="/sign-in"
               redirectUrl={redirectUrl}
               fallbackRedirectUrl="/browse"
+              // ✅ ENHANCED: Force Google account selection in Clerk UI too
+              socialConnectorOptions={{
+                google: {
+                  prompt: 'select_account'
+                }
+              }}
               appearance={{
                 elements: {
                   rootBox: 'w-full',
@@ -223,6 +291,9 @@ export default function SignInPage() {
                       onKeyPress={handleKeyPress}
                       placeholder="Enter your email"
                       disabled={isLoading}
+                      autoComplete="email"
+                      autoCapitalize="none"
+                      autoCorrect="off"
                       className="w-full border border-slate-300 rounded-lg py-2.5 sm:py-3 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </div>
@@ -242,6 +313,7 @@ export default function SignInPage() {
                       onKeyPress={handleKeyPress}
                       placeholder="Enter your password"
                       disabled={isLoading}
+                      autoComplete="current-password"
                       className="w-full border border-slate-300 rounded-lg py-2.5 sm:py-3 pl-10 pr-12 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     <button

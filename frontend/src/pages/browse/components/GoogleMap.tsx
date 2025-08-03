@@ -465,28 +465,41 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
           });
 
           // ✅ Show dropdown on property marker click
-          marker.addListener('click', (e: any) => {
-            e.stop();
-            
-            // MIGRATION: Use spaces or fallback to advertisingAreas for backward compatibility
-            const allSpaces = spaces.length > 0 ? spaces : advertisingAreas;
-            const propertySpaces = allSpaces.filter(space => 
-              space.propertyId === property.id || 
-              space.property?.id === property.id ||
-              (space.propertyCoords && 
-               Math.abs(space.propertyCoords.lat - position!.lat) < 0.001 &&
-               Math.abs(space.propertyCoords.lng - position!.lng) < 0.001)
-            );
+          // ✅ FIXED: Mobile-aware property marker click handler
+marker.addListener('click', (e: any) => {
+  e.stop();
+  
+  // ✅ Check if currently mobile (real-time detection)
+  const isCurrentlyMobile = window.innerWidth < 768;
+  
+  if (isCurrentlyMobile) {
+    // ✅ Mobile: Always use bottom sheet via onPropertyClick
+    console.log('📱 Mobile property marker clicked - opening bottom sheet');
+    onPropertyClick(property);
+  } else {
+    // ✅ Desktop: Use dropdown as before
+    console.log('🖥️ Desktop property marker clicked - showing dropdown');
+    
+    // MIGRATION: Use spaces or fallback to advertisingAreas for backward compatibility
+    const allSpaces = spaces.length > 0 ? spaces : advertisingAreas;
+    const propertySpaces = allSpaces.filter(space => 
+      space.propertyId === property.id || 
+      space.property?.id === property.id ||
+      (space.propertyCoords && 
+       Math.abs(space.propertyCoords.lat - position!.lat) < 0.001 &&
+       Math.abs(space.propertyCoords.lng - position!.lng) < 0.001)
+    );
 
-            if (propertySpaces.length > 0) {
-              setActiveDropdown({
-                spaces: propertySpaces,
-                position: position!
-              });
-            } else {
-              onPropertyClick(property);
-            }
-          });
+    if (propertySpaces.length > 0) {
+      setActiveDropdown({
+        spaces: propertySpaces,
+        position: position!
+      });
+    } else {
+      onPropertyClick(property);
+    }
+  }
+});
 
           newMarkers.push(marker);
         }
