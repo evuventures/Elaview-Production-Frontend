@@ -2,7 +2,7 @@ import Layout from "../components/layout/Layout.tsx";
 import CheckoutPage from "./checkout/CheckoutPage.jsx"; // ✅ FIXED: Renamed from Bookings to CheckoutPage for clarity
 import AdvertisingPage from "./dashboard/advertiser/AdvertiserDashboard.tsx"; // ✅ NEW: Import the bookings management page
 import Map from "./browse/BrowsePage.jsx";
-import Messages from "./messages/Messages.tsx";
+import Messages from "./messages/MessagesPage.tsx";
 import Profile from "./user/Profile.jsx";
 import Help from "./help/Help.jsx";
 import Dashboard from "./dashboard/owner/OwnerDashboard.tsx";

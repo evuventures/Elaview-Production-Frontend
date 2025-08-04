@@ -1,4 +1,4 @@
-// src/pages/auth/SignUp.jsx
+// src/pages/auth/SignUp.jsx - MOBILE RESPONSIVE VERSION
 import React, { useState } from 'react';
 import { SignUp, useSignUp, useAuth } from '@clerk/clerk-react';
 import { useNavigate } from 'react-router-dom';
@@ -19,6 +19,15 @@ export default function SignUpPage() {
 
   const { signUp, setActive } = useSignUp();
   const { isSignedIn } = useAuth();
+
+  // ✅ MOBILE: Add console log for mobile debugging
+  React.useEffect(() => {
+    console.log('📱 SIGN-UP PAGE: Mobile viewport check', {
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+      isMobile: window.innerWidth < 768
+    });
+  }, []);
 
   // If already signed in, redirect
   React.useEffect(() => {
@@ -155,17 +164,18 @@ export default function SignUpPage() {
         className="min-h-screen flex items-center justify-center p-3 sm:p-4 lg:p-8"
         style={{ backgroundColor: '#f7f5e6' }}
       >
+        {/* ✅ MOBILE: Full height container with proper spacing */}
         <div className="w-full max-w-sm sm:max-w-md">
-          {/* Responsive Logo */}
-          <div className="flex justify-center mb-6 sm:mb-8">
+          {/* ✅ MOBILE: Responsive Logo */}
+          <div className="flex justify-center mb-4 sm:mb-6 lg:mb-8">
             <img 
               src={elaviewLogo} 
               alt="Elaview Logo" 
-              className="h-12 sm:h-14 md:h-16 w-auto"
+              className="h-10 sm:h-12 md:h-14 lg:h-16 w-auto"
             />
           </div>
           
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+          <div className="bg-white rounded-lg sm:rounded-xl lg:rounded-2xl shadow-sm border border-slate-200 p-3 sm:p-4 lg:p-6">
             <SignUp 
               routing="path"
               path="/sign-up"
@@ -195,7 +205,7 @@ export default function SignUpPage() {
             
             <button 
               onClick={() => setShowClerkUI(false)}
-              className="mt-4 text-xs text-slate-600 hover:text-slate-900 transition-colors duration-200 min-h-[44px] flex items-center"
+              className="mt-3 sm:mt-4 text-xs text-slate-600 hover:text-slate-900 transition-colors duration-200 min-h-[44px] flex items-center w-full justify-center"
             >
               ← Back to custom form
             </button>
@@ -207,10 +217,10 @@ export default function SignUpPage() {
 
   return (
     <div 
-      className="min-h-screen flex"
+      className="min-h-screen flex flex-col lg:flex-row"
       style={{ backgroundColor: '#f7f5e6' }}
     >
-      {/* Left Half - Logo, Header, Subheader */}
+      {/* ✅ MOBILE: Left Half - Hidden on mobile, shown on desktop */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-8 xl:p-12">
         {/* Logo */}
         <div className="mb-8 xl:mb-12">
@@ -241,53 +251,55 @@ export default function SignUpPage() {
         </button>
       </div>
 
-      {/* Right Half - Form and everything else */}
-      <div className="w-full lg:w-1/2 flex flex-col h-screen max-h-screen overflow-y-auto">
-        <div className="flex-1 flex flex-col justify-center p-3 sm:p-4 lg:p-6 xl:p-8 py-4 sm:py-6">
+      {/* ✅ MOBILE: Right Half - Full width on mobile, half on desktop */}
+      <div className="w-full lg:w-1/2 flex flex-col min-h-screen">
+        {/* ✅ MOBILE: Scrollable container with safe areas */}
+        <div className="flex-1 flex flex-col justify-center p-3 sm:p-4 lg:p-6 xl:p-8 py-6 sm:py-8 lg:py-4 overflow-y-auto">
           
-          {/* Mobile Logo and Header (shown only on mobile) */}
-          <div className="lg:hidden mb-4 sm:mb-6">
-            <div className="flex justify-center mb-3 sm:mb-4">
+          {/* ✅ MOBILE: Mobile Logo and Header (shown only on mobile/tablet) */}
+          <div className="lg:hidden mb-6 sm:mb-8">
+            <div className="flex justify-center mb-4 sm:mb-6">
               <img 
                 src={elaviewLogo} 
                 alt="Elaview Logo" 
-                className="h-10 sm:h-12 w-auto"
+                className="h-12 sm:h-16 w-auto"
               />
             </div>
-            <div className="text-center mb-4">
-              <h1 className="text-xl sm:text-2xl font-light text-slate-900 leading-tight mb-1 sm:mb-2">
+            <div className="text-center mb-4 sm:mb-6">
+              <h1 className="text-2xl sm:text-3xl font-light text-slate-900 leading-tight mb-2 sm:mb-3">
                 Join the
-                <span className="text-2xl sm:text-3xl block font-medium">marketplace</span>
+                <span className="text-3xl sm:text-4xl block font-medium">marketplace</span>
               </h1>
-              <p className="text-slate-600 text-sm font-light mb-3 sm:mb-4">
+              <p className="text-slate-600 text-base sm:text-lg font-light mb-4 sm:mb-6">
                 Start buying and selling advertising spaces
               </p>
-              {/* Learn More Button for Mobile */}
+              {/* ✅ MOBILE: Learn More Button for Mobile */}
               <button 
                 onClick={() => navigate('/learn-more')}
-                className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg transition-all duration-200 shadow-sm text-sm"
+                className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 px-6 sm:px-8 py-3 sm:py-3.5 rounded-lg transition-all duration-200 shadow-sm text-sm sm:text-base"
               >
                 Learn more
               </button>
             </div>
           </div>
           
-          {/* Sign Up Form Container */}
+          {/* ✅ MOBILE: Sign Up Form Container with responsive width */}
           <div className="w-full max-w-sm mx-auto">
-            <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4">
+            <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+              {/* ✅ MOBILE: Error display with responsive design */}
               {error && (
-                <div className="mb-3 p-2.5 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-red-700">{error}</p>
+                  <p className="text-xs sm:text-sm text-red-700 flex-1">{error}</p>
                 </div>
               )}
               
-              <div className="space-y-3 sm:space-y-4">
+              <div className="space-y-4 sm:space-y-5">
                 
-                {/* Name Fields */}
+                {/* ✅ MOBILE: Name Fields with responsive grid */}
                 <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700">
+                  <div className="space-y-1.5">
+                    <label className="text-xs sm:text-sm font-medium text-slate-700">
                       First Name
                     </label>
                     <div className="relative">
@@ -301,13 +313,13 @@ export default function SignUpPage() {
                         disabled={isLoading}
                         autoComplete="given-name"
                         autoCapitalize="words"
-                        className="w-full border border-slate-300 rounded-lg py-2.5 sm:py-3 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full border border-slate-300 rounded-lg py-3 sm:py-3.5 pl-10 pr-3 text-sm sm:text-base text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 bg-white disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-[48px]"
                       />
                     </div>
                   </div>
                   
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700">
+                  <div className="space-y-1.5">
+                    <label className="text-xs sm:text-sm font-medium text-slate-700">
                       Last Name
                     </label>
                     <div className="relative">
@@ -321,15 +333,15 @@ export default function SignUpPage() {
                         disabled={isLoading}
                         autoComplete="family-name"
                         autoCapitalize="words"
-                        className="w-full border border-slate-300 rounded-lg py-2.5 sm:py-3 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full border border-slate-300 rounded-lg py-3 sm:py-3.5 pl-10 pr-3 text-sm sm:text-base text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 bg-white disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-[48px]"
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* Email Field */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-700">
+                {/* ✅ MOBILE: Email Field with responsive design */}
+                <div className="space-y-1.5">
+                  <label className="text-xs sm:text-sm font-medium text-slate-700">
                     Email Address
                   </label>
                   <div className="relative">
@@ -344,14 +356,14 @@ export default function SignUpPage() {
                       autoComplete="email"
                       autoCapitalize="none"
                       autoCorrect="off"
-                      className="w-full border border-slate-300 rounded-lg py-2.5 sm:py-3 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full border border-slate-300 rounded-lg py-3 sm:py-3.5 pl-10 pr-3 text-sm sm:text-base text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 bg-white disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-[48px]"
                     />
                   </div>
                 </div>
 
-                {/* Password Field */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-700">
+                {/* ✅ MOBILE: Password Field with responsive design */}
+                <div className="space-y-1.5">
+                  <label className="text-xs sm:text-sm font-medium text-slate-700">
                     Password
                   </label>
                   <div className="relative">
@@ -364,39 +376,39 @@ export default function SignUpPage() {
                       placeholder="Create a password"
                       disabled={isLoading}
                       autoComplete="new-password"
-                      className="w-full border border-slate-300 rounded-lg py-2.5 sm:py-3 pl-10 pr-12 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full border border-slate-300 rounded-lg py-3 sm:py-3.5 pl-10 pr-12 text-sm sm:text-base text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 bg-white disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-[48px]"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors duration-200 p-1"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors duration-200 p-1 min-h-[24px] min-w-[24px] flex items-center justify-center"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
 
-                {/* Submit Button */}
+                {/* ✅ MOBILE: Submit Button with responsive design */}
                 <button
                   onClick={handleSubmit}
                   disabled={isLoading || !firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()}
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-2.5 sm:py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-sm"
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 sm:py-3.5 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-sm sm:text-base min-h-[44px] sm:min-h-[48px]"
                 >
                   {isLoading ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
                     <>
                       Create Account
-                      <ArrowRight className="w-3 h-3" />
+                      <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
                     </>
                   )}
                 </button>
 
-                {/* Google Sign Up */}
+                {/* ✅ MOBILE: Google Sign Up with responsive design */}
                 <button
                   onClick={handleGoogleSignUp}
                   disabled={isLoading}
-                  className="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2.5 sm:py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-sm"
+                  className="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-3 sm:py-3.5 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-sm sm:text-base min-h-[44px] sm:min-h-[48px]"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
                     <path fill="#4285f4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -408,43 +420,43 @@ export default function SignUpPage() {
                 </button>
               </div>
 
-              {/* Divider */}
-              <div className="relative my-3 sm:my-4">
+              {/* ✅ MOBILE: Divider with responsive spacing */}
+              <div className="relative my-4 sm:my-5">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-slate-200" />
                 </div>
-                <div className="relative flex justify-center text-xs">
+                <div className="relative flex justify-center text-xs sm:text-sm">
                   <span className="bg-white px-3 text-slate-500">
                     or
                   </span>
                 </div>
               </div>
 
-              {/* Sign In Section */}
-              <div className="text-center space-y-2">
-                <p className="text-xs text-slate-600">Already have an account?</p>
+              {/* ✅ MOBILE: Sign In Section with responsive design */}
+              <div className="text-center space-y-2 sm:space-y-3">
+                <p className="text-xs sm:text-sm text-slate-600">Already have an account?</p>
                 <button 
                   onClick={() => navigate('/sign-in')}
-                  className="text-slate-900 hover:text-slate-700 font-medium transition-colors duration-200 text-sm w-full py-1"
+                  className="text-slate-900 hover:text-slate-700 font-medium transition-colors duration-200 text-sm sm:text-base w-full py-2 min-h-[40px]"
                 >
                   Sign in here
                 </button>
               </div>
 
-              {/* Alternative Clerk UI Option */}
-              <div className="text-center mt-2 sm:mt-3">
+              {/* ✅ MOBILE: Alternative Clerk UI Option with responsive design */}
+              <div className="text-center mt-3 sm:mt-4">
                 <button 
                   onClick={() => setShowClerkUI(true)}
-                  className="text-xs text-slate-500 hover:text-slate-700 transition-colors duration-200 w-full py-1"
+                  className="text-xs text-slate-500 hover:text-slate-700 transition-colors duration-200 w-full py-2 min-h-[36px]"
                 >
                   Need verification or having trouble? Use secure form
                 </button>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="text-center pt-3 sm:pt-4">
-              <p className="text-xs text-slate-500 leading-relaxed">
+            {/* ✅ MOBILE: Footer with responsive spacing */}
+            <div className="text-center pt-4 sm:pt-6">
+              <p className="text-xs text-slate-500 leading-relaxed px-2">
                 By signing up, you agree to our{' '}
                 <button className="underline hover:no-underline">Terms of Service</button>
                 {' '}and{' '}

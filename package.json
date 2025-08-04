@@ -2,6 +2,8 @@
   "dependencies": {
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/forms": "^0.5.10",
-    "@tailwindcss/typography": "^0.5.16"
+    "@tailwindcss/typography": "^0.5.16",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^12.23.12"
   }
 }

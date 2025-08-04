@@ -34,6 +34,15 @@ function CheckoutPage({ cartData, onBack, onSuccess }) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // ✅ MOBILE: Add console log for mobile debugging
+  useEffect(() => {
+    console.log('📱 CHECKOUT PAGE: Mobile viewport check', {
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+      isMobile: window.innerWidth < 768
+    });
+  }, []);
+
   // ✅ CORE STATE MANAGEMENT
   const [profileLoading, setProfileLoading] = useState(true);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
@@ -420,30 +429,30 @@ function CheckoutPage({ cartData, onBack, onSuccess }) {
     
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-        <div className="container mx-auto px-4 py-8">
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-8">
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+          {/* ✅ MOBILE: Header with responsive spacing */}
+          <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => navigate(-1)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 p-2 sm:p-3"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back
+              <span className="hidden sm:inline">Back</span>
             </Button>
-            <h1 className="text-2xl font-bold text-slate-900">Checkout</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Checkout</h1>
           </div>
 
-          {/* Error Display */}
+          {/* ✅ MOBILE: Error Display with responsive design */}
           {checkoutError && (
             <div className="max-w-6xl mx-auto mb-4">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-600" />
-                  <div>
-                    <p className="font-medium text-red-800">Setup Error</p>
-                    <p className="text-sm text-red-700">{checkoutError}</p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-red-800 text-sm sm:text-base">Setup Error</p>
+                    <p className="text-sm text-red-700 mt-1">{checkoutError}</p>
                   </div>
                 </div>
                 <Button
@@ -464,13 +473,13 @@ function CheckoutPage({ cartData, onBack, onSuccess }) {
             </div>
           )}
 
-          {/* Loading Card */}
+          {/* ✅ MOBILE: Loading Card with responsive design */}
           <div className="max-w-6xl mx-auto">
-            <Card className="p-8">
+            <Card className="p-4 sm:p-8">
               <div className="flex flex-col items-center justify-center space-y-4">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-blue-600" />
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold text-slate-900">Setting up your checkout...</h3>
+                  <h3 className="text-base sm:text-lg font-semibold text-slate-900">Setting up your checkout...</h3>
                   <p className="text-sm text-slate-600 mt-1">
                     {profileLoading && "Loading your business profile..."}
                     {isLoadingOrderData && "Loading booking details..."}
@@ -488,12 +497,12 @@ function CheckoutPage({ cartData, onBack, onSuccess }) {
   if (shouldShowSuccess) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-2xl mx-auto text-center">
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
-              <h1 className="text-2xl font-bold text-slate-900 mb-2">Payment Successful!</h1>
-              <p className="text-slate-600 mb-6">Your booking has been confirmed.</p>
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+          <div className="max-w-md sm:max-w-2xl mx-auto text-center">
+            <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
+              <CheckCircle className="w-12 h-12 sm:w-16 sm:h-16 text-green-600 mx-auto mb-4" />
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2">Payment Successful!</h1>
+              <p className="text-slate-600 mb-4 sm:mb-6">Your booking has been confirmed.</p>
               <Button onClick={() => navigate('/dashboard')} className="w-full">
                 View Your Bookings
               </Button>
@@ -506,19 +515,19 @@ function CheckoutPage({ cartData, onBack, onSuccess }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        {/* ✅ MOBILE: Header with responsive spacing */}
+        <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 p-2 sm:p-3"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back
+            <span className="hidden sm:inline">Back</span>
           </Button>
-          <h1 className="text-2xl font-bold text-slate-900">Checkout</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Checkout</h1>
         </div>
 
         {/* Business Details Modal */}
@@ -533,7 +542,7 @@ function CheckoutPage({ cartData, onBack, onSuccess }) {
           )}
         </AnimatePresence>
 
-        {/* Main Checkout Content */}
+        {/* ✅ MOBILE: Main Checkout Content with responsive layout */}
         {shouldShowCheckout && clientSecret && (
           <Elements 
             stripe={stripePromise} 
@@ -562,7 +571,7 @@ function CheckoutPage({ cartData, onBack, onSuccess }) {
   );
 }
 
-// 💳 PAYMENT FORM COMPONENT 
+// 💳 PAYMENT FORM COMPONENT - MOBILE RESPONSIVE
 function CheckoutForm({ orderData, businessProfile, onSuccess }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -604,122 +613,126 @@ function CheckoutForm({ orderData, businessProfile, onSuccess }) {
   };
 
   return (
-    <div className="max-w-6xl mx-auto grid lg:grid-cols-3 gap-8">
-      {/* Order Summary */}
-      <div className="lg:col-span-1">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Order Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {orderData.type === 'direct' ? (
-              <div className="space-y-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium">{orderData.space.name}</p>
-                    <p className="text-sm text-slate-600">{orderData.property.name}</p>
-                    <div className="flex items-center gap-1 text-sm text-slate-500 mt-1">
-                      <MapPin className="w-3 h-3" />
-                      {orderData.property.address}
-                    </div>
-                    {orderData.usedFallbackProperty && (
-                      <div className="flex items-center gap-1 text-xs text-amber-600 mt-1">
-                        <AlertCircle className="w-3 h-3" />
-                        Property details estimated
+    <div className="max-w-6xl mx-auto">
+      {/* ✅ MOBILE: Responsive grid layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+        
+        {/* ✅ MOBILE: Order Summary - Full width on mobile, sidebar on desktop */}
+        <div className="order-2 lg:order-1 lg:col-span-1">
+          <Card>
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Package className="w-4 h-4 sm:w-5 sm:h-5" />
+                Order Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 sm:space-y-4 text-sm sm:text-base">
+              {orderData.type === 'direct' ? (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{orderData.space.name}</p>
+                      <p className="text-sm text-slate-600 truncate">{orderData.property.name}</p>
+                      <div className="flex items-start gap-1 text-sm text-slate-500 mt-1">
+                        <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                        <span className="truncate">{orderData.property.address}</span>
                       </div>
-                    )}
-                  </div>
-                  <p className="font-medium">${orderData.space.baseRate || orderData.space.price}</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {orderData.items.map((item, index) => (
-                  <div key={index} className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{item.name}</p>
-                      <p className="text-sm text-slate-600">{item.description}</p>
+                      {orderData.usedFallbackProperty && (
+                        <div className="flex items-center gap-1 text-xs text-amber-600 mt-1">
+                          <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                          <span>Property details estimated</span>
+                        </div>
+                      )}
                     </div>
-                    <p className="font-medium">${item.price}</p>
+                    <p className="font-medium flex-shrink-0">${orderData.space.baseRate || orderData.space.price}</p>
                   </div>
-                ))}
-              </div>
-            )}
-            
-            <Separator />
-            <div className="flex justify-between items-center font-semibold">
-              <span>Total</span>
-              <span>${orderData.total}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Business Profile Summary - ENHANCED */}
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="w-5 h-5" />
-              Billing Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm space-y-1">
-              <p className="font-medium">{businessProfile.businessName}</p>
-              <p className="text-slate-600">{businessProfile.businessIndustry}</p>
-              {businessProfile.businessAddress && (
-                <div className="text-slate-600">
-                  <p>{businessProfile.businessAddress.street}</p>
-                  <p>{businessProfile.businessAddress.city}, {businessProfile.businessAddress.state} {businessProfile.businessAddress.zipCode}</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {orderData.items.map((item, index) => (
+                    <div key={index} className="flex justify-between items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{item.name}</p>
+                        <p className="text-sm text-slate-600 truncate">{item.description}</p>
+                      </div>
+                      <p className="font-medium flex-shrink-0">${item.price}</p>
+                    </div>
+                  ))}
                 </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Payment Form */}
-      <div className="lg:col-span-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5" />
-              Payment Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <PaymentElement />
               
-              {paymentError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5 text-red-600" />
-                    <p className="text-red-800">{paymentError}</p>
-                  </div>
-                </div>
-              )}
+              <Separator />
+              <div className="flex justify-between items-center font-semibold">
+                <span>Total</span>
+                <span>${orderData.total}</span>
+              </div>
+            </CardContent>
+          </Card>
 
-              <Button 
-                type="submit" 
-                disabled={!stripe || isProcessing}
-                className="w-full"
-                size="lg"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Processing Payment...
-                  </>
-                ) : (
-                  `Complete Payment - $${orderData.total}`
+          {/* ✅ MOBILE: Business Profile Summary - Responsive */}
+          <Card className="mt-4">
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                Billing Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm space-y-1">
+                <p className="font-medium truncate">{businessProfile.businessName}</p>
+                <p className="text-slate-600 truncate">{businessProfile.businessIndustry}</p>
+                {businessProfile.businessAddress && (
+                  <div className="text-slate-600">
+                    <p className="truncate">{businessProfile.businessAddress.street}</p>
+                    <p className="truncate">{businessProfile.businessAddress.city}, {businessProfile.businessAddress.state} {businessProfile.businessAddress.zipCode}</p>
+                  </div>
                 )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ✅ MOBILE: Payment Form - Full width on mobile, main content on desktop */}
+        <div className="order-1 lg:order-2 lg:col-span-2">
+          <Card>
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
+                Payment Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+                <PaymentElement />
+                
+                {paymentError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-red-800 text-sm sm:text-base">{paymentError}</p>
+                    </div>
+                  </div>
+                )}
+
+                <Button 
+                  type="submit" 
+                  disabled={!stripe || isProcessing}
+                  className="w-full py-3 sm:py-4"
+                  size="lg"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Processing Payment...
+                    </>
+                  ) : (
+                    `Complete Payment - $${orderData.total}`
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

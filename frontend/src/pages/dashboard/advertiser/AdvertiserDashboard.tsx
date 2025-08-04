@@ -59,6 +59,15 @@ export default function AdvertiserDashboard() {
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
   const [customDimensions, setCustomDimensions] = useState<CustomDimensions>({ width: '', height: '' });
 
+  // ✅ MOBILE: Add console log for mobile debugging
+  useEffect(() => {
+    console.log('📱 ADVERTISER DASHBOARD: Mobile viewport check', {
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+      isMobile: window.innerWidth < 768
+    });
+  }, []);
+
   // Fetch dashboard data on mount
   useEffect(() => {
     console.log('👤 User loaded:', userLoaded, 'User ID:', user?.id);
@@ -224,7 +233,7 @@ export default function AdvertiserDashboard() {
       case 'campaigns':
         return bookings.length > 0 ? (
           <div className="space-y-4">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
               <div>
                 <h3 className="font-semibold text-gray-900">Your Active Campaigns</h3>
                 {urgentBookings.length > 0 && (
@@ -236,7 +245,7 @@ export default function AdvertiserDashboard() {
               </div>
               <button 
                 onClick={() => setActiveTab('browse')}
-                className="text-teal-600 hover:text-teal-700 text-sm font-medium"
+                className="text-teal-600 hover:text-teal-700 text-sm font-medium self-start sm:self-auto"
               >
                 Browse More Spaces →
               </button>
@@ -296,7 +305,7 @@ export default function AdvertiserDashboard() {
                   <p className="text-gray-600">Loading available spaces...</p>
                 </div>
               ) : searchResults.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {searchResults.map(space => (
                     <SpaceSearchCard 
                       key={space.id} 
@@ -325,7 +334,10 @@ export default function AdvertiserDashboard() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#f7f5e6' }}>
+      <div 
+        className="min-h-screen flex items-center justify-center px-4"
+        style={{ backgroundColor: '#f7f5e6' }}
+      >
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading your dashboard...</p>
@@ -337,7 +349,10 @@ export default function AdvertiserDashboard() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#f7f5e6' }}>
+      <div 
+        className="min-h-screen flex items-center justify-center px-4"
+        style={{ backgroundColor: '#f7f5e6' }}
+      >
         <div className="text-center">
           <p className="text-red-600 mb-4">{error}</p>
           <button 
@@ -353,125 +368,131 @@ export default function AdvertiserDashboard() {
 
   return (
     <div 
-      className="min-h-screen p-4 sm:p-6"
+      className="min-h-full w-full overflow-hidden"
       style={{ backgroundColor: '#f7f5e6' }}
     >
-      <div className="max-w-7xl mx-auto">
-        
-        {/* Header with Notifications */}
-        <div className="mb-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Advertiser Dashboard</h1>
-              <p className="text-gray-600">Manage your campaigns and materials</p>
+      {/* ✅ MOBILE RESPONSIVE: Container with proper spacing */}
+      <div className="w-full h-full">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
+          
+          {/* ✅ MOBILE: Header with responsive spacing */}
+          <div className="mb-4 sm:mb-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Advertiser Dashboard</h1>
+                <p className="text-gray-600 text-sm sm:text-base">Manage your campaigns and materials</p>
+              </div>
+              
+              {/* ✅ MOBILE: Notification Bell with proper touch target */}
+              {unreadNotifications.length > 0 && (
+                <button className="relative p-3 text-gray-600 hover:text-gray-900 self-start sm:self-auto">
+                  <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center min-w-[20px]">
+                    {unreadNotifications.length}
+                  </span>
+                </button>
+              )}
             </div>
             
-            {/* Notification Bell */}
-            {unreadNotifications.length > 0 && (
-              <button className="relative p-2 text-gray-600 hover:text-gray-900">
-                <Bell className="w-6 h-6" />
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {unreadNotifications.length}
-                </span>
-              </button>
+            {/* ✅ MOBILE: Urgent Alerts with responsive layout */}
+            {urgentBookings.length > 0 && (
+              <div className="mt-3 sm:mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <div className="flex items-start sm:items-center flex-1">
+                    <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 mr-2 mt-0.5 sm:mt-0 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-amber-800">
+                        Action Required: {urgentBookings.length} campaign{urgentBookings.length > 1 ? 's' : ''} need{urgentBookings.length === 1 ? 's' : ''} immediate attention
+                      </p>
+                      <p className="text-xs text-amber-700 mt-1">
+                        Installation deadlines approaching or materials delivered
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setActiveTab('campaigns')}
+                    className="text-amber-700 hover:text-amber-800 text-sm font-medium self-start sm:self-auto whitespace-nowrap"
+                  >
+                    View →
+                  </button>
+                </div>
+              </div>
             )}
           </div>
-          
-          {/* Urgent Alerts */}
-          {urgentBookings.length > 0 && (
-            <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <div className="flex items-center">
-                <AlertCircle className="w-5 h-5 text-amber-600 mr-2" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-amber-800">
-                    Action Required: {urgentBookings.length} campaign{urgentBookings.length > 1 ? 's' : ''} need{urgentBookings.length === 1 ? 's' : ''} immediate attention
-                  </p>
-                  <p className="text-xs text-amber-700">
-                    Installation deadlines approaching or materials delivered
-                  </p>
-                </div>
-                <button 
-                  onClick={() => setActiveTab('campaigns')}
-                  className="text-amber-700 hover:text-amber-800 text-sm font-medium"
-                >
-                  View →
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
 
-        {/* Enhanced Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <StatCard 
-            icon={DollarSign} 
-            value={stats.totalSpent} 
-            label="Total Invested"
-            color="green"
-            subValue="This month"
-          />
-          <StatCard 
-            icon={Calendar} 
-            value={stats.activeCampaigns} 
-            label="Active Campaigns"
-            color="blue"
-            actionText={urgentBookings.length > 0 ? `${urgentBookings.length} urgent` : "View All"}
-            onAction={() => setActiveTab('campaigns')}
-          />
-          <StatCard 
-            icon={Package} 
-            value={stats.pendingMaterials} 
-            label="Materials In Transit"
-            color="yellow"
-          />
-          <StatCard 
-            icon={Building2} 
-            value={searchResults.length} 
-            label="Spaces Available"
-            color="teal"
-            actionText="Browse"
-            onAction={() => setActiveTab('browse')}
-          />
-        </div>
-
-        {/* Main Content with Glass Morphism */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50">
-          {/* Tabs */}
-          <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6">
-              {[
-                { id: 'campaigns', label: 'My Campaigns', icon: Calendar, badge: urgentBookings.length },
-                { id: 'browse', label: 'Browse Spaces', icon: Search }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors inline-flex items-center ${
-                    activeTab === tab.id
-                      ? 'border-teal-500 text-teal-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  <tab.icon className="w-4 h-4 mr-2" />
-                  {tab.label}
-                  {tab.badge && tab.badge > 0 && (
-                    <span className="ml-2 bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full">
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </nav>
+          {/* ✅ MOBILE: Enhanced Stats Grid with responsive columns */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <StatCard 
+              icon={DollarSign} 
+              value={stats.totalSpent} 
+              label="Total Invested"
+              color="green"
+              subValue="This month"
+            />
+            <StatCard 
+              icon={Calendar} 
+              value={stats.activeCampaigns} 
+              label="Active Campaigns"
+              color="blue"
+              actionText={urgentBookings.length > 0 ? `${urgentBookings.length} urgent` : "View All"}
+              onAction={() => setActiveTab('campaigns')}
+            />
+            <StatCard 
+              icon={Package} 
+              value={stats.pendingMaterials} 
+              label="Materials In Transit"
+              color="yellow"
+            />
+            <StatCard 
+              icon={Building2} 
+              value={searchResults.length} 
+              label="Spaces Available"
+              color="teal"
+              actionText="Browse"
+              onAction={() => setActiveTab('browse')}
+            />
           </div>
 
-          {/* Tab Content */}
-          <div className="p-6">
-            {renderContent()}
+          {/* ✅ MOBILE: Main Content with responsive glass morphism */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg border border-white/50">
+            {/* ✅ MOBILE: Tabs with responsive layout */}
+            <div className="border-b border-gray-200">
+              <nav className="flex px-3 sm:px-6 overflow-x-auto scrollbar-hide">
+                {[
+                  { id: 'campaigns', label: 'My Campaigns', icon: Calendar, badge: urgentBookings.length },
+                  { id: 'browse', label: 'Browse Spaces', icon: Search }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex-shrink-0 py-3 sm:py-4 px-1 border-b-2 font-medium text-sm transition-colors inline-flex items-center whitespace-nowrap mr-6 sm:mr-8 ${
+                      activeTab === tab.id
+                        ? 'border-teal-500 text-teal-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <tab.icon className="w-4 h-4 mr-2" />
+                    <span className="hidden sm:inline">{tab.label}</span>
+                    <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+                    {tab.badge && tab.badge > 0 && (
+                      <span className="ml-2 bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full">
+                        {tab.badge}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            {/* ✅ MOBILE: Tab Content with responsive padding */}
+            <div className="p-3 sm:p-6">
+              {renderContent()}
+            </div>
           </div>
         </div>
       </div>
       
-      {/* Material Selection Modal */}
+      {/* ✅ MOBILE: Material Selection Modal with responsive design */}
       {showMaterialModal && selectedSpace && (
         <MaterialSelectionModal
           selectedSpace={selectedSpace}

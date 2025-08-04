@@ -1,0 +1,56 @@
+/* Mobile Messaging Specific Styles */
+.messaging-container {
+  @apply mobile-nav-full-spacing mobile-safe-area;
+}
+
+.conversation-item {
+  @apply touch-target-lg mobile-space-sm;
+}
+
+.message-bubble {
+  @apply mobile-text-responsive;
+  max-width: min(85%, 320px);
+}
+
+.message-input-area {
+  @apply mobile-container mobile-safe-bottom;
+  min-height: var(--touch-target-min);
+}
+
+.attachment-preview {
+  @apply mobile-grid-2 mobile-gap-xs;
+}
+
+/* B2B Message Types */
+.rfq-message {
+  @apply bg-gradient-to-br from-purple-500 to-purple-600;
+}
+
+.contract-message {
+  @apply bg-gradient-to-br from-orange-500 to-orange-600;
+}
+
+.campaign-message {
+  @apply bg-gradient-to-br from-green-500 to-green-600;
+}
+
+.payment-message {
+  @apply bg-gradient-to-br from-blue-500 to-blue-600;
+}
+
+/* Mobile Performance Optimizations */
+.messages-scrollarea {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  .message-bubble {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  
+  .conversation-item {
+    padding: 12px;
+  }
+}

@@ -1,7 +1,7 @@
-// src/pages/browse/BrowsePage.jsx - Complete Business Profile Integration
-// ✅ UPDATED: Complete mobile cart integration with FloatingCartButton and MobileCartDrawer
-// ✅ FIXED: Improved mobile detection and property click handlers
-// ✅ NEW: Business profile integration with smart booking navigation
+// src/pages/browse/BrowsePage.jsx - MOBILE RESPONSIVE VERSION
+// ✅ UPDATED: Complete mobile responsiveness with proper nav bar spacing
+// ✅ FIXED: Touch targets, safe areas, and overflow issues
+// ✅ NEW: Enhanced mobile cart integration and business profile support
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate } from 'react-router-dom';
@@ -22,11 +22,11 @@ import LoadingState from './components/LoadingState';
 import ErrorState from './components/ErrorState';
 import EmptyState from './components/EmptyState';
 
-// ✅ NEW: Mobile cart components
+// ✅ Mobile cart components
 import FloatingCartButton from './components/mobile/FloatingCartButton';
 import MobileCartDrawer from './components/mobile/MobileCartDrawer';
 
-// ✅ NEW: Business Profile Components
+// ✅ Business Profile Components
 import BusinessDetailsModal from '../checkout/components/BusinessDetailsModal';
 import { useBusinessProfile, checkBusinessProfileRequired } from '../checkout/hooks/useBusinessProfile';
 
@@ -75,7 +75,7 @@ export default function BrowsePage() {
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
   
-  // ✅ NEW: Mobile cart state
+  // ✅ Mobile cart state
   const [showMobileCartDrawer, setShowMobileCartDrawer] = useState(false);
   
   // Filter state
@@ -92,15 +92,15 @@ export default function BrowsePage() {
   const [animatingSpace, setAnimatingSpace] = useState(null);
   const [savedSpaces, setSavedSpaces] = useState(new Set());
   const [detailsExpanded, setDetailsExpanded] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768); // ✅ FIXED: Initialize immediately
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showROICalculator, setShowROICalculator] = useState(false);
   
-  // ✅ NEW: Mobile bottom sheet state
+  // ✅ Mobile bottom sheet state
   const [showMobileSheet, setShowMobileSheet] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [sheetTitle, setSheetTitle] = useState("Available Spaces");
   
-  // ✅ NEW: Business Profile state
+  // ✅ Business Profile state
   const [showBusinessProfileModal, setShowBusinessProfileModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState(null);
   
@@ -108,7 +108,7 @@ export default function BrowsePage() {
   const isMountedRef = useRef(true);
   const mobileSheetRef = useRef(null);
 
-  // ✅ NEW: Business Profile hook integration
+  // ✅ Business Profile hook integration
   const {
     businessProfile,
     isProfileComplete,
@@ -119,15 +119,25 @@ export default function BrowsePage() {
     missingFields
   } = useBusinessProfile();
 
-  // ✅ IMPROVED: Mobile detection with debugging
+  // ✅ MOBILE: Add mobile viewport debugging
+  useEffect(() => {
+    console.log('📱 BROWSE PAGE: Mobile viewport check', {
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+      isMobile: window.innerWidth < 768,
+      viewport: `${window.innerWidth}x${window.innerHeight}`
+    });
+  }, []);
+
+  // ✅ IMPROVED: Mobile detection with enhanced debugging
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
-      console.log(`📱 Screen resize: ${window.innerWidth}px, Mobile: ${mobile}`);
+      console.log(`📱 Browse page resize: ${window.innerWidth}px, Mobile: ${mobile}`);
       setIsMobile(mobile);
     };
     
-    // ✅ Call immediately to ensure correct initial state
+    // Call immediately to ensure correct initial state
     handleResize();
     
     window.addEventListener('resize', handleResize);
@@ -241,7 +251,7 @@ export default function BrowsePage() {
         setProperties(validProperties);
         setAllSpaces(flattenedSpaces);
         
-        // ✅ NEW: Auto-open mobile sheet with closest spaces
+        // ✅ Auto-open mobile sheet with closest spaces
         if (isMobile && flattenedSpaces.length > 0) {
           setShowMobileSheet(true);
           setSheetTitle("Spaces Near You");
@@ -317,7 +327,7 @@ export default function BrowsePage() {
     setCurrentPage(1);
   }, [filters]);
 
-  // ✅ ENHANCED: Cart functions with mobile logging
+  // ✅ Cart functions with mobile logging
   const addToCart = (space, duration = 30) => {
     const cartItem = {
       id: `${space.id}_${Date.now()}`,
@@ -360,23 +370,16 @@ export default function BrowsePage() {
     console.log('🗑️ Cart cleared for mobile');
   };
 
-  // ✅ NEW: Business Profile Integration Functions
-  
-  /**
-   * Check if business profile is complete before proceeding to booking
-   * Research-backed: Only show modal when actually needed
-   */
+  // ✅ Business Profile Integration Functions
   const checkBusinessProfileBeforeBooking = async (space) => {
     if (!currentUser?.id) {
       console.log('❌ No user authenticated, redirecting to login');
-      // Handle unauthenticated user
       return false;
     }
 
     console.log('🔍 Checking business profile completion for booking...');
     
     try {
-      // Check localStorage first for quick response
       const completionKey = `businessProfile_${currentUser.id}`;
       const hasCompletedProfile = localStorage.getItem(completionKey) === 'completed';
       
@@ -385,7 +388,6 @@ export default function BrowsePage() {
         return true;
       }
       
-      // Check database for actual profile completion
       console.log('🔄 Checking profile completion in database...');
       const profileRequired = await checkBusinessProfileRequired(currentUser.id);
       
@@ -396,22 +398,18 @@ export default function BrowsePage() {
       
       console.log('❌ Business profile incomplete, showing modal');
       
-      // Store pending navigation
       setPendingNavigation({
         type: 'booking',
         space: space,
         timestamp: Date.now()
       });
       
-      // Show business profile modal
       setShowBusinessProfileModal(true);
-      
       return false;
       
     } catch (error) {
       console.error('❌ Error checking business profile:', error);
       
-      // On error, still try to proceed but show profile modal as fallback
       if (needsBusinessProfile) {
         console.log('⚠️ Error checking profile, but hook indicates profile needed');
         setPendingNavigation({
@@ -423,24 +421,19 @@ export default function BrowsePage() {
         return false;
       }
       
-      return true; // Proceed if no clear indication profile is needed
+      return true;
     }
   };
 
-  /**
-   * Handle successful business profile completion
-   */
   const handleBusinessProfileComplete = (profileData) => {
     console.log('✅ Business profile completed successfully:', profileData);
     
     setShowBusinessProfileModal(false);
     
-    // Process pending navigation
     if (pendingNavigation) {
       console.log('🚀 Processing pending navigation:', pendingNavigation);
       
       if (pendingNavigation.type === 'booking' && pendingNavigation.space) {
-        // Proceed with booking navigation
         const space = pendingNavigation.space;
         console.log('📅 Proceeding to booking after profile completion:', space.id);
         navigate(`/checkout/${space.property.id}/${space.id}`);
@@ -450,22 +443,17 @@ export default function BrowsePage() {
     }
   };
 
-  /**
-   * Handle business profile modal close/skip
-   */
   const handleBusinessProfileClose = () => {
     console.log('🚪 Business profile modal closed');
-    
     setShowBusinessProfileModal(false);
     
-    // Clear pending navigation
     if (pendingNavigation) {
       console.log('❌ Clearing pending navigation due to profile modal close');
       setPendingNavigation(null);
     }
   };
 
-  // ✅ NEW: Mobile cart handlers
+  // ✅ Mobile cart handlers
   const handleMobileCartOpen = () => {
     console.log('🛒 Opening mobile cart drawer with items:', cart.length);
     setShowMobileCartDrawer(true);
@@ -484,7 +472,6 @@ export default function BrowsePage() {
       return;
     }
     
-    // Check business profile before checkout
     const firstItem = cart[0];
     const canProceed = await checkBusinessProfileBeforeBooking(firstItem.space);
     
@@ -492,31 +479,26 @@ export default function BrowsePage() {
       navigate(`/checkout/${firstItem.space.property.id}/${firstItem.space.id}`);
       setShowMobileCartDrawer(false);
     }
-    // If can't proceed, modal will be shown by checkBusinessProfileBeforeBooking
   };
 
   // ✅ FIXED: Property click handler with real-time mobile detection
   const handlePropertyClick = (property) => {
     if (!isMountedRef.current) return;
     
-    // ✅ DEBUGGING: Log current state
     console.log('🏢 Property clicked:', property);
     console.log('📱 Current isMobile state:', isMobile);
     console.log('📐 Current window width:', window.innerWidth);
     
-    // ✅ FIXED: Use real-time mobile detection instead of state
     const isCurrentlyMobile = window.innerWidth < 768;
     
     if (isCurrentlyMobile) {
       console.log('✅ Handling as mobile click');
-      // ✅ Mobile: Show property spaces in bottom sheet
       setSelectedProperty(property);
-      setSelectedSpace(null); // Clear individual space selection
+      setSelectedSpace(null);
       setShowMobileSheet(true);
       setSheetTitle(`${property.name || property.title}`);
     } else {
       console.log('🖥️ Handling as desktop click');
-      // Desktop: Keep existing behavior
       console.log('Desktop property click - implement as needed');
     }
   };
@@ -528,19 +510,16 @@ export default function BrowsePage() {
     console.log('📍 Space clicked:', space);
     console.log('📱 Current isMobile state:', isMobile);
     
-    // ✅ FIXED: Use real-time mobile detection
     const isCurrentlyMobile = window.innerWidth < 768;
     
     if (isCurrentlyMobile) {
       console.log('✅ Handling as mobile space click');
-      // ✅ Mobile: Set selected space and ensure sheet is open
       setSelectedSpace(space);
       setShowMobileSheet(true);
-      setSelectedProperty(null); // Clear property selection
+      setSelectedProperty(null);
       setSheetTitle("Space Details");
     } else {
       console.log('🖥️ Handling as desktop space click');
-      // Desktop: Use existing modal
       setSelectedSpace(space);
       setDetailsExpanded(true);
     }
@@ -551,7 +530,6 @@ export default function BrowsePage() {
     
     console.log('📱 Space card clicked:', space);
     
-    // ✅ Use real-time mobile detection here too
     const isCurrentlyMobile = window.innerWidth < 768;
     
     if (isCurrentlyMobile) {
@@ -567,13 +545,10 @@ export default function BrowsePage() {
     }
   };
 
-  // ✅ NEW: Handle mobile sheet space selection
   const handleMobileSpaceSelect = (space) => {
     setSelectedSpace(space);
-    // Keep sheet open but update content to show space details
   };
 
-  // ✅ NEW: Handle mobile sheet close
   const handleMobileSheetClose = () => {
     setShowMobileSheet(false);
     setSelectedSpace(null);
@@ -581,7 +556,6 @@ export default function BrowsePage() {
     setSheetTitle("Available Spaces");
   };
 
-  // ✅ NEW: Map click handler to close sheet
   const handleMapClick = useCallback(() => {
     console.log('🗺️ Map clicked - closing sheet');
     if (mobileSheetRef.current) {
@@ -628,7 +602,6 @@ export default function BrowsePage() {
     });
   };
 
-  // ✅ Handle location button click
   const handleCenterOnLocation = async () => {
     console.log('📍 Location button clicked');
     
@@ -642,7 +615,6 @@ export default function BrowsePage() {
         
         setUserLocation(locationData.coordinates);
         
-        // ✅ Mobile: Close modals/sheets when centering location
         const isCurrentlyMobile = window.innerWidth < 768;
         if (isCurrentlyMobile) {
           setShowMobileSheet(false);
@@ -665,23 +637,18 @@ export default function BrowsePage() {
     }
   };
 
-  // ✅ ENHANCED: Booking navigation with business profile check
   const handleBookingNavigation = async (space) => {
     console.log('📅 Booking navigation requested:', space.id, space.property?.id || space.propertyId);
     
-    // Check business profile completion before proceeding
     const canProceed = await checkBusinessProfileBeforeBooking(space);
     
     if (canProceed) {
-      // Profile is complete, proceed to checkout
       const propertyId = space.property?.id || space.propertyId;
       console.log('✅ Profile complete, navigating to checkout:', `/checkout/${propertyId}/${space.id}`);
       navigate(`/checkout/${propertyId}/${space.id}`);
     }
-    // If profile incomplete, modal will be shown by checkBusinessProfileBeforeBooking
   };
 
-  // ✅ ENHANCED: Mobile booking handler
   const handleMobileBooking = async (space) => {
     console.log('📱 Mobile booking for space:', space.id);
     await handleBookingNavigation(space);
@@ -696,14 +663,18 @@ export default function BrowsePage() {
     return count;
   }, [filters]);
 
-  // ✅ MOBILE LAYOUT: Enhanced with complete cart system and business profile
+  // ✅ MOBILE LAYOUT: Enhanced with proper nav bar spacing and safe areas
   if (isMobile) {
     return (
       <div 
-        className="fixed inset-0 overflow-hidden"
+        className={`
+          fixed inset-0 overflow-hidden
+          mobile-nav-full-spacing
+          mobile-safe-area
+        `}
         style={{ backgroundColor: '#f7f5e6' }}
       >
-        {/* ✅ MOBILE: Full-screen Map Container */}
+        {/* ✅ MOBILE: Full-screen Map Container with proper spacing */}
         <div className="w-full h-full relative">
           <div className="w-full h-full bg-white overflow-hidden">
             <GoogleMap
@@ -711,7 +682,7 @@ export default function BrowsePage() {
                 property.latitude && property.longitude
               )}
               onPropertyClick={handlePropertyClick}
-              onClick={handleMapClick} // ✅ NEW: Map click handler
+              onClick={handleMapClick}
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"
@@ -720,12 +691,17 @@ export default function BrowsePage() {
               showAreaMarkers={true}
             />
 
-            {/* ✅ Mobile Map Controls */}
-            <div className="fixed top-[5rem] right-4 z-20 flex flex-col gap-2">
+            {/* ✅ MOBILE: Enhanced Map Controls with better touch targets */}
+            <div className="fixed top-[5.5rem] right-3 sm:right-4 z-20 flex flex-col gap-2">
               <Button 
                 size="sm" 
                 variant="outline"
-                className="bg-white/95 backdrop-blur-sm hover:bg-white border-slate-300 text-slate-600 hover:text-slate-800 shadow-lg h-10 w-10 p-0"
+                className="
+                  bg-white/95 backdrop-blur-sm hover:bg-white border-slate-300 
+                  text-slate-600 hover:text-slate-800 shadow-lg 
+                  h-11 w-11 p-0 touch-target
+                  transition-all duration-200
+                "
                 onClick={handleCenterOnLocation}
                 title="Center map on your location"
               >
@@ -735,7 +711,12 @@ export default function BrowsePage() {
               <Button 
                 size="sm" 
                 variant="outline"
-                className="bg-white/95 backdrop-blur-sm hover:bg-white border-slate-300 text-slate-600 hover:text-slate-800 shadow-lg h-10 w-10 p-0"
+                className="
+                  bg-white/95 backdrop-blur-sm hover:bg-white border-slate-300 
+                  text-slate-600 hover:text-slate-800 shadow-lg 
+                  h-11 w-11 p-0 touch-target relative
+                  transition-all duration-200
+                "
                 onClick={() => setShowFilters(true)}
                 title="Filters"
               >
@@ -743,25 +724,25 @@ export default function BrowsePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
                 </svg>
                 {activeFiltersCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-teal-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 bg-teal-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-medium">
                     {activeFiltersCount}
                   </span>
                 )}
               </Button>
             </div>
 
-           {/* ✅ Mobile Map Info Card */}
+           {/* ✅ MOBILE: Enhanced Map Info Card with better responsive design */}
            {!isLoading && !error && (
-              <div className="fixed top-20 left-4 z-20">
-                <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg px-4 py-3 shadow-lg min-w-[140px] max-w-[220px]">
+              <div className="fixed top-[5.5rem] left-3 sm:left-4 z-20">
+                <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg px-3 py-2.5 shadow-lg min-w-[120px] max-w-[200px]">
                   <div className="text-center">
-                    <p className="text-xl font-semibold text-teal-600">
+                    <p className="text-lg sm:text-xl font-semibold text-teal-600">
                       {filteredSpaces.length}
                     </p>
-                    <p className="text-sm text-slate-600 leading-tight">
+                    <p className="text-xs sm:text-sm text-slate-600 leading-tight">
                       {filteredSpaces.length === 1 ? 'Space' : 'Spaces'}
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-slate-500 mt-1 truncate">
                       📍 {mapLocationName}
                     </p>
                   </div>
@@ -769,10 +750,10 @@ export default function BrowsePage() {
               </div>
             )}
 
-            {/* ✅ Mobile Loading State */}
+            {/* ✅ MOBILE: Enhanced Loading State */}
             {isLoading && (
               <div className="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-30">
-                <div className="bg-white rounded-lg p-4 text-center shadow-lg">
+                <div className="bg-white rounded-lg p-4 text-center shadow-lg max-w-xs mx-4">
                   <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                   <p className="text-sm text-slate-600">Loading spaces...</p>
                 </div>
@@ -781,7 +762,7 @@ export default function BrowsePage() {
           </div>
         </div>
 
-        {/* ✅ NEW: Mobile Bottom Sheet with enhanced props */}
+        {/* ✅ Mobile Bottom Sheet with enhanced props */}
         <MobileBottomSheet
           ref={mobileSheetRef}
           isOpen={showMobileSheet}
@@ -792,15 +773,14 @@ export default function BrowsePage() {
           onSpaceSelect={handleMobileSpaceSelect}
           savedSpaces={savedSpaces}
           toggleSavedSpace={toggleSavedSpace}
-          // ✅ Enhanced cart functionality props
-          onBookNow={handleBookingNavigation} // ✅ UPDATED: Now includes business profile check
+          onBookNow={handleBookingNavigation}
           onAddToCart={addToCart}
           isInCart={isInCart}
           cartCount={cart.length}
           title={sheetTitle}
         />
 
-        {/* ✅ NEW: Mobile Cart System */}
+        {/* ✅ Enhanced Mobile Cart System with safe area support */}
         <FloatingCartButton
           cartItems={cart}
           onOpenCart={handleMobileCartOpen}
@@ -813,19 +793,19 @@ export default function BrowsePage() {
           cartItems={cart}
           onUpdateQuantity={updateCartItemDuration}
           onRemoveItem={removeFromCart}
-          onProceedToCheckout={handleProceedToCheckout} // ✅ UPDATED: Now includes business profile check
+          onProceedToCheckout={handleProceedToCheckout}
           onClearCart={clearCart}
         />
 
-        {/* ✅ NEW: Business Profile Modal for Mobile */}
+        {/* ✅ Business Profile Modal for Mobile */}
         <BusinessDetailsModal
           isOpen={showBusinessProfileModal}
           onClose={handleBusinessProfileClose}
           onProfileComplete={handleBusinessProfileComplete}
-          required={true} // Required for booking/checkout
+          required={true}
         />
 
-        {/* ✅ Other Mobile Modals */}
+        {/* ✅ Other Mobile Modals with enhanced mobile styling */}
         <CartModal 
           showCart={showCart}
           setShowCart={setShowCart}
@@ -852,13 +832,13 @@ export default function BrowsePage() {
           selectedSpace={selectedSpace}
           isInCart={isInCart}
           addToCart={addToCart}
-          handleBookingNavigation={handleBookingNavigation} // ✅ UPDATED: Now includes business profile check
+          handleBookingNavigation={handleBookingNavigation}
         />
       </div>
     );
   }
 
-  // ✅ DESKTOP LAYOUT: Enhanced with business profile integration
+  // ✅ DESKTOP LAYOUT: Enhanced with business profile integration (unchanged but with minor responsive improvements)
   return (
     <div 
       className="h-screen overflow-hidden"
@@ -869,7 +849,7 @@ export default function BrowsePage() {
         {/* ✅ LEFT CONTAINER: Content (55%) */}
         <div className="w-[55%] h-full flex flex-col">
           <div className="flex-1 flex flex-col min-h-0 bg-white/60 backdrop-blur-sm rounded-2xl m-4 shadow-lg border border-white/50">
-            <div className="flex-1 overflow-y-auto scrollbar-hide rounded-t-2xl">
+            <div className="flex-1 overflow-y-auto mobile-scroll-container rounded-t-2xl">
               <div className="p-6">
                 {!isLoading && !error && (
                   <div className="mb-6">
@@ -1063,12 +1043,12 @@ export default function BrowsePage() {
         </div>
       </div>
 
-      {/* ✅ NEW: Business Profile Modal for Desktop */}
+      {/* ✅ Business Profile Modal for Desktop */}
       <BusinessDetailsModal
         isOpen={showBusinessProfileModal}
         onClose={handleBusinessProfileClose}
         onProfileComplete={handleBusinessProfileComplete}
-        required={true} // Required for booking/checkout
+        required={true}
       />
   
       {/* ✅ Desktop Modal Components */}
@@ -1099,7 +1079,7 @@ export default function BrowsePage() {
         setDetailsExpanded={setDetailsExpanded}
         isInCart={isInCart}
         addToCart={addToCart}
-        handleBookingNavigation={handleBookingNavigation} // ✅ UPDATED: Now includes business profile check
+        handleBookingNavigation={handleBookingNavigation}
         setShowROICalculator={setShowROICalculator}
       />
   
@@ -1109,7 +1089,7 @@ export default function BrowsePage() {
         selectedSpace={selectedSpace}
         isInCart={isInCart}
         addToCart={addToCart}
-        handleBookingNavigation={handleBookingNavigation} // ✅ UPDATED: Now includes business profile check
+        handleBookingNavigation={handleBookingNavigation}
       />
     </div>
   );

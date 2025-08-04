@@ -1,16 +1,36 @@
+// src/components/messages/MessagesSidebar.tsx
+// ✅ EXTRACTED: From MessagesPage.tsx inline JSX
+// ✅ ENHANCED: With proper TypeScript interfaces and B2B features
+
 import React from 'react';
-import { Conversation, User } from '@/types/messages';
-import { ConversationItem } from './ConversationItem';
+import { motion } from 'framer-motion';
+import { formatDistanceToNow } from 'date-fns';
+import { 
+  Search, 
+  Plus, 
+  MessageSquare, 
+  UserIcon as User, 
+  Check, 
+  Building2, 
+  Briefcase, 
+  FileText, 
+  MapPin, 
+  Calendar 
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, MessageSquare, MessageCircleHeart } from 'lucide-react';
+import { Conversation, User as UserType } from '@/types/messages';
 
 interface MessagesSidebarProps {
   conversations: Conversation[];
   selectedConversation: Conversation | null;
-  currentUser: User | null;
-  allUsers: Record<string, User>;
+  allUsers: Record<string, UserType & { businessName?: string; isVerified?: boolean }>;
+  onlineUsers: Set<string>;
   searchTerm: string;
+  filteredConversations: Conversation[];
   onSelectConversation: (conversation: Conversation) => void;
   onSearchChange: (term: string) => void;
 }
@@ -18,61 +38,192 @@ interface MessagesSidebarProps {
 export const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
   conversations,
   selectedConversation,
-  currentUser,
   allUsers,
+  onlineUsers,
   searchTerm,
+  filteredConversations,
   onSelectConversation,
   onSearchChange
 }) => {
-  const filteredConversations = conversations.filter(c => {
-    if (!currentUser || !allUsers) return false;
-    const otherUserId = c.participant_ids.find(id => id !== 'user1');
-    const user = otherUserId ? allUsers[otherUserId] : undefined;
-    return user?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false;
-  });
-
   return (
-    <div className="w-full md:w-96 flex-col glass border-r border-[hsl(var(--border))]">
-      <div className="p-6 border-b border-[hsl(var(--border))] glass-strong">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-gradient-brand rounded-2xl flex items-center justify-center shadow-[var(--shadow-brand)]">
-            <MessageCircleHeart className="w-6 h-6 text-white" />
+    <div className="w-full md:w-[35%] md:block h-full border-r border-slate-200 bg-white flex flex-col">
+      {/* Header */}
+      <div className="mobile-container bg-white border-b border-slate-200">
+        <div className="py-4 md:py-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center mobile-gap-sm">
+              <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center shadow-lg">
+                <MessageSquare className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-slate-900">Messages</h1>
+                <p className="mobile-text-small text-slate-600">
+                  {filteredConversations.length} conversations
+                </p>
+              </div>
+            </div>
+            
+            <Button 
+              size="sm"
+              className="touch-target bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200 hover:text-slate-900"
+              variant="outline"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              <span className="hidden sm:inline">New</span>
+            </Button>
           </div>
-          <h1 className="text-2xl font-bold text-gradient-brand">
-            Messages
-          </h1>
-        </div>
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--primary))]" />
-          <Input 
-            placeholder="Search contacts..." 
-            className="pl-12 bg-[hsl(var(--card)/0.7)] border-[hsl(var(--border))] rounded-2xl backdrop-blur-sm focus-brand transition-brand"
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <Input
+              placeholder="Search conversations..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-10 touch-target bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:ring-teal-500 focus:border-teal-500"
+            />
+          </div>
         </div>
       </div>
-      <ScrollArea className="flex-1 p-4">
-        {filteredConversations.length > 0 ? (
-          <div className="space-y-2">
-            {filteredConversations.map(convo => (
-              <ConversationItem
-                key={convo.id}
-                conversation={convo}
-                onSelect={onSelectConversation}
-                isSelected={selectedConversation?.id === convo.id}
-                currentUser={{ id: 'user1', full_name: 'Current User', profile_image: null }}
-                allUsers={allUsers}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center p-8 text-[hsl(var(--muted-foreground))]">
-            <div className="w-20 h-20 mx-auto mb-4 bg-[hsl(var(--muted))] rounded-2xl flex items-center justify-center">
-              <MessageSquare className="w-10 h-10 text-[hsl(var(--primary))]" />
+
+      {/* Conversations List */}
+      <ScrollArea className="flex-1 mobile-scroll-container">
+        <div className="mobile-space-xs mobile-container">
+          {filteredConversations.map((conversation) => {
+            const otherParticipantId = conversation.participant_ids.find(id => id !== 'user1');
+            const otherParticipant = otherParticipantId ? allUsers[otherParticipantId] : null;
+            const isSelected = selectedConversation?.id === conversation.id;
+            const isOnline = onlineUsers.has(otherParticipantId || '');
+            
+            if (!otherParticipant) return null;
+            
+            return (
+              <motion.div
+                key={conversation.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ duration: 0.2 }}
+                className="mb-2"
+              >
+                <Card 
+                  onClick={() => onSelectConversation(conversation)}
+                  className={`cursor-pointer transition-all duration-300 rounded-xl border touch-target-lg ${
+                    isSelected 
+                      ? 'bg-teal-50 ring-1 ring-teal-500 shadow-lg border-teal-200' 
+                      : 'bg-white hover:bg-slate-50 border-slate-200 hover:shadow-md'
+                  }`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start mobile-gap-sm">
+                      {/* Avatar with status indicators */}
+                      <div className="relative flex-shrink-0">
+                        <div className="w-12 h-12 bg-slate-300 rounded-full flex items-center justify-center overflow-hidden">
+                          {otherParticipant.profile_image ? (
+                            <img 
+                              src={otherParticipant.profile_image} 
+                              alt={otherParticipant.full_name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <User className="w-6 h-6 text-slate-600" />
+                          )}
+                        </div>
+                        
+                        {/* Online indicator */}
+                        {isOnline && (
+                          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
+                        )}
+                        
+                        {/* Business verification badge */}
+                        {otherParticipant.isVerified && (
+                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                            <Check className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center mobile-gap-xs flex-1 min-w-0">
+                            <h3 className={`font-semibold truncate mobile-text-responsive ${
+                              isSelected ? 'text-teal-700' : 'text-slate-900'
+                            }`}>
+                              {otherParticipant.full_name}
+                            </h3>
+                            
+                            {/* Business context badge */}
+                            {conversation.businessType && (
+                              <Badge 
+                                variant="secondary" 
+                                className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 flex-shrink-0"
+                              >
+                                {conversation.businessType === 'property_inquiry' && <Building2 className="w-3 h-3 mr-1" />}
+                                {conversation.businessType === 'campaign_discussion' && <Briefcase className="w-3 h-3 mr-1" />}
+                                {conversation.businessType === 'contract_review' && <FileText className="w-3 h-3 mr-1" />}
+                                {conversation.businessType.replace('_', ' ')}
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center mobile-gap-xs flex-shrink-0 ml-2">
+                            {conversation.unreadCount > 0 && (
+                              <Badge 
+                                variant="default" 
+                                className="bg-teal-500 text-white text-xs px-2 py-1 rounded-full min-w-[20px] h-5"
+                              >
+                                {conversation.unreadCount}
+                              </Badge>
+                            )}
+                            <span className="mobile-text-small text-slate-500">
+                              {formatDistanceToNow(conversation.lastActivity, { addSuffix: true })}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Business name and last message */}
+                        <div className="mobile-space-xs">
+                          <p className="mobile-text-small text-slate-500 truncate font-medium">
+                            {otherParticipant.businessName}
+                          </p>
+                          <p className="mobile-text-small text-slate-600 truncate">
+                            {conversation.lastMessage}
+                          </p>
+                          
+                          {/* Business context */}
+                          {conversation.context && (
+                            <div className="flex items-center mobile-gap-xs mt-1">
+                              {conversation.context.type === 'property' && <MapPin className="w-3 h-3 text-slate-400" />}
+                              {conversation.context.type === 'campaign' && <Briefcase className="w-3 h-3 text-slate-400" />}
+                              {conversation.context.type === 'booking' && <Calendar className="w-3 h-3 text-slate-400" />}
+                              <span className="mobile-text-small text-slate-500 truncate">
+                                {conversation.context.name}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </div>
+        
+        {/* Empty state */}
+        {filteredConversations.length === 0 && (
+          <div className="mobile-container text-center py-8">
+            <div className="w-16 h-16 bg-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <MessageSquare className="w-8 h-8 text-slate-400" />
             </div>
-            <div className="font-semibold">No conversations found.</div>
-            <div className="text-sm mt-2">Start a conversation from a property details page.</div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">
+              {searchTerm ? 'No conversations found' : 'No conversations yet'}
+            </h3>
+            <p className="text-slate-600 mobile-text-responsive">
+              {searchTerm ? 'Try a different search term' : 'Start a conversation from a property listing'}
+            </p>
           </div>
         )}
       </ScrollArea>

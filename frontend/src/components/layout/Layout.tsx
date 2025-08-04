@@ -1,5 +1,5 @@
 // src/components/layout/Layout.tsx
-// ✅ FINAL FIX: Persist viewMode across navigation to prevent remount issues
+// ✅ MOBILE RESPONSIVE: Fixed spacing and overflow issues
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, useUser, useClerk } from '@clerk/clerk-react';
@@ -297,50 +297,57 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
               )}
             </div>
 
-            <div className="flex-1 relative z-10">
-              {/* Main Content Area */}
+            {/* ✅ MOBILE RESPONSIVE: Flex layout with proper spacing */}
+            <div className="flex-1 flex flex-col relative z-10">
+              {/* ✅ MOBILE: Top Bar with proper positioning */}
+              {typeof MobileTopBar !== 'undefined' && (
+                <div className="md:hidden">
+                  <MobileTopBar 
+                    currentUser={currentUser}
+                    viewMode={viewMode}
+                    onViewModeChange={handleViewModeChange}
+                    isAdmin={isAdmin}
+                  />
+                </div>
+              )}
+
+              {/* ✅ MOBILE RESPONSIVE: Main Content Area with proper spacing */}
               <main className="flex-1 relative">
-                  {/* ✅ UPDATED: Mobile Components */}
-                  {typeof MobileTopBar !== 'undefined' && (
-                    <div className="lg:hidden">
-                      <MobileTopBar 
-                        currentUser={currentUser}
-                        viewMode={viewMode}
-                        onViewModeChange={handleViewModeChange}
-                        isAdmin={isAdmin}
-                      />
-                    </div>
-                  )}
-                  {typeof MobileNav !== 'undefined' && (
-                    <div className="lg:hidden">
-                      <MobileNav 
-                        unreadCount={unreadCount} 
-                        pendingInvoices={pendingInvoices} 
-                        actionItemsCount={actionItemsCount} 
-                        currentUser={currentUser}
-                        viewMode={viewMode}
-                        onViewModeChange={handleViewModeChange}
-                      />
-                    </div>
-                  )}
-                  
-                  {/* ✅ Content Container - Only render when ready */}
-                  <div className="w-full">
+                  {/* ✅ MOBILE: Content Container with proper padding for nav bars */}
+                  <div className={`w-full h-full ${
+                    // Add top padding for mobile top bar (64px = h-16)
+                    // Add bottom padding for mobile bottom nav (80px for safe area)
+                    isSignedIn ? 'md:pt-0 pt-16 md:pb-0 pb-20' : 'md:pt-0 md:pb-0'
+                  }`}>
                       <motion.div
                           initial="initial"
                           animate="in"
                           exit="out"
                           variants={pageVariants}
                           transition={pageTransition}
-                          className="w-full"
+                          className="w-full h-full"
                       >
-                          {/* ✅ Child Content - Only render when auth is ready */}
-                          <div className="w-full">
+                          {/* ✅ MOBILE: Child Content with responsive container */}
+                          <div className="w-full h-full">
                             {children}
                           </div>
                       </motion.div>
                   </div>
               </main>
+
+              {/* ✅ MOBILE: Bottom Navigation with proper positioning */}
+              {typeof MobileNav !== 'undefined' && (
+                <div className="md:hidden">
+                  <MobileNav 
+                    unreadCount={unreadCount} 
+                    pendingInvoices={pendingInvoices} 
+                    actionItemsCount={actionItemsCount} 
+                    currentUser={currentUser}
+                    viewMode={viewMode}
+                    onViewModeChange={handleViewModeChange}
+                  />
+                </div>
+              )}
             </div>
         </div>
     );
