@@ -22,16 +22,28 @@ export default function LoadingState() {
   return (
     <div className="flex items-center justify-center min-h-64 py-12">
       <div className="text-center">
-        {/* Enhanced Loading Animation */}
+        {/* Enhanced Loading Animation with updated colors */}
         <div className="relative mb-6">
-          <div className="loading-spinner w-8 h-8 text-teal-500 mx-auto"></div>
+          <div 
+            className="loading-spinner w-8 h-8 mx-auto"
+            style={{ color: '#4668AB' }}
+          ></div>
           
-          {/* Pulse rings around spinner */}
+          {/* Pulse rings around spinner with updated colors */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-12 h-12 border border-teal-200 rounded-full animate-ping opacity-20"></div>
+            <div 
+              className="w-12 h-12 rounded-full animate-ping opacity-20"
+              style={{ border: '1px solid #4668AB' }}
+            ></div>
           </div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-16 h-16 border border-teal-100 rounded-full animate-ping opacity-10" style={{ animationDelay: '0.5s' }}></div>
+            <div 
+              className="w-16 h-16 rounded-full animate-ping opacity-10"
+              style={{ 
+                border: '1px solid #4668AB',
+                animationDelay: '0.5s'
+              }}
+            ></div>
           </div>
         </div>
 
@@ -48,15 +60,16 @@ export default function LoadingState() {
           <p className="caption text-slate-500">This should only take a moment</p>
         </motion.div>
 
-        {/* Progress Dots */}
+        {/* Progress Dots with updated colors */}
         <div className="flex justify-center gap-1 mt-4">
           {[0, 1, 2].map((index) => (
             <motion.div
               key={index}
-              className="w-2 h-2 bg-teal-300 rounded-full"
+              className="w-2 h-2 rounded-full"
+              style={{ backgroundColor: '#4668AB', opacity: 0.3 }}
               animate={{
                 scale: [1, 1.2, 1],
-                opacity: [0.5, 1, 0.5],
+                opacity: [0.3, 1, 0.3],
               }}
               transition={{
                 duration: 1.5,

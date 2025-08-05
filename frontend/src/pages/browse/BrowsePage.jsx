@@ -2,6 +2,8 @@
 // ✅ UPDATED: Complete mobile responsiveness with proper nav bar spacing
 // ✅ FIXED: Touch targets, safe areas, and overflow issues
 // ✅ NEW: Enhanced mobile cart integration and business profile support
+// ✅ UPDATED: New color scheme and removed middle layer
+// ✅ FIXED: Pagination moved inside scrollable container and scroll bar hidden
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate } from 'react-router-dom';
@@ -118,6 +120,17 @@ export default function BrowsePage() {
     completionPercentage,
     missingFields
   } = useBusinessProfile();
+
+  // ✅ COLOR SCHEME: Verification on mount
+  useEffect(() => {
+    console.log('🎨 BROWSE PAGE: Updated color scheme verification', {
+      primaryBlue: '#4668AB',
+      lightBlueBackground: '#F8FAFF',
+      whiteCards: '#FFFFFF',
+      lightGrayBorders: '#E5E7EB',
+      timestamp: new Date().toISOString()
+    });
+  }, []);
 
   // ✅ MOBILE: Add mobile viewport debugging
   useEffect(() => {
@@ -672,7 +685,7 @@ export default function BrowsePage() {
           mobile-nav-full-spacing
           mobile-safe-area
         `}
-        style={{ backgroundColor: '#f7f5e6' }}
+        style={{ backgroundColor: '#F8FAFF' }}
       >
         {/* ✅ MOBILE: Full-screen Map Container with proper spacing */}
         <div className="w-full h-full relative">
@@ -719,12 +732,19 @@ export default function BrowsePage() {
                 "
                 onClick={() => setShowFilters(true)}
                 title="Filters"
+                style={{ 
+                  color: activeFiltersCount > 0 ? '#4668AB' : undefined,
+                  backgroundColor: activeFiltersCount > 0 ? '#EFF6FF' : undefined
+                }}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
                 </svg>
                 {activeFiltersCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-teal-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-medium">
+                  <span 
+                    className="absolute -top-1 -right-1 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-medium"
+                    style={{ backgroundColor: '#4668AB' }}
+                  >
                     {activeFiltersCount}
                   </span>
                 )}
@@ -736,7 +756,10 @@ export default function BrowsePage() {
               <div className="fixed top-[5.5rem] left-3 sm:left-4 z-20">
                 <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg px-3 py-2.5 shadow-lg min-w-[120px] max-w-[200px]">
                   <div className="text-center">
-                    <p className="text-lg sm:text-xl font-semibold text-teal-600">
+                    <p 
+                      className="text-lg sm:text-xl font-semibold"
+                      style={{ color: '#4668AB' }}
+                    >
                       {filteredSpaces.length}
                     </p>
                     <p className="text-xs sm:text-sm text-slate-600 leading-tight">
@@ -754,7 +777,10 @@ export default function BrowsePage() {
             {isLoading && (
               <div className="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-30">
                 <div className="bg-white rounded-lg p-4 text-center shadow-lg max-w-xs mx-4">
-                  <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <div 
+                    className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-2"
+                    style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
+                  ></div>
                   <p className="text-sm text-slate-600">Loading spaces...</p>
                 </div>
               </div>
@@ -838,19 +864,20 @@ export default function BrowsePage() {
     );
   }
 
-  // ✅ DESKTOP LAYOUT: Enhanced with business profile integration (unchanged but with minor responsive improvements)
+  // ✅ DESKTOP LAYOUT: Updated with new color scheme and fixed pagination positioning
   return (
     <div 
       className="h-screen overflow-hidden"
-      style={{ backgroundColor: '#f7f5e6' }}
+      style={{ backgroundColor: '#F8FAFF' }}
     >
       <div className="flex h-full">
         
-        {/* ✅ LEFT CONTAINER: Content (55%) */}
-        <div className="w-[55%] h-full flex flex-col">
-          <div className="flex-1 flex flex-col min-h-0 bg-white/60 backdrop-blur-sm rounded-2xl m-4 shadow-lg border border-white/50">
-            <div className="flex-1 overflow-y-auto mobile-scroll-container rounded-t-2xl">
-              <div className="p-6">
+        {/* ✅ LEFT CONTAINER: Content (55%) with hidden scroll bar and pagination inside */}
+        <div className="w-[55%] h-full flex flex-col p-6">
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* ✅ FIXED: Scrollable container with hidden scroll bar and pagination inside */}
+            <div className="flex-1 overflow-y-auto scrollbar-hide">
+              <div>
                 {!isLoading && !error && (
                   <div className="mb-6">
                     <div className="flex items-start justify-between gap-4">
@@ -864,9 +891,7 @@ export default function BrowsePage() {
                             : 'No spaces found with current filters'
                           }
                         </p>
-                        <p className="text-sm text-slate-500 mt-1">
-                          📍 Showing spaces near: {mapLocationName}
-                        </p>
+                        
                         {activeFiltersCount > 0 && (
                           <button
                             onClick={clearFilters}
@@ -887,7 +912,10 @@ export default function BrowsePage() {
                           </svg>
                           Filters
                           {activeFiltersCount > 0 && (
-                            <span className="bg-teal-500 text-white text-xs px-2 py-0.5 rounded-full">
+                            <span 
+                              className="text-white text-xs px-2 py-0.5 rounded-full"
+                              style={{ backgroundColor: '#4668AB' }}
+                            >
                               {activeFiltersCount}
                             </span>
                           )}
@@ -902,7 +930,10 @@ export default function BrowsePage() {
                           </svg>
                           Cart
                           {cart.length > 0 && (
-                            <span className="bg-white text-teal-600 text-xs px-2 py-0.5 rounded-full font-medium">
+                            <span 
+                              className="text-xs px-2 py-0.5 rounded-full font-medium"
+                              style={{ backgroundColor: '#4668AB', color: '#FFFFFF' }}
+                            >
                               {cart.length}
                             </span>
                           )}
@@ -936,6 +967,21 @@ export default function BrowsePage() {
                       isInCart={isInCart}
                       addToCart={addToCart}
                     />
+
+                    {/* ✅ FIXED: Pagination moved inside scrollable container */}
+                    {!isLoading && !error && filteredSpaces.length > 0 && totalPages > 1 && (
+                      <div 
+                        className="border-t shadow-lg px-6 py-4 rounded-lg mt-6"
+                        style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' }}
+                      >
+                        <PaginationControls 
+                          currentPage={currentPage}
+                          setCurrentPage={setCurrentPage}
+                          totalPages={totalPages}
+                          filteredSpaces={filteredSpaces}
+                        />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="py-12">
@@ -944,17 +990,6 @@ export default function BrowsePage() {
                 )}
               </div>
             </div>
-  
-            {!isLoading && !error && totalPages > 1 && (
-              <div className="bg-white/90 backdrop-blur-sm border-t border-slate-200/60 shadow-lg px-6 py-4 rounded-b-2xl mx-4 mb-4">
-                <PaginationControls 
-                  currentPage={currentPage}
-                  setCurrentPage={setCurrentPage}
-                  totalPages={totalPages}
-                  filteredSpaces={filteredSpaces}
-                />
-              </div>
-            )}
           </div>
         </div>
   
@@ -991,7 +1026,10 @@ export default function BrowsePage() {
                 <h4 className="font-medium text-xs text-slate-800 mb-3">Map Legend</h4>
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-teal-500 rounded-full shadow-sm"></div>
+                    <div 
+                      className="w-3 h-3 rounded-full shadow-sm"
+                      style={{ backgroundColor: '#4668AB' }}
+                    ></div>
                     <span className="text-xs text-slate-600">Ad Spaces</span>
                   </div>
                   <div className="flex items-center gap-3">
@@ -1011,7 +1049,10 @@ export default function BrowsePage() {
             {isLoading && (
               <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-30">
                 <div className="bg-white rounded-lg p-4 text-center shadow-lg">
-                  <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <div 
+                    className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-2"
+                    style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
+                  ></div>
                   <p className="text-sm text-slate-600">Loading spaces...</p>
                 </div>
               </div>
@@ -1021,7 +1062,10 @@ export default function BrowsePage() {
               <div className="absolute top-4 left-4 z-20">
                 <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg max-w-56">
                   <div className="text-center">
-                    <p className="text-lg font-semibold text-teal-600">
+                    <p 
+                      className="text-lg font-semibold"
+                      style={{ color: '#4668AB' }}
+                    >
                       {filteredSpaces.length}
                     </p>
                     <p className="text-xs text-slate-600">

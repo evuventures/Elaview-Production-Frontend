@@ -47,7 +47,13 @@ export default function PaginationControls({
   const endItem = Math.min(currentPage * CARDS_PER_PAGE, filteredSpaces.length);
 
   return (
-    <div className="bg-white border-t border-slate-200 shadow-soft">
+    <div 
+      className="border-t shadow-soft"
+      style={{ 
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E5E7EB'
+      }}
+    >
       <div className="flex items-center justify-between px-6 py-4">
         {/* Results Summary */}
         <div className="flex items-center gap-4">
@@ -91,9 +97,23 @@ export default function PaginationControls({
                     onClick={() => setCurrentPage(pageNum)}
                     className={`w-10 h-8 p-0 ${
                       currentPage === pageNum
-                        ? 'bg-teal-500 text-white hover:bg-teal-600 border-teal-500'
+                        ? 'text-white border-0'
                         : 'btn-secondary hover:bg-slate-100'
                     }`}
+                    style={currentPage === pageNum ? {
+                      backgroundColor: '#4668AB',
+                      borderColor: '#4668AB'
+                    } : {}}
+                    onMouseEnter={(e) => {
+                      if (currentPage === pageNum) {
+                        e.target.style.backgroundColor = '#3A5490';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (currentPage === pageNum) {
+                        e.target.style.backgroundColor = '#4668AB';
+                      }
+                    }}
                   >
                     {pageNum}
                   </Button>
@@ -118,7 +138,13 @@ export default function PaginationControls({
       
       {/* Quick Jump (Enhancement for large datasets) */}
       {totalPages > 10 && (
-        <div className="border-t border-slate-200 px-6 py-3 bg-slate-25">
+        <div 
+          className="border-t px-6 py-3"
+          style={{ 
+            borderColor: '#E5E7EB',
+            backgroundColor: '#F8FAFF'
+          }}
+        >
           <div className="flex items-center justify-center gap-3">
             <span className="caption text-slate-600">Quick jump to page:</span>
             <input

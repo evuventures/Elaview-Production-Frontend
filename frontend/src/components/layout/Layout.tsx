@@ -221,9 +221,15 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     // ✅ Enhanced loading state - wait for Clerk AND user data
     if (!isFullyLoaded || (isSignedIn && !userDataLoaded && isLoading)) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-teal-50/30 flex items-center justify-center">
+            <div 
+                className="min-h-screen flex items-center justify-center"
+                style={{ backgroundColor: '#FFFFFF' }}
+            >
                 <div className="text-center">
-                    <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                    <div 
+                        className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-3"
+                        style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
+                    ></div>
                     <p className="text-sm text-slate-600">
                         {!isFullyLoaded ? 'Loading authentication...' : 'Loading your dashboard...'}
                     </p>
@@ -241,13 +247,38 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     }
     
     return (
-        <div className="min-h-screen flex flex-col font-sans text-slate-900 relative">
-            {/* ✅ Subtle Background Effects - Only for non-browse pages */}
+        <div 
+            className="min-h-screen flex flex-col font-sans text-slate-900 relative"
+            style={{ backgroundColor: '#FFFFFF' }}
+        >
+            {/* ✅ CORRECTED: Subtle Background Effects with pure white background - Only for non-browse pages */}
             {location.pathname !== '/browse' && (
               <div className="fixed inset-0 pointer-events-none opacity-30 z-0">
-                <div className="absolute inset-0 bg-gradient-to-br from-teal-50/50 via-transparent to-slate-100/50"></div>
-                <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-teal-100/20 to-transparent rounded-full blur-3xl"></div>
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-slate-100/30 to-transparent rounded-full blur-3xl"></div>
+                <div 
+                  className="absolute inset-0"
+                  style={{
+                    background: `linear-gradient(135deg, 
+                      rgba(255, 255, 255, 0.95) 0%, 
+                      rgba(249, 250, 251, 0.8) 50%, 
+                      rgba(229, 231, 235, 0.4) 100%)`
+                  }}
+                ></div>
+                <div 
+                  className="absolute top-0 left-1/4 w-96 h-96 rounded-full blur-3xl"
+                  style={{
+                    background: `linear-gradient(135deg, 
+                      rgba(70, 104, 171, 0.08) 0%, 
+                      rgba(70, 104, 171, 0.03) 100%)`
+                  }}
+                ></div>
+                <div 
+                  className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl"
+                  style={{
+                    background: `linear-gradient(135deg, 
+                      rgba(229, 231, 235, 0.2) 0%, 
+                      rgba(249, 250, 251, 0.1) 100%)`
+                  }}
+                ></div>
               </div>
             )}
             
@@ -269,7 +300,13 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
               ) : (
                 // ✅ Fallback header with Elaview styling - DESKTOP ONLY  
                 <div className="hidden lg:block">
-                  <header className="bg-white border-b border-slate-200 shadow-soft px-6 py-4">
+                  <header 
+                    className="border-b shadow-soft px-6 py-4"
+                    style={{ 
+                      backgroundColor: '#FFFFFF',
+                      borderColor: '#E5E7EB'
+                    }}
+                  >
                     <div className="flex items-center justify-between max-w-7xl mx-auto">
                       <h1 className="text-2xl font-bold text-slate-900">Elaview</h1>
                       {currentUser && (
@@ -277,15 +314,20 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
                           <span className="text-sm text-slate-600">
                             Welcome, {currentUser.firstName || currentUser.primaryEmailAddress?.emailAddress}
                           </span>
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                            viewMode === 'seller' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-teal-100 text-teal-800'
-                          }`}>
+                          <span 
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium`}
+                            style={viewMode === 'seller' 
+                              ? { backgroundColor: '#DCFCE7', color: '#166534' }
+                              : { backgroundColor: '#E0E7FF', color: '#4338CA' }
+                            }
+                          >
                             {viewMode === 'seller' ? 'Space Owner View' : 'Advertiser View'}
                           </span>
                           {isAdmin && (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            <span 
+                              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+                              style={{ backgroundColor: '#F3E8FF', color: '#7C3AED' }}
+                            >
                               Admin
                             </span>
                           )}

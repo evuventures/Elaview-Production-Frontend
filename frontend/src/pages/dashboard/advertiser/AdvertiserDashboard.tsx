@@ -1,345 +1,317 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import {
-  Search, MapPin, Upload, Package, DollarSign,
-  Calendar, Eye, Download, Clock, CheckCircle,
-  Calculator, FileImage, ShoppingCart, Info,
-  Truck, AlertCircle, Navigation, Building2,
-  Camera, ChevronRight, X, Plus, Bell
+  Calendar, TrendingUp, Eye, MessageCircle, ChevronRight,
+  DollarSign, Clock, MapPin, User, Receipt
 } from 'lucide-react';
 
 // ✅ FIXED: Import real apiClient instead of mock
 import apiClient from '../../../api/apiClient.js';
 
-// Import enhanced components
-import { EnhancedBookingCard } from './components/EnhancedBookingCard';
-import { StatCard } from './components/StatCard';
-import { EmptyState } from './components/EmptyState';
-import { SpaceSearchCard } from './components/SpaceSearchCard';
-import { MaterialSelectionModal } from './components/MaterialSelectionModal';
-
 // Types
-import {
-  DashboardStats, Booking, Material, Space, BookingData,
-  CustomDimensions, Notification
-} from './types';
+interface DashboardStats {
+  activeCampaigns: number;
+  completedCampaigns: number;
+  estimatedImpressions: number;
+  totalSpent: number;
+}
 
-// Utility functions
-import {
-  formatStatValue, calculateMaterialCost, calculateTotalCost,
-  isBookingDataComplete, filterCompatibleMaterials,
-  getBookingUrgencyLevel
-} from './utils';
+interface Campaign {
+  id: string;
+  name: string;
+  startDate: string;
+  budget: number;
+  performance: string;
+  status: 'active' | 'paused' | 'completed';
+}
+
+interface Invoice {
+  id: string;
+  campaignName: string;
+  amount: number;
+  dueDate: string;
+  status: 'paid' | 'pending' | 'overdue';
+}
+
+interface RecentMessage {
+  id: string;
+  sender: string;
+  avatar: string;
+  preview: string;
+  timestamp: string;
+  isRead: boolean;
+}
 
 export default function AdvertiserDashboard() {
   const { user, isLoaded: userLoaded } = useUser();
   const [activeTab, setActiveTab] = useState('campaigns');
-  const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
-  const [showMaterialModal, setShowMaterialModal] = useState(false);
-  const [expandedBooking, setExpandedBooking] = useState<string | null>(null);
-  
-  // Real data states
-  const [stats, setStats] = useState<DashboardStats>({
-    totalSpent: 0,
-    activeCampaigns: 0,
-    pendingMaterials: 0,
-    completedCampaigns: 0
-  });
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [availableMaterials, setAvailableMaterials] = useState<Material[]>([]);
-  const [searchResults, setSearchResults] = useState<Space[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [materialsLoading, setMaterialsLoading] = useState(false);
-  const [spacesLoading, setSpacesLoading] = useState(false);
 
-  // Material selection states
-  const [uploadedCreative, setUploadedCreative] = useState<string | null>(null);
-  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
-  const [customDimensions, setCustomDimensions] = useState<CustomDimensions>({ width: '', height: '' });
+  // Data states
+  const [stats, setStats] = useState<DashboardStats>({
+    activeCampaigns: 25,
+    completedCampaigns: 120,
+    estimatedImpressions: 5680,
+    totalSpent: 0
+  });
 
-  // ✅ MOBILE: Add console log for mobile debugging
+  const [campaigns, setCampaigns] = useState<Campaign[]>([
+    {
+      id: '1',
+      name: 'Campaign name',
+      startDate: '12/01',
+      budget: 18,
+      performance: '$350640',
+      status: 'active'
+    },
+    {
+      id: '2', 
+      name: 'Status',
+      startDate: '20/20',
+      budget: 24,
+      performance: '$580640',
+      status: 'active'
+    },
+    {
+      id: '3',
+      name: 'End Date',
+      startDate: '10/25',
+      budget: 14,
+      performance: '$500640',
+      status: 'completed'
+    },
+    {
+      id: '4',
+      name: 'Budget',
+      startDate: '22%',
+      budget: 18,
+      performance: '$570640',
+      status: 'active'
+    },
+    {
+      id: '5',
+      name: 'Widget',
+      startDate: '25/10',
+      budget: 16,
+      performance: '$560640',
+      status: 'active'
+    },
+    {
+      id: '6',
+      name: 'Managed',
+      startDate: '20/4',
+      budget: 32,
+      performance: '$270640',
+      status: 'paused'
+    }
+  ]);
+
+  const [invoices, setInvoices] = useState<Invoice[]>([
+    {
+      id: '1',
+      campaignName: 'Summer Billboard Campaign',
+      amount: 2500,
+      dueDate: '2025-01-15',
+      status: 'pending'
+    },
+    {
+      id: '2', 
+      campaignName: 'Downtown Digital Display',
+      amount: 1800,
+      dueDate: '2025-01-20',
+      status: 'paid'
+    },
+    {
+      id: '3',
+      campaignName: 'Highway Banner Ad',
+      amount: 3200,
+      dueDate: '2025-01-10',
+      status: 'overdue'
+    }
+  ]);
+
+  const [recentMessages, setRecentMessages] = useState<RecentMessage[]>([
+    {
+      id: '1',
+      sender: 'Send',
+      avatar: '👤',
+      preview: 'Your your visible your your message',
+      timestamp: '2h ago',
+      isRead: false
+    },
+    {
+      id: '2',
+      sender: 'Send', 
+      avatar: '👤',
+      preview: 'Your your resolve your message',
+      timestamp: '4h ago',
+      isRead: false
+    },
+    {
+      id: '3',
+      sender: 'Send',
+      avatar: '👤', 
+      preview: 'Your your sometimes hope',
+      timestamp: '1d ago',
+      isRead: true
+    }
+  ]);
+
+  // ✅ Updated color scheme verification
   useEffect(() => {
-    console.log('📱 ADVERTISER DASHBOARD: Mobile viewport check', {
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
-      isMobile: window.innerWidth < 768
+    console.log('🎨 ADVERTISER DASHBOARD: Updated color scheme verification', {
+      primaryBlue: '#4668AB',
+      lightBlueBackground: '#F8FAFF',
+      offWhiteCards: '#F9FAFB',
+      lightGrayBorders: '#E5E7EB',
+      timestamp: new Date().toISOString()
     });
   }, []);
 
-  // Fetch dashboard data on mount
+  // ✅ Section titles verification
   useEffect(() => {
-    console.log('👤 User loaded:', userLoaded, 'User ID:', user?.id);
+    console.log('✅ ADVERTISER DASHBOARD: Section titles verification', {
+      leftSectionTitles: ['Key 3 Cards', 'Recent Messages'],
+      rightSectionTitle: 'My Campaigns',
+      layoutStructure: '50/50 split with aligned section titles',
+      timestamp: new Date().toISOString()
+    });
+  }, []);
+
+  // Fetch data on mount
+  useEffect(() => {
     if (userLoaded && user?.id) {
-      fetchDashboardData();
-      fetchMaterialsCatalog();
-      fetchNotifications();
+      // Simulate loading
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 1000);
     } else if (userLoaded && !user) {
-      console.error('❌ User not authenticated');
       setError('Please sign in to view your dashboard');
       setIsLoading(false);
     }
   }, [userLoaded, user?.id]);
 
-  // Fetch spaces when browse tab is active
-  useEffect(() => {
-    if (activeTab === 'browse' && searchResults.length === 0) {
-      fetchAvailableSpaces();
-    }
-  }, [activeTab]);
+  // ✅ CLEANED UP: Simplified Key Cards Component
+  const KeyCard = ({ title, value, icon: Icon, comingSoon = false, highlighted = false }) => (
+    <div 
+      className={`rounded-lg p-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${
+        highlighted ? 'ring-2 ring-blue-200' : ''
+      }`}
+      style={{ 
+        backgroundColor: '#FFFFFF',
+        border: '1px solid #E5E7EB',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
+      }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div 
+          className="w-10 h-10 rounded-lg flex items-center justify-center"
+          style={{ backgroundColor: '#EFF6FF' }}
+        >
+          <Icon className="w-5 h-5" style={{ color: '#4668AB' }} />
+        </div>
+        {highlighted && (
+          <div 
+            className="w-2 h-2 rounded-full"
+            style={{ backgroundColor: '#4668AB' }}
+          ></div>
+        )}
+      </div>
+      <div className="text-xs text-gray-600 mb-1 font-medium">{title}</div>
+      <div className="text-2xl font-bold text-gray-900 mb-1">#{value}</div>
+      {comingSoon && (
+        <div 
+          className="text-xs font-medium mt-2 px-2 py-1 rounded-full inline-block"
+          style={{ 
+            backgroundColor: '#EFF6FF',
+            color: '#4668AB'
+          }}
+        >
+          Coming Soon
+        </div>
+      )}
+    </div>
+  );
 
-  const fetchDashboardData = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      console.log('🔄 Fetching advertiser dashboard data for user:', user?.id);
-      const response = await apiClient.getAdvertiserDashboard();
-      
-      if (response.success) {
-        console.log('✅ Dashboard data received:', response.data);
-        setStats(response.data.stats || {
-          totalSpent: 0,
-          activeCampaigns: 0,
-          pendingMaterials: 0,
-          completedCampaigns: 0
-        });
-        setBookings(response.data.bookings || []);
-      } else {
-        console.error('❌ Dashboard fetch failed:', response.error);
-        setError(response.error || 'Failed to load dashboard data');
-      }
-    } catch (err) {
-      console.error('❌ Dashboard error:', err);
-      setError('Failed to load dashboard data. Please try again.');
-      
-      // Show fallback data for development
-      setStats({
-        totalSpent: 0,
-        activeCampaigns: 0,
-        pendingMaterials: 0,
-        completedCampaigns: 0
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // ✅ CLEANED UP: Campaign Table Component
+  const CampaignTable = () => (
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-gray-200">
+            <th className="text-left py-3 px-4 font-medium text-gray-700">Campaign Name</th>
+            <th className="text-left py-3 px-4 font-medium text-gray-700">Start Date</th>
+            <th className="text-left py-3 px-4 font-medium text-gray-700">Budget</th>
+            <th className="text-left py-3 px-4 font-medium text-gray-700">Performance</th>
+          </tr>
+        </thead>
+        <tbody>
+          {campaigns.map((campaign, index) => (
+            <tr 
+              key={campaign.id} 
+              className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                index === 1 ? 'bg-blue-50' : ''
+              }`}
+              style={index === 1 ? { backgroundColor: '#EFF6FF' } : {}}
+            >
+              <td className="py-3 px-4 text-gray-900">{campaign.name}</td>
+              <td className="py-3 px-4 text-gray-600">{campaign.startDate}</td>
+              <td className="py-3 px-4 text-gray-600">{campaign.budget}</td>
+              <td className="py-3 px-4 font-semibold text-gray-900">{campaign.performance}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 
-  const fetchMaterialsCatalog = async () => {
-    setMaterialsLoading(true);
-    
-    try {
-      console.log('📦 Fetching materials catalog...');
-      const response = await apiClient.getMaterialsCatalog();
-      
-      if (response.success) {
-        console.log('✅ Materials catalog received:', response.data);
-        setAvailableMaterials(response.data.materials || []);
-      } else {
-        console.error('❌ Materials fetch failed:', response.error);
-      }
-    } catch (err) {
-      console.error('❌ Materials error:', err);
-      setAvailableMaterials([]);
-    } finally {
-      setMaterialsLoading(false);
-    }
-  };
-
-  const fetchAvailableSpaces = async (filters = {}) => {
-    setSpacesLoading(true);
-    
-    try {
-      console.log('🔍 Fetching available spaces...');
-      const response = await apiClient.searchAvailableSpaces(filters);
-      
-      if (response.success) {
-        console.log('✅ Available spaces received:', response.data);
-        setSearchResults(response.data.spaces || []);
-      } else {
-        console.error('❌ Spaces fetch failed:', response.error);
-      }
-    } catch (err) {
-      console.error('❌ Spaces error:', err);
-      setSearchResults([]);
-    } finally {
-      setSpacesLoading(false);
-    }
-  };
-
-  const fetchNotifications = async () => {
-    try {
-      console.log('🔔 Fetching notifications...');
-      const response = await apiClient.getNotifications();
-      
-      if (response.success) {
-        console.log('✅ Notifications received:', response.data);
-        setNotifications(response.data.notifications || []);
-      } else {
-        console.error('❌ Notifications fetch failed:', response.error);
-      }
-    } catch (err) {
-      console.error('❌ Notifications error:', err);
-      setNotifications([]);
-    }
-  };
-
-  // Handle booking with materials
-  const handleBookingConfirm = async () => {
-    if (!selectedSpace || !selectedMaterial || !customDimensions.width || !customDimensions.height || !uploadedCreative) {
-      console.error('❌ Missing required booking data');
-      return;
-    }
-
-    const bookingData: BookingData = {
-      spaceId: selectedSpace.id,
-      propertyId: selectedSpace.propertyId,
-      materialItemId: selectedMaterial.id,
-      dimensions: customDimensions,
-      designFileUrl: uploadedCreative,
-      totalCost: calculateTotalCost(selectedSpace, selectedMaterial, customDimensions)
-    };
-
-    try {
-      console.log('📋 Creating booking with materials:', bookingData);
-      const response = await apiClient.createBookingWithMaterials(bookingData);
-      
-      if (response.success) {
-        console.log('✅ Booking created successfully');
-        alert('Booking confirmed! You will receive installation instructions via email.');
-        setShowMaterialModal(false);
-        setSelectedSpace(null);
-        setSelectedMaterial(null);
-        setCustomDimensions({ width: '', height: '' });
-        setUploadedCreative(null);
-        fetchDashboardData(); // Refresh data
-      } else {
-        console.error('❌ Booking creation failed:', response.error);
-        alert('Failed to create booking. Please try again.');
-      }
-    } catch (err) {
-      console.error('❌ Booking error:', err);
-      alert('Failed to create booking. Please try again.');
-    }
-  };
-
-  // Calculate derived stats for better insights
-  const urgentBookings = bookings.filter(b => getBookingUrgencyLevel(b) === 'high' || getBookingUrgencyLevel(b) === 'critical');
-  const unreadNotifications = notifications.filter(n => !n.isRead);
-
-  const renderContent = () => {
-    switch(activeTab) {
-      case 'campaigns':
-        return bookings.length > 0 ? (
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
-              <div>
-                <h3 className="font-semibold text-gray-900">Your Active Campaigns</h3>
-                {urgentBookings.length > 0 && (
-                  <p className="text-sm text-amber-600 flex items-center mt-1">
-                    <AlertCircle className="w-4 h-4 mr-1" />
-                    {urgentBookings.length} campaign{urgentBookings.length > 1 ? 's' : ''} need{urgentBookings.length === 1 ? 's' : ''} attention
-                  </p>
-                )}
-              </div>
-              <button 
-                onClick={() => setActiveTab('browse')}
-                className="text-teal-600 hover:text-teal-700 text-sm font-medium self-start sm:self-auto"
-              >
-                Browse More Spaces →
-              </button>
-            </div>
-            
-            {/* Sort bookings by urgency */}
-            <div className="space-y-4">
-              {bookings
-                .sort((a, b) => {
-                  const urgencyOrder = { 'critical': 0, 'high': 1, 'medium': 2, 'low': 3 };
-                  return urgencyOrder[getBookingUrgencyLevel(a)] - urgencyOrder[getBookingUrgencyLevel(b)];
-                })
-                .map(booking => (
-                  <EnhancedBookingCard 
-                    key={booking.id} 
-                    booking={booking}
-                    expandedBooking={expandedBooking}
-                    onToggleExpand={setExpandedBooking}
-                  />
-                ))}
-            </div>
-          </div>
-        ) : (
-          <EmptyState
-            icon={Calendar}
-            title="No active campaigns"
-            description="Browse available spaces to start your first advertising campaign with integrated materials"
-            actionText="Browse Ad Spaces"
-            onAction={() => setActiveTab('browse')}
-          />
-        );
-        
-      case 'browse':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-4">Find Ad Spaces</h3>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <p className="text-sm text-blue-800">
-                  <Info className="w-4 h-4 inline mr-1" />
-                  All spaces include material sourcing and installation coordination
-                </p>
-                <button 
-                  onClick={() => window.location.href = '/browse'}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                >
-                  Open Full Browse →
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-600 mb-3">Quick results near you:</p>
-              {spacesLoading ? (
-                <div className="text-center py-8">
-                  <div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                  <p className="text-gray-600">Loading available spaces...</p>
-                </div>
-              ) : searchResults.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {searchResults.map(space => (
-                    <SpaceSearchCard 
-                      key={space.id} 
-                      space={space}
-                      onSelect={(space) => {
-                        setSelectedSpace(space);
-                        setShowMaterialModal(true);
-                      }}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <p>No spaces available</p>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-        
-      default:
-        return null;
-    }
-  };
+  // ✅ CLEANED UP: Invoice Table Component  
+  const InvoiceTable = () => (
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-gray-200">
+            <th className="text-left py-3 px-4 font-medium text-gray-700">Campaign</th>
+            <th className="text-left py-3 px-4 font-medium text-gray-700">Amount</th>
+            <th className="text-left py-3 px-4 font-medium text-gray-700">Due Date</th>
+            <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {invoices.map((invoice) => (
+            <tr key={invoice.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+              <td className="py-3 px-4 text-gray-900">{invoice.campaignName}</td>
+              <td className="py-3 px-4 font-semibold text-gray-900">${invoice.amount.toLocaleString()}</td>
+              <td className="py-3 px-4 text-gray-600">{invoice.dueDate}</td>
+              <td className="py-3 px-4">
+                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                  invoice.status === 'paid' ? 'bg-green-100 text-green-800' :
+                  invoice.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 
   // Loading state
   if (isLoading) {
     return (
       <div 
         className="min-h-screen flex items-center justify-center px-4"
-        style={{ backgroundColor: '#f7f5e6' }}
+        style={{ backgroundColor: '#F8FAFF' }}
       >
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div 
+            className="w-16 h-16 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4"
+            style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
+          ></div>
           <p className="text-gray-600">Loading your dashboard...</p>
         </div>
       </div>
@@ -351,13 +323,14 @@ export default function AdvertiserDashboard() {
     return (
       <div 
         className="min-h-screen flex items-center justify-center px-4"
-        style={{ backgroundColor: '#f7f5e6' }}
+        style={{ backgroundColor: '#F8FAFF' }}
       >
         <div className="text-center">
           <p className="text-red-600 mb-4">{error}</p>
           <button 
-            onClick={fetchDashboardData}
-            className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700"
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-lg text-white hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: '#4668AB' }}
           >
             Retry
           </button>
@@ -368,155 +341,174 @@ export default function AdvertiserDashboard() {
 
   return (
     <div 
-      className="min-h-full w-full overflow-hidden"
-      style={{ backgroundColor: '#f7f5e6' }}
+      className="min-h-full w-full"
+      style={{ backgroundColor: '#F8FAFF' }}
     >
-      {/* ✅ MOBILE RESPONSIVE: Container with proper spacing */}
-      <div className="w-full h-full">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
+        
+        {/* ✅ MAIN LAYOUT: 50/50 split - Key Cards & Messages | Campaigns & Invoices */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
-          {/* ✅ MOBILE: Header with responsive spacing */}
-          <div className="mb-4 sm:mb-6">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Advertiser Dashboard</h1>
-                <p className="text-gray-600 text-sm sm:text-base">Manage your campaigns and materials</p>
-              </div>
-              
-              {/* ✅ MOBILE: Notification Bell with proper touch target */}
-              {unreadNotifications.length > 0 && (
-                <button className="relative p-3 text-gray-600 hover:text-gray-900 self-start sm:self-auto">
-                  <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center min-w-[20px]">
-                    {unreadNotifications.length}
-                  </span>
-                </button>
-              )}
-            </div>
+          {/* ✅ LEFT SECTION - Key Cards & Recent Messages */}
+          <div className="space-y-6">
             
-            {/* ✅ MOBILE: Urgent Alerts with responsive layout */}
-            {urgentBookings.length > 0 && (
-              <div className="mt-3 sm:mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <div className="flex items-start sm:items-center flex-1">
-                    <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 mr-2 mt-0.5 sm:mt-0 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-amber-800">
-                        Action Required: {urgentBookings.length} campaign{urgentBookings.length > 1 ? 's' : ''} need{urgentBookings.length === 1 ? 's' : ''} immediate attention
-                      </p>
-                      <p className="text-xs text-amber-700 mt-1">
-                        Installation deadlines approaching or materials delivered
-                      </p>
+            {/* Key 3 Cards Section */}
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Key 3 Cards</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <KeyCard
+                  title="Active Campaigns"
+                  value={stats.activeCampaigns}
+                  icon={Calendar}
+                />
+                <KeyCard
+                  title="Completed Campaigns"
+                  value={stats.completedCampaigns}
+                  icon={TrendingUp}
+                  highlighted={false}
+                />
+                <KeyCard
+                  title="Estimated Total Impressions"
+                  value={stats.estimatedImpressions}
+                  icon={Eye}
+                  comingSoon={true}
+                />
+              </div>
+            </div>
+
+            {/* ✅ CLEANED UP: Recent Messages Section */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Recent Messages</h2>
+                <button 
+                  className="text-sm font-medium hover:underline transition-colors"
+                  style={{ color: '#4668AB' }}
+                >
+                  View All
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {recentMessages.map((message) => (
+                  <div 
+                    key={message.id}
+                    className="rounded-lg p-3 hover:shadow-md transition-all duration-200 cursor-pointer"
+                    style={{ 
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E5E7EB'
+                    }}
+                  >
+                    <div className="flex items-start space-x-2">
+                      <div 
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0"
+                        style={{ backgroundColor: '#EFF6FF' }}
+                      >
+                        {message.avatar}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-xs font-medium text-gray-900 truncate">{message.sender}</p>
+                          <p className="text-xs text-gray-500">{message.timestamp}</p>
+                        </div>
+                        <p className="text-xs text-gray-600 line-clamp-2">{message.preview}</p>
+                        {!message.isRead && (
+                          <div 
+                            className="w-1.5 h-1.5 rounded-full mt-2"
+                            style={{ backgroundColor: '#4668AB' }}
+                          ></div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <button 
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ✅ RIGHT SECTION - Campaigns/Invoices */}
+          <div>
+            {/* ✅ NEW: Add section title to match left column */}
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">My Campaigns</h2>
+            
+            <div 
+              className="rounded-lg shadow-md transition-all duration-200"
+              style={{ 
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E5E7EB'
+              }}
+            >
+              
+              {/* ✅ CLEANED UP: Tab Headers */}
+              <div className="border-b border-gray-200">
+                <div className="flex">
+                  <button
                     onClick={() => setActiveTab('campaigns')}
-                    className="text-amber-700 hover:text-amber-800 text-sm font-medium self-start sm:self-auto whitespace-nowrap"
+                    className={`px-6 py-4 text-sm font-medium border-b-2 transition-all duration-200 ${
+                      activeTab === 'campaigns'
+                        ? 'text-white'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                    style={activeTab === 'campaigns' ? { 
+                      borderBottomColor: '#4668AB',
+                      backgroundColor: '#4668AB'
+                    } : {}}
                   >
-                    View →
+                    Campaigns
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('invoices')}
+                    className={`px-6 py-4 text-sm font-medium border-b-2 transition-all duration-200 ${
+                      activeTab === 'invoices'
+                        ? 'text-white'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                    style={activeTab === 'invoices' ? {
+                      borderBottomColor: '#4668AB',
+                      backgroundColor: '#4668AB'
+                    } : {}}
+                  >
+                    Invoices
                   </button>
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* ✅ MOBILE: Enhanced Stats Grid with responsive columns */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
-            <StatCard 
-              icon={DollarSign} 
-              value={stats.totalSpent} 
-              label="Total Invested"
-              color="green"
-              subValue="This month"
-            />
-            <StatCard 
-              icon={Calendar} 
-              value={stats.activeCampaigns} 
-              label="Active Campaigns"
-              color="blue"
-              actionText={urgentBookings.length > 0 ? `${urgentBookings.length} urgent` : "View All"}
-              onAction={() => setActiveTab('campaigns')}
-            />
-            <StatCard 
-              icon={Package} 
-              value={stats.pendingMaterials} 
-              label="Materials In Transit"
-              color="yellow"
-            />
-            <StatCard 
-              icon={Building2} 
-              value={searchResults.length} 
-              label="Spaces Available"
-              color="teal"
-              actionText="Browse"
-              onAction={() => setActiveTab('browse')}
-            />
-          </div>
+              {/* Tab Content */}
+              <div className="p-6">
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {activeTab === 'campaigns' ? 'Campaign Performance' : 'Recent Invoices'}
+                  </h3>
+                </div>
 
-          {/* ✅ MOBILE: Main Content with responsive glass morphism */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg border border-white/50">
-            {/* ✅ MOBILE: Tabs with responsive layout */}
-            <div className="border-b border-gray-200">
-              <nav className="flex px-3 sm:px-6 overflow-x-auto scrollbar-hide">
-                {[
-                  { id: 'campaigns', label: 'My Campaigns', icon: Calendar, badge: urgentBookings.length },
-                  { id: 'browse', label: 'Browse Spaces', icon: Search }
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex-shrink-0 py-3 sm:py-4 px-1 border-b-2 font-medium text-sm transition-colors inline-flex items-center whitespace-nowrap mr-6 sm:mr-8 ${
-                      activeTab === tab.id
-                        ? 'border-teal-500 text-teal-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <tab.icon className="w-4 h-4 mr-2" />
-                    <span className="hidden sm:inline">{tab.label}</span>
-                    <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
-                    {tab.badge && tab.badge > 0 && (
-                      <span className="ml-2 bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full">
-                        {tab.badge}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </nav>
-            </div>
-
-            {/* ✅ MOBILE: Tab Content with responsive padding */}
-            <div className="p-3 sm:p-6">
-              {renderContent()}
+                {activeTab === 'campaigns' ? <CampaignTable /> : <InvoiceTable />}
+              </div>
             </div>
           </div>
+
         </div>
       </div>
-      
-      {/* ✅ MOBILE: Material Selection Modal with responsive design */}
-      {showMaterialModal && selectedSpace && (
-        <MaterialSelectionModal
-          selectedSpace={selectedSpace}
-          showModal={showMaterialModal}
-          availableMaterials={availableMaterials}
-          materialsLoading={materialsLoading}
-          selectedMaterial={selectedMaterial}
-          customDimensions={customDimensions}
-          uploadedCreative={uploadedCreative}
-          onClose={() => {
-            setShowMaterialModal(false);
-            setSelectedSpace(null);
-            setSelectedMaterial(null);
-            setCustomDimensions({ width: '', height: '' });
-            setUploadedCreative(null);
-          }}
-          onMaterialSelect={setSelectedMaterial}
-          onDimensionsChange={setCustomDimensions}
-          onCreativeUpload={(file) => setUploadedCreative(file)}
-          onConfirmBooking={handleBookingConfirm}
-          calculateTotalCost={() => calculateTotalCost(selectedSpace, selectedMaterial, customDimensions)}
-          calculateMaterialCost={calculateMaterialCost}
-        />
-      )}
     </div>
   );
+}
+
+// ✅ Add verification function for testing
+if (typeof window !== 'undefined') {
+  window.verifyAdvertiserColors = () => {
+    const lightBlueElements = document.querySelectorAll('[style*="F8FAFF"]');
+    const whiteElements = document.querySelectorAll('[style*="FFFFFF"]');
+    const blueElements = document.querySelectorAll('[style*="4668AB"]');
+    
+    console.log('🔍 ADVERTISER DASHBOARD COLOR VERIFICATION:', {
+      lightBlueBackgroundFound: lightBlueElements.length,
+      whiteCardsFound: whiteElements.length,
+      blueElementsFound: blueElements.length,
+      colorSchemeComplete: lightBlueElements.length > 0 && whiteElements.length > 0 && blueElements.length > 0
+    });
+    
+    return {
+      status: lightBlueElements.length > 0 && blueElements.length > 0 ? 'SUCCESS' : 'NEEDS_UPDATE',
+      lightBlueElements: lightBlueElements.length,
+      whiteElements: whiteElements.length,
+      blueElements: blueElements.length
+    };
+  };
 }

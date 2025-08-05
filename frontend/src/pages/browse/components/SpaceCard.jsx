@@ -36,9 +36,14 @@ export default function SpaceCard({
     >
       <Card 
         onClick={() => onCardClick(space)}
-        className={`cursor-pointer transition-all duration-300 group overflow-hidden rounded-xl bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 hover:shadow-lg ${
-          isAnimating ? 'ring-2 ring-teal-500 shadow-lg' : ''
+        className={`cursor-pointer transition-all duration-300 group overflow-hidden rounded-xl border hover:shadow-lg ${
+          isAnimating ? 'ring-2 shadow-lg' : ''
         }`}
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderColor: isAnimating ? '#4668AB' : '#E5E7EB',
+          boxShadow: isAnimating ? '0 0 0 2px rgba(70, 104, 171, 0.2)' : undefined
+        }}
       >
         <CardContent className="p-0">
           {/* Square Image Section */}
@@ -52,9 +57,12 @@ export default function SpaceCard({
               }}
             />
             
-            {/* Overlay Elements with Elaview colors */}
+            {/* Overlay Elements with updated Elaview colors */}
             <div className="absolute top-3 left-3">
-              <span className="bg-teal-500 text-white flex items-center gap-1 text-xs font-medium shadow-sm px-3 py-1 rounded-full">
+              <span 
+                className="text-white flex items-center gap-1 text-xs font-medium shadow-sm px-3 py-1 rounded-full"
+                style={{ backgroundColor: '#4668AB' }}
+              >
                 <IconComponent className="w-3 h-3" />
                 {getAreaType(space)}
               </span>
@@ -66,7 +74,8 @@ export default function SpaceCard({
                   e.stopPropagation();
                   toggleSavedSpace(space.id);
                 }}
-                className="p-2 bg-white/90 hover:bg-white rounded-full transition-colors shadow-sm backdrop-blur-sm border border-slate-200"
+                className="p-2 bg-white/90 hover:bg-white rounded-full transition-colors shadow-sm backdrop-blur-sm"
+                style={{ border: '1px solid #E5E7EB' }}
               >
                 <Heart className={`w-4 h-4 ${
                   savedSpaces.has(space.id) ? 'fill-red-500 text-red-500' : 'text-slate-600'
@@ -81,13 +90,17 @@ export default function SpaceCard({
                     addToCart(space);
                   }
                 }}
-                className={`p-2 bg-white/90 hover:bg-white rounded-full transition-colors shadow-sm backdrop-blur-sm border border-slate-200 ${
-                  isInCart(space.id) ? 'bg-success-50 border-success-200' : ''
+                className={`p-2 bg-white/90 hover:bg-white rounded-full transition-colors shadow-sm backdrop-blur-sm ${
+                  isInCart(space.id) ? 'border-green-200' : ''
                 }`}
+                style={{ 
+                  border: `1px solid ${isInCart(space.id) ? '#16B96F' : '#E5E7EB'}`,
+                  backgroundColor: isInCart(space.id) ? '#F0FDF4' : undefined
+                }}
                 disabled={isInCart(space.id)}
               >
                 {isInCart(space.id) ? (
-                  <CheckCircle className="w-4 h-4 text-success-600" />
+                  <CheckCircle className="w-4 h-4 text-green-600" />
                 ) : (
                   <Plus className="w-4 h-4 text-slate-600" />
                 )}
@@ -96,7 +109,10 @@ export default function SpaceCard({
 
             {trust?.verified && (
               <div className="absolute bottom-3 left-3">
-                <span className="bg-success-500 text-white border-0 flex items-center gap-1 text-xs shadow-sm px-3 py-1 rounded-full">
+                <span 
+                  className="text-white border-0 flex items-center gap-1 text-xs shadow-sm px-3 py-1 rounded-full"
+                  style={{ backgroundColor: '#16B96F' }}
+                >
                   <CheckCircle className="w-3 h-3" />
                   Verified
                 </span>
@@ -110,11 +126,18 @@ export default function SpaceCard({
             </div>
           </div>
 
-          {/* Content Section - Keep original compact spacing */}
+          {/* Content Section - Keep original compact spacing with updated colors */}
           <div className="p-4 space-y-2">
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-base text-slate-800 group-hover:text-teal-600 transition-colors duration-300 truncate">
+                <h3 
+                  className="font-bold text-base text-slate-800 group-hover:transition-colors duration-300 truncate"
+                  style={{
+                    color: 'inherit'
+                  }}
+                  onMouseEnter={(e) => e.target.style.color = '#4668AB'}
+                  onMouseLeave={(e) => e.target.style.color = 'inherit'}
+                >
                   {getAreaName(space)}
                 </h3>
                 <p className="text-xs text-slate-600 font-medium truncate">
@@ -134,21 +157,24 @@ export default function SpaceCard({
               {space.propertyAddress}
             </p>
 
-            {/* Performance Metrics with Elaview colors */}
+            {/* Performance Metrics with updated Elaview colors */}
             <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center text-success-600">
+              <div className="flex items-center text-green-600">
                 <Users className="w-3 h-3 mr-1" />
                 <span>{(insights.footTraffic/1000).toFixed(0)}K/day</span>
               </div>
-              <div className="flex items-center text-teal-600">
+              <div 
+                className="flex items-center"
+                style={{ color: '#4668AB' }}
+              >
                 <TrendingUp className="w-3 h-3 mr-1" />
                 <span>+{insights.avgCampaignLift}%</span>
               </div>
             </div>
 
-            {/* Action Area with Elaview colors */}
+            {/* Action Area with updated Elaview colors */}
             <div className="flex items-center justify-between pt-2">
-              <div className="flex items-center text-success-600">
+              <div className="flex items-center text-green-600">
                 <Eye className="w-3 h-3 mr-1" />
                 <span className="text-xs font-medium">Available</span>
               </div>
@@ -158,7 +184,13 @@ export default function SpaceCard({
                   onSpaceClick(space);
                 }}
                 size="sm"
-                className="bg-teal-500 text-white hover:bg-teal-600 text-xs px-3 py-1 shadow-sm border-0"
+                className="text-white text-xs px-3 py-1 shadow-sm border-0 hover:opacity-90 transition-opacity"
+                style={{ 
+                  backgroundColor: '#4668AB',
+                  '&:hover': { backgroundColor: '#3A5490' }
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#3A5490'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#4668AB'}
               >
                 Details
               </Button>

@@ -9,7 +9,8 @@ import Dashboard from "./dashboard/owner/OwnerDashboard.tsx";
 import Invoices from "./payments/Invoices.jsx";
 import BookingManagement from "./bookings/BookingManagement.jsx";
 import CreateCampaign from "./campaigns/CreateCampaign.jsx";
-import CreateProperty from "./properties/CreateProperty.tsx"; // Keep the component name
+// ❌ REMOVED: import CreateProperty from "./properties/CreateProperty.tsx"; // OLD LEGACY COMPONENT
+import CreateListingWizard from "./dashboard/owner/components/create-listing"; // ✅ NEW: Our minimal wizard
 import PropertyManagement from "./properties/PropertyManagement.jsx";
 import DataSeeder from "./DataSeeder.jsx";
 import Admin from "./dashboard/admin/Admin.tsx";
@@ -42,6 +43,7 @@ import MinimalTestMap from "@/dev/debug/MinimalTestMap.tsx";
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation, useParams } from 'react-router-dom';
 import { useEffect } from 'react';
 
+// ✅ UPDATED: No more CreateProperty in PAGES object
 const PAGES = {
     Browse: Map, // ✅ Map.jsx is your browse page
     Messages: Messages,
@@ -53,7 +55,8 @@ const PAGES = {
     Invoices: Invoices,
     BookingManagement: BookingManagement,
     CreateCampaign: CreateCampaign,
-    ListSpace: CreateProperty, // ✅ NEW: Use CreateProperty component for list-space route
+    // ❌ REMOVED: ListSpace: CreateProperty, // OLD LEGACY COMPONENT
+    ListSpace: CreateListingWizard, // ✅ NEW: Use our minimal wizard
     PropertyManagement: PropertyManagement,
     DataSeeder: DataSeeder,
     Admin: Admin,
@@ -220,12 +223,10 @@ function PagesContent() {
                 </ProtectedRoute>
             } />
             
-            {/* ✅ NEW: List Space route (replaces create-property) */}
+            {/* ✅ CRITICAL FIX: List Space route uses CreateListingWizard directly (NO LAYOUT) */}
             <Route path="/list-space" element={
                 <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="list-space-protected">
-                    <Layout currentPageName="ListSpace" key="list-space-page">
-                        <CreateProperty key="list-space-component" />
-                    </Layout>
+                    <CreateListingWizard key="list-space-component" />
                 </ProtectedRoute>
             } />
             

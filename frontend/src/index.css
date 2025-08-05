@@ -6,11 +6,30 @@
 
 @layer base {
   :root {
-    --color-primary: 15 118 110;  /* Deep Teal */
-    --color-secondary: 59 130 246;
-    --color-success: 16 185 129;
-    --color-warning: 245 158 11;
-    --color-error: 239 68 68;
+    /* ✅ UPDATED COLOR SCHEME - Elaview Brand Colors */
+    --color-primary: 70 104 171;     /* #4668AB - Brand Blue */
+    --color-primary-50: 239 242 250; /* Light blue tint */
+    --color-primary-100: 219 228 244; 
+    --color-primary-500: 70 104 171;  /* Main brand blue */
+    --color-primary-600: 57 85 140;   /* Darker blue for hover */
+    --color-primary-700: 45 67 111;   /* Even darker for active states */
+    
+    /* Neutral Colors */
+    --color-white: 248 250 255;       /* #F8FAFF - Light Blue Background */       /* #FFFFFF - Pure White */
+    --color-off-white: 249 250 251;   /* #F9FAFB - Off-White */
+    --color-light-gray: 229 231 235;  /* #E5E7EB - Light Gray */
+    --color-gray-50: 249 250 251;     /* #F9FAFB */
+    --color-gray-100: 243 244 246;    /* Slightly darker than off-white */
+    --color-gray-200: 229 231 235;    /* #E5E7EB */
+    --color-gray-300: 209 213 219;    /* Medium gray for borders */
+    --color-gray-600: 75 85 99;       /* Dark gray for text */
+    --color-gray-900: 17 24 39;       /* Almost black for primary text */
+    
+    /* Status Colors (keeping these for functionality) */
+    --color-secondary: 59 130 246;    /* Blue for secondary actions */
+    --color-success: 16 185 129;      /* Green for success states */
+    --color-warning: 245 158 11;      /* Amber for warnings */
+    --color-error: 239 68 68;         /* Red for errors */
     
     --spacing-xs: 0.5rem;
     --spacing-sm: 0.75rem;
@@ -41,8 +60,11 @@
   }
   
   body {
-    @apply bg-slate-50 text-slate-900;
-    @apply selection:bg-teal-200 selection:text-teal-900;
+    @apply text-slate-900;
+    /* ✅ CORRECTED: Pure white background, off-white cards */
+    background-color: rgb(var(--color-white));
+    @apply selection:text-slate-900;
+    selection-background-color: rgb(var(--color-primary-100));
     /* ✅ MOBILE: Prevent horizontal scroll and ensure full height */
     overflow-x: hidden;
     min-height: 100vh;
@@ -200,7 +222,7 @@
     @apply text-xs text-slate-500;
   }
   
-  /* Buttons - Enhanced for mobile touch targets */
+  /* ✅ UPDATED: Buttons - Enhanced for mobile touch targets with new brand colors */
   .btn-base {
     @apply inline-flex items-center justify-center rounded-lg font-medium;
     @apply transition-all duration-200;
@@ -211,30 +233,65 @@
   }
   
   .btn-primary {
-    @apply btn-base px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base text-white bg-teal-500;
-    @apply hover:bg-teal-600 hover:shadow-lg hover:-translate-y-0.5;
+    @apply btn-base px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base text-white;
+    background-color: rgb(var(--color-primary));
+    @apply hover:shadow-lg hover:-translate-y-0.5;
     @apply active:translate-y-0 active:shadow-md;
-    @apply focus:ring-teal-500;
+    @apply focus:ring-2 focus:ring-offset-2;
+  }
+  
+  .btn-primary:hover {
+    background-color: rgb(var(--color-primary-600));
+  }
+  
+  .btn-primary:active {
+    background-color: rgb(var(--color-primary-700));
+  }
+  
+  .btn-primary:focus {
+    box-shadow: 0 0 0 2px rgb(var(--color-primary) / 0.5);
   }
   
   .btn-secondary {
-    @apply btn-base px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base text-slate-700;
-    @apply border border-slate-300 bg-white;
-    @apply hover:bg-slate-50 hover:border-slate-400;
-    @apply focus:ring-teal-500;
+    @apply btn-base px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base;
+    color: rgb(var(--color-gray-600));
+    border: 1px solid rgb(var(--color-light-gray));
+    background-color: rgb(var(--color-white));
+    @apply hover:bg-gray-50 hover:border-gray-400;
+    @apply focus:ring-2 focus:ring-offset-2;
+  }
+  
+  .btn-secondary:focus {
+    box-shadow: 0 0 0 2px rgb(var(--color-primary) / 0.5);
   }
   
   .btn-outline {
     @apply btn-base px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base;
-    @apply border-2 border-teal-500 text-teal-600;
-    @apply bg-transparent hover:bg-teal-500 hover:text-white;
-    @apply focus:ring-teal-500;
+    @apply bg-transparent hover:text-white;
+    border: 2px solid rgb(var(--color-primary));
+    color: rgb(var(--color-primary));
+    @apply focus:ring-2 focus:ring-offset-2;
+  }
+  
+  .btn-outline:hover {
+    background-color: rgb(var(--color-primary));
+  }
+  
+  .btn-outline:focus {
+    box-shadow: 0 0 0 2px rgb(var(--color-primary) / 0.5);
   }
 
   .btn-ghost {
     @apply btn-base px-3 sm:px-4 py-2 text-sm sm:text-base;
-    @apply text-slate-600 hover:text-slate-900 hover:bg-slate-100;
-    @apply focus:ring-slate-500;
+    color: rgb(var(--color-gray-600));
+    @apply hover:text-gray-900;
+    background-color: transparent;
+    @apply hover:bg-gray-100;
+    @apply focus:ring-2 focus:ring-offset-2;
+  }
+  
+  .btn-ghost:focus {
+    box-shadow: 0 0 0 2px rgb(var(--color-gray-300));
   }
   
   .btn-small {
@@ -247,7 +304,7 @@
     min-height: var(--touch-target-large);
   }
   
-  /* Forms - Enhanced for mobile */
+  /* ✅ UPDATED: Forms - Enhanced for mobile with new colors */
   .form-group {
     @apply space-y-1.5 sm:space-y-2;
   }
@@ -257,9 +314,11 @@
   }
   
   .form-input {
-    @apply w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border border-slate-300 bg-slate-50;
-    @apply focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent;
-    @apply transition-all duration-200 placeholder:text-slate-400;
+    @apply w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg;
+    border: 1px solid rgb(var(--color-light-gray));
+    background-color: rgb(var(--color-white));
+    @apply focus:outline-none;
+    @apply transition-all duration-200 placeholder:text-gray-400;
     @apply text-sm sm:text-base;
     /* ✅ MOBILE: Ensure minimum touch target */
     min-height: var(--touch-target-min);
@@ -268,7 +327,9 @@
   }
   
   .form-input:focus {
-    @apply bg-white;
+    background-color: rgb(var(--color-white));
+    border-color: rgb(var(--color-primary));
+    box-shadow: 0 0 0 2px rgb(var(--color-primary) / 0.2);
   }
   
   .form-select {
@@ -289,9 +350,11 @@
     @apply text-xs sm:text-sm text-red-600 mt-1;
   }
   
-  /* Cards - Enhanced for mobile */
+  /* ✅ CORRECTED: Cards - Off-white background instead of pure white */
   .card {
-    @apply bg-white rounded-lg sm:rounded-xl border border-slate-200;
+    background-color: rgb(var(--color-off-white));
+    @apply rounded-lg sm:rounded-xl;
+    border: 1px solid rgb(var(--color-light-gray));
     @apply transition-all duration-300;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
   }
@@ -313,7 +376,7 @@
     @apply p-6 sm:p-8;
   }
   
-  /* Property Components - Enhanced for mobile */
+  /* ✅ UPDATED: Property Components - Enhanced for mobile with new colors */
   .property-listing {
     @apply card-hover card-comfortable space-y-3 sm:space-y-4;
   }
@@ -336,7 +399,8 @@
   }
   
   .property-price {
-    @apply text-lg sm:text-xl font-bold text-teal-600;
+    color: rgb(var(--color-primary));
+    @apply text-lg sm:text-xl font-bold;
   }
   
   .property-status {
@@ -359,10 +423,10 @@
     @apply bg-red-100 text-red-800;
   }
   
-  /* Campaign Components - Enhanced for mobile */
+  /* ✅ CORRECTED: Campaign Components - Off-white gradient */
   .campaign-card {
     @apply card card-comfortable space-y-3 sm:space-y-4;
-    background: linear-gradient(145deg, #ffffff, #f8fafc);
+    background: linear-gradient(145deg, rgb(var(--color-off-white)), rgb(var(--color-gray-100)));
   }
   
   .campaign-header {
@@ -390,7 +454,8 @@
   }
   
   .campaign-status.completed {
-    @apply bg-blue-100 text-blue-800;
+    background-color: rgb(var(--color-primary-100));
+    color: rgb(var(--color-primary-700));
   }
   
   .campaign-metrics {
@@ -409,18 +474,24 @@
     @apply text-xs sm:text-sm text-slate-600;
   }
   
-  /* Upload Components - Enhanced for mobile */
+  /* ✅ UPDATED: Upload Components - Enhanced for mobile with new colors */
   .upload-area {
-    @apply border-2 border-dashed border-slate-300 rounded-lg p-6 sm:p-8;
+    border: 2px dashed rgb(var(--color-light-gray));
+    @apply rounded-lg p-6 sm:p-8;
     @apply text-center transition-all duration-200;
-    @apply hover:border-teal-400 hover:bg-teal-50;
     @apply cursor-pointer;
     /* ✅ MOBILE: Ensure adequate touch area */
     min-height: 120px;
   }
   
+  .upload-area:hover {
+    border-color: rgb(var(--color-primary));
+    background-color: rgb(var(--color-primary-50));
+  }
+  
   .upload-area.dragover {
-    @apply border-teal-500 bg-teal-100;
+    border-color: rgb(var(--color-primary));
+    background-color: rgb(var(--color-primary-100));
   }
   
   .creative-grid {
@@ -428,13 +499,19 @@
   }
   
   .creative-item {
-    @apply aspect-square rounded-lg overflow-hidden bg-slate-100;
+    @apply aspect-square rounded-lg overflow-hidden;
+    background-color: rgb(var(--color-gray-100));
     @apply border-2 border-transparent transition-all duration-200;
-    @apply hover:border-teal-500 cursor-pointer;
+    @apply cursor-pointer;
+  }
+  
+  .creative-item:hover {
+    border-color: rgb(var(--color-primary));
   }
   
   .creative-item.selected {
-    @apply border-teal-500 ring-2 ring-teal-200;
+    border-color: rgb(var(--color-primary));
+    box-shadow: 0 0 0 2px rgb(var(--color-primary) / 0.2);
   }
   
   /* Layout - Enhanced for mobile */
@@ -647,9 +724,13 @@
     @apply px-3 py-1.5 text-sm;
   }
 
-  /* ✅ MOBILE: Focus states optimized for touch */
+  /* ✅ UPDATED: Focus states optimized for touch with new brand colors */
   .focus-visible-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+  }
+  
+  .focus-visible-ring:focus-visible {
+    box-shadow: 0 0 0 2px rgb(var(--color-primary) / 0.5);
   }
 
   /* ✅ MOBILE: List utilities */

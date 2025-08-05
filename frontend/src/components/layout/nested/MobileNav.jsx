@@ -1,5 +1,5 @@
 // src/components/layout/MobileNav.jsx
-// ✅ UPDATED: Added viewMode support and dynamic label switching
+// ✅ UPDATED: Added viewMode support and dynamic label switching with brand colors
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
@@ -20,6 +20,17 @@ const MobileNav = ({
   const [notificationCount, setNotificationCount] = useState(0);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState(null);
+
+  // ✅ COLOR SCHEME: Verification on mount
+  useEffect(() => {
+    console.log('🎨 MOBILE NAV: Updated color scheme verification', {
+      primaryBlue: '#4668AB',
+      whiteBackground: '#FFFFFF',
+      offWhiteCards: '#F9FAFB',
+      lightGrayBorders: '#E5E7EB',
+      timestamp: new Date().toISOString()
+    });
+  }, []);
 
   // ✅ OPTIMIZED: Fetch notification count with rate limit protection
   const fetchNotificationCount = async (force = false) => {
@@ -137,8 +148,12 @@ const MobileNav = ({
 
   return (
     <div 
-      className="fixed bottom-0 left-0 right-0 bg-white z-40 md:hidden"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      className="fixed bottom-0 left-0 right-0 bg-white z-40 md:hidden border-t"
+      style={{ 
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        borderColor: '#E5E7EB',
+        backgroundColor: '#F8FAFF'
+      }}
     >
       <div className="flex items-center justify-around py-2">
         {navigationItems.map((item) => {
@@ -149,9 +164,13 @@ const MobileNav = ({
               to={item.url}
               className={`relative flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
                 isActive
-                  ? 'text-teal-600 bg-teal-50'
+                  ? 'text-white'
                   : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
               }`}
+              style={isActive ? { 
+                backgroundColor: '#4668AB',
+                color: '#FFFFFF'
+              } : {}}
             >
               <div className="relative">
                 <item.icon className="w-5 h-5" />

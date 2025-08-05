@@ -1,5 +1,5 @@
 // src/components/layout/MobileTopBar.jsx
-// ✅ UPDATED: Added simplified profile dropdown with role switching
+// ✅ UPDATED: Added simplified profile dropdown with role switching and brand colors
 // ✅ FIXED: onClick handler to prevent stale state issues
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -31,6 +31,17 @@ const MobileTopBar = ({
   const [lastFetchTime, setLastFetchTime] = useState(null);
   const notificationMenuRef = useRef(null);
   const profileMenuRef = useRef(null);
+
+  // ✅ COLOR SCHEME: Verification on mount
+  useEffect(() => {
+    console.log('🎨 MOBILE TOP BAR: Updated color scheme verification', {
+      primaryBlue: '#4668AB',
+      whiteBackground: '#FFFFFF',
+      offWhiteCards: '#F9FAFB',
+      lightGrayBorders: '#E5E7EB',
+      timestamp: new Date().toISOString()
+    });
+  }, []);
 
   // ✅ OPTIMIZED: Fetch notifications with rate limit protection
   const fetchNotifications = async (force = false) => {
@@ -150,7 +161,10 @@ const MobileTopBar = ({
     }
     
     return (
-      <div className="w-6 h-6 bg-gradient-to-r from-teal-500 to-teal-600 rounded-full flex items-center justify-center">
+      <div 
+        className="w-6 h-6 rounded-full flex items-center justify-center"
+        style={{ background: 'linear-gradient(to right, #4668AB, #5B7BC7)' }}
+      >
         <UserCircle className="w-4 h-4 text-white" />
       </div>
     );
@@ -220,7 +234,10 @@ const MobileTopBar = ({
   };
 
   return (
-    <div className="md:hidden fixed top-0 left-0 right-0 border-b border-slate-200/60 z-30 shadow-sm backdrop-blur-sm" style={{ backgroundColor: '#f7f5e6' }}>
+    <div 
+      className="md:hidden fixed top-0 left-0 right-0 border-b shadow-sm backdrop-blur-sm z-30"
+      style={{ backgroundColor: '#F8FAFF', borderColor: '#E5E7EB' }}
+    >
       <div className="flex items-center justify-between h-16 px-4">
         {/* Logo */}
         <Link to={viewMode === 'seller' ? '/dashboard' : '/browse'} className="flex items-center gap-2 group">
@@ -239,9 +256,13 @@ const MobileTopBar = ({
               <button
                 onClick={toggleNotificationMenu}
                 disabled={isRateLimited}
-                className={`relative p-2 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-white/60 transition-all duration-200 ${
+                className={`relative p-2 rounded-lg text-slate-500 hover:bg-slate-50 transition-all duration-200 ${
                   isRateLimited ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
+                style={{ 
+                  color: notificationMenuOpen ? '#4668AB' : undefined,
+                  backgroundColor: notificationMenuOpen ? '#F9FAFB' : undefined
+                }}
               >
                 <Bell className="w-5 h-5" />
                 {notificationCount > 0 && (
@@ -265,17 +286,24 @@ const MobileTopBar = ({
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -10, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute right-0 top-12 w-80 max-w-[calc(100vw-2rem)] bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden z-[999999]"
-                      style={{ maxHeight: '40vh' }}
+                      className="absolute right-0 top-12 w-80 max-w-[calc(100vw-2rem)] bg-white border rounded-xl shadow-2xl overflow-hidden z-[999999]"
+                      style={{ 
+                        maxHeight: '40vh',
+                        borderColor: '#E5E7EB'
+                      }}
                     >
                       {/* Header */}
-                      <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-teal-50 to-slate-50">
+                      <div 
+                        className="p-4 border-b"
+                        style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}
+                      >
                         <div className="flex items-center justify-between">
                           <h3 className="font-semibold text-slate-900">Notifications</h3>
                           {notificationCount > 0 && (
                             <button
                               onClick={handleMarkAllAsRead}
-                              className="text-xs text-teal-600 hover:text-teal-700 font-medium"
+                              className="text-xs font-medium hover:underline"
+                              style={{ color: '#4668AB' }}
                             >
                               Mark all read
                             </button>
@@ -298,7 +326,10 @@ const MobileTopBar = ({
                       <div className="max-h-60 overflow-y-auto">
                         {isLoadingNotifications ? (
                           <div className="p-6 text-center">
-                            <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                            <div 
+                              className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-2"
+                              style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
+                            ></div>
                             <p className="text-sm text-slate-500">Loading notifications...</p>
                           </div>
                         ) : notifications.length === 0 ? (
@@ -315,8 +346,11 @@ const MobileTopBar = ({
                               className="p-4 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors"
                             >
                               <div className="flex items-start gap-3">
-                                <div className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <Bell className="w-4 h-4 text-blue-600" />
+                                <div 
+                                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ backgroundColor: '#EFF6FF' }}
+                                >
+                                  <Bell className="w-4 h-4" style={{ color: '#4668AB' }} />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-slate-900 line-clamp-2">
@@ -336,11 +370,15 @@ const MobileTopBar = ({
                       </div>
                       
                       {/* Footer */}
-                      <div className="p-3 border-t border-slate-200 bg-slate-50">
+                      <div 
+                        className="p-3 border-t"
+                        style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}
+                      >
                         <Link
                           to="/messages"
                           onClick={() => setNotificationMenuOpen(false)}
-                          className="block text-center text-sm text-teal-600 hover:text-teal-700 font-medium"
+                          className="block text-center text-sm font-medium hover:underline"
+                          style={{ color: '#4668AB' }}
                         >
                           View all messages
                         </Link>
@@ -357,7 +395,10 @@ const MobileTopBar = ({
             <div className="relative" ref={profileMenuRef}>
               <button
                 onClick={toggleProfileMenu}
-                className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/60 transition-all duration-200"
+                className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 transition-all duration-200"
+                style={{ 
+                  backgroundColor: profileMenuOpen ? '#F9FAFB' : undefined
+                }}
               >
                 {getProfileImage()}
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-all duration-200 ${profileMenuOpen ? 'rotate-180' : ''}`} />
@@ -373,11 +414,17 @@ const MobileTopBar = ({
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -10, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute right-0 top-12 w-64 max-w-[calc(100vw-1rem)] bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden z-[999999]"
-                      style={{ maxHeight: '40vh' }}
+                      className="absolute right-0 top-12 w-64 max-w-[calc(100vw-1rem)] bg-white border rounded-xl shadow-2xl overflow-hidden z-[999999]"
+                      style={{ 
+                        maxHeight: '40vh',
+                        borderColor: '#E5E7EB'
+                      }}
                     >
                       {/* User Info Header */}
-                      <div className="px-3 py-3 bg-gradient-to-r from-teal-50 to-slate-50 border-b border-slate-200">
+                      <div 
+                        className="px-3 py-3 border-b"
+                        style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}
+                      >
                         <div className="flex items-center gap-2">
                           {getProfileImage()}
                           <div className="flex-1 min-w-0">
@@ -394,9 +441,10 @@ const MobileTopBar = ({
                         <div className="mt-3 flex gap-2 items-center">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
                             viewMode === 'seller' 
-                              ? 'bg-teal-100 text-teal-700' 
-                              : 'bg-blue-100 text-blue-700'
-                          }`}>
+                              ? 'bg-emerald-50 text-emerald-700' 
+                              : 'text-white'
+                          }`}
+                          style={viewMode === 'buyer' ? { backgroundColor: '#4668AB' } : {}}>
                             {viewMode === 'seller' ? (
                               <><Building2 className="w-3 h-3" />Space Owner View</>
                             ) : (
@@ -429,7 +477,7 @@ const MobileTopBar = ({
                               <Shield className="w-4 h-4" />
                               <span className="font-medium">Admin Dashboard</span>
                             </Link>
-                            <div className="border-t border-slate-200 my-1" />
+                            <div className="border-t my-1" style={{ borderColor: '#E5E7EB' }} />
                           </>
                         )}
                         
@@ -461,7 +509,7 @@ const MobileTopBar = ({
                           <span className="font-medium">Help & Support</span>
                         </Link>
 
-                        <div className="border-t border-slate-200 my-1" />
+                        <div className="border-t my-1" style={{ borderColor: '#E5E7EB' }} />
                         
                         <button 
                           onClick={handleSignOut}

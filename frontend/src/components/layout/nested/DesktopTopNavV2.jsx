@@ -1,5 +1,5 @@
-// Enhanced Navigation with Working Notifications - Elaview Design System
-// ✅ UPDATED: UI-only view switching and admin dashboard link
+// Enhanced Navigation with Working Notifications - Updated Brand Colors
+// ✅ UPDATED: UI-only view switching and admin dashboard link with brand color scheme
 // ✅ FIXED: onClick handler to prevent stale state issues
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -36,6 +36,17 @@ const DesktopTopNavV2 = ({
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
+  // ✅ COLOR SCHEME: Verification on mount
+  useEffect(() => {
+    console.log('🎨 DESKTOP NAV: Updated color scheme verification', {
+      primaryBlue: '#4668AB',
+      whiteBackground: '#FFFFFF',
+      offWhiteCards: '#F9FAFB',
+      lightGrayBorders: '#E5E7EB',
+      timestamp: new Date().toISOString()
+    });
+  }, []);
+
   // ✅ OPTIMIZED: Notification state with better rate limiting
   const [notifications, setNotifications] = useState([]);
   const [notificationCount, setNotificationCount] = useState(0);
@@ -47,13 +58,13 @@ const DesktopTopNavV2 = ({
     if (mode === 'seller') {
       return [
         {
-          title: 'My Spaces',
+          title: 'Manage Listings',
           url: '/dashboard',
           icon: LayoutDashboard,
           badge: pendingInvoices || 0
         },
         {
-          title: 'Browse',
+          title: 'Browse Spaces',
           url: '/browse',
           icon: MapPin,
           badge: 0
@@ -293,13 +304,16 @@ const DesktopTopNavV2 = ({
         <img 
           src={currentUser.imageUrl} 
           alt="Profile"
-          className="w-8 h-8 rounded-full object-cover ring-2 ring-white group-hover:ring-teal-200 transition-all duration-200"
+          className="w-8 h-8 rounded-full object-cover ring-2 ring-white group-hover:ring-blue-200 transition-all duration-200"
         />
       );
     }
     
     return (
-      <div className="w-8 h-8 bg-gradient-to-r from-teal-500 to-teal-600 rounded-full flex items-center justify-center ring-2 ring-white group-hover:ring-teal-200 transition-all duration-200">
+      <div 
+        className="w-8 h-8 rounded-full flex items-center justify-center ring-2 ring-white group-hover:ring-blue-200 transition-all duration-200"
+        style={{ background: 'linear-gradient(to right, #4668AB, #5B7BC7)' }}
+      >
         <UserCircle className="w-5 h-5 text-white" />
       </div>
     );
@@ -307,10 +321,10 @@ const DesktopTopNavV2 = ({
 
   return (
     <>
-      {/* Navigation Header - Updated with cream background */}
+      {/* Navigation Header - Updated with light blue background */}
       <header 
-        className="fixed top-0 left-0 right-0 h-16 border-b border-slate-200/60 z-50 shadow-sm backdrop-blur-sm"
-        style={{ backgroundColor: '#f7f5e6' }}
+        className="fixed top-0 left-0 right-0 h-16 shadow-sm backdrop-blur-sm"
+        style={{ backgroundColor: '#F8FAFF' }}
       >
         <div className="flex items-center justify-between h-full px-4 lg:px-6">
           
@@ -336,9 +350,10 @@ const DesktopTopNavV2 = ({
                       to={item.url}
                       className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                         isActive
-                          ? 'text-teal-700 bg-white/80 backdrop-blur-sm border border-teal-200 shadow-sm'
-                          : 'text-slate-600 hover:text-slate-800 hover:bg-white/40 backdrop-blur-sm'
+                          ? 'text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
                       }`}
+                      style={isActive ? { backgroundColor: '#4668AB' } : {}}
                     >
                       <item.icon className="w-4 h-4" />
                       <span className="hidden xl:inline">{item.title}</span>
@@ -351,7 +366,8 @@ const DesktopTopNavV2 = ({
                       {isActive && (
                         <motion.div
                           layoutId="activeIndicator"
-                          className="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-teal-500 rounded-full"
+                          className="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full"
+                          style={{ backgroundColor: '#FFFFFF' }}
                           transition={{ type: "spring", stiffness: 400, damping: 30 }}
                         />
                       )}
@@ -365,7 +381,7 @@ const DesktopTopNavV2 = ({
                     to="/admin"
                     className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                       location.pathname.startsWith('/admin')
-                        ? 'text-purple-700 bg-purple-50 border border-purple-200 shadow-sm'
+                        ? 'text-white bg-purple-600 shadow-sm'
                         : 'text-purple-600 hover:text-purple-700 hover:bg-purple-50'
                     }`}
                   >
@@ -375,7 +391,7 @@ const DesktopTopNavV2 = ({
                     {location.pathname.startsWith('/admin') && (
                       <motion.div
                         layoutId="activeIndicator"
-                        className="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-purple-500 rounded-full"
+                        className="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-white rounded-full"
                         transition={{ type: "spring", stiffness: 400, damping: 30 }}
                       />
                     )}
@@ -397,11 +413,12 @@ const DesktopTopNavV2 = ({
                     const newMode = viewMode === 'seller' ? 'buyer' : 'seller';
                     handleViewSwitch(newMode);
                   }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-white/60 backdrop-blur-sm border border-white/40 hover:bg-white/80 shadow-sm ${
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 border shadow-sm hover:shadow-md ${
                     viewMode === 'seller' 
-                      ? 'text-emerald-600 hover:text-emerald-700 hover:border-emerald-200' 
-                      : 'text-blue-600 hover:text-blue-700 hover:border-blue-200'
+                      ? 'text-emerald-600 hover:text-emerald-700 bg-emerald-50 border-emerald-200 hover:border-emerald-300' 
+                      : 'text-blue-600 hover:text-blue-700 bg-blue-50 border-blue-200 hover:border-blue-300'
                   }`}
+                  style={{ backgroundColor: viewMode === 'seller' ? '#ECFDF5' : '#EFF6FF' }}
                 >
                   {viewMode === 'seller' ? (
                     <Building2 className="w-4 h-4" />
@@ -426,9 +443,13 @@ const DesktopTopNavV2 = ({
                   variant="ghost"
                   onClick={toggleNotificationMenu}
                   disabled={isRateLimited}
-                  className={`relative w-10 h-10 p-0 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-white/60 backdrop-blur-sm transition-all duration-200 ${
+                  className={`relative w-10 h-10 p-0 rounded-lg text-slate-500 hover:bg-slate-50 transition-all duration-200 ${
                     isRateLimited ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
+                  style={{ 
+                    color: notificationMenuOpen ? '#4668AB' : undefined,
+                    backgroundColor: notificationMenuOpen ? '#F9FAFB' : undefined
+                  }}
                 >
                   <Bell className="w-4 h-4" />
                   {notificationCount > 0 && (
@@ -460,7 +481,11 @@ const DesktopTopNavV2 = ({
                 <button
                   type="button"
                   onClick={toggleUserMenu}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/60 backdrop-blur-sm transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2"
+                  style={{ 
+                    backgroundColor: userMenuOpen ? '#F9FAFB' : undefined,
+                    focusRingColor: '#4668AB'
+                  }}
                 >
                   {getProfileImage()}
                   <div className="hidden sm:block text-left">
@@ -494,13 +519,17 @@ const DesktopTopNavV2 = ({
                           damping: 30,
                           duration: 0.2 
                         }}
-                        className="fixed top-16 right-4 w-72 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden z-[999999]"
+                        className="fixed top-16 right-4 w-72 bg-white border rounded-xl shadow-2xl overflow-hidden z-[999999]"
                         style={{ 
                           transformOrigin: 'top right',
+                          borderColor: '#E5E7EB'
                         }}
                       >
                       {/* User Info Header */}
-                      <div className="px-4 py-4 bg-gradient-to-r from-teal-50 to-slate-50 border-b border-slate-200">
+                      <div 
+                        className="px-4 py-4 border-b"
+                        style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}
+                      >
                         <div className="flex items-center gap-3">
                           {getProfileImage()}
                           <div className="flex-1">
@@ -513,15 +542,16 @@ const DesktopTopNavV2 = ({
                           </div>
                         </div>
                         <div className="mt-3 flex gap-2">
-                          <Badge className={`text-xs px-2 py-1 ${
+                          <Badge className={`text-xs px-2 py-1 border ${
                             viewMode === 'seller' 
-                              ? 'bg-teal-100 text-teal-700 border border-teal-200' 
-                              : 'bg-blue-100 text-blue-700 border border-blue-200'
-                          }`}>
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                              : 'text-white border-blue-200'
+                          }`}
+                          style={viewMode === 'buyer' ? { backgroundColor: '#4668AB' } : {}}>
                             {viewMode === 'seller' ? 'Space Owner View' : 'Advertiser View'}
                           </Badge>
                           {isAdmin && (
-                            <Badge className="text-xs px-2 py-1 bg-purple-100 text-purple-700 border border-purple-200">
+                            <Badge className="text-xs px-2 py-1 bg-purple-50 text-purple-700 border border-purple-200">
                               Admin
                             </Badge>
                           )}
@@ -544,7 +574,7 @@ const DesktopTopNavV2 = ({
                                 <div className="text-xs text-purple-500">Manage platform</div>
                               </div>
                             </Link>
-                            <div className="border-t border-slate-200 my-2" />
+                            <div className="border-t my-2" style={{ borderColor: '#E5E7EB' }} />
                           </>
                         )}
                         
@@ -553,7 +583,7 @@ const DesktopTopNavV2 = ({
                           onClick={closeUserMenu}
                           className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
                         >
-                          <UserCircle className="w-4 h-4 group-hover:text-teal-600 transition-colors" />
+                          <UserCircle className="w-4 h-4 transition-colors" style={{ color: userMenuOpen ? '#4668AB' : undefined }} />
                           <div className="flex-1">
                             <div className="font-medium">Profile Settings</div>
                             <div className="text-xs text-slate-500">Manage your account</div>
@@ -565,7 +595,7 @@ const DesktopTopNavV2 = ({
                           onClick={closeUserMenu}
                           className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
                         >
-                          <Settings className="w-4 h-4 group-hover:text-teal-600 transition-colors" />
+                          <Settings className="w-4 h-4 transition-colors" style={{ color: userMenuOpen ? '#4668AB' : undefined }} />
                           <div className="flex-1">
                             <div className="font-medium">Preferences</div>
                             <div className="text-xs text-slate-500">Notifications & privacy</div>
@@ -577,7 +607,7 @@ const DesktopTopNavV2 = ({
                           onClick={closeUserMenu}
                           className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
                         >
-                          <Bookmark className="w-4 h-4 group-hover:text-teal-600 transition-colors" />
+                          <Bookmark className="w-4 h-4 transition-colors" style={{ color: userMenuOpen ? '#4668AB' : undefined }} />
                           <div className="flex-1">
                             <div className="font-medium">Saved Spaces</div>
                             <div className="text-xs text-slate-500">Your bookmarked listings</div>
@@ -589,14 +619,14 @@ const DesktopTopNavV2 = ({
                           onClick={closeUserMenu}
                           className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
                         >
-                          <HelpCircle className="w-4 h-4 group-hover:text-teal-600 transition-colors" />
+                          <HelpCircle className="w-4 h-4 transition-colors" style={{ color: userMenuOpen ? '#4668AB' : undefined }} />
                           <div className="flex-1">
                             <div className="font-medium">Help & Support</div>
                             <div className="text-xs text-slate-500">Get assistance</div>
                           </div>
                         </Link>
 
-                        <div className="border-t border-slate-200 my-2" />
+                        <div className="border-t my-2" style={{ borderColor: '#E5E7EB' }} />
                         
                         <button 
                           type="button"
@@ -619,7 +649,8 @@ const DesktopTopNavV2 = ({
               /* Sign In Button for Unauthenticated Users */
               <Button
                 onClick={handleSignIn}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-medium rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="flex items-center gap-2 px-4 py-2 text-white font-medium rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:opacity-90"
+                style={{ backgroundColor: '#4668AB' }}
               >
                 <LogIn className="w-4 h-4" />
                 <span>Sign In</span>

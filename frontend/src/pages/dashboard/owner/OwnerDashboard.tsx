@@ -1,11 +1,12 @@
-// Space Owner Dashboard - MVP Version with Real Data - MOBILE RESPONSIVE
+// Space Owner Dashboard - MVP Version with Real Data - MOBILE RESPONSIVE - 50/50 LAYOUT
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
+import { useNavigate, useSearchParams } from 'react-router-dom'; // ✅ ADDED: Navigation hooks
 import {
   Plus, Building2, Calendar, Package, Camera,
   DollarSign, Clock, CheckCircle, AlertCircle,
   Eye, Upload, ChevronRight, MapPin, FileText,
-  Download, Truck, Navigation, Star
+  Download, Truck, Navigation, Star, TrendingUp
 } from 'lucide-react';
 
 // ✅ FIXED: Import real apiClient instead of mock
@@ -13,8 +14,11 @@ import apiClient from '../../../api/apiClient.js';
 
 export default function SpaceOwnerDashboardMVP() {
   const { user, isLoaded: userLoaded } = useUser();
+  const navigate = useNavigate(); // ✅ ADDED: Navigation hook
+  const [searchParams] = useSearchParams(); // ✅ ADDED: URL params hook
   const [activeTab, setActiveTab] = useState('bookings');
   const [expandedBooking, setExpandedBooking] = useState(null);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false); // ✅ ADDED: Success message state
   
   // Real data states
   const [stats, setStats] = useState({
@@ -29,12 +33,57 @@ export default function SpaceOwnerDashboardMVP() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // ✅ ADDED: Handle success message from URL params
+  useEffect(() => {
+    const created = searchParams.get('created');
+    const tab = searchParams.get('tab');
+    
+    if (created === 'true') {
+      setShowSuccessMessage(true);
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 5000);
+      
+      // Clear URL params
+      navigate('/dashboard', { replace: true });
+    }
+    
+    if (tab === 'listings') {
+      setActiveTab('listings');
+    }
+  }, [searchParams, navigate]);
+
   // ✅ MOBILE: Add console log for mobile debugging
   useEffect(() => {
     console.log('📱 SPACE OWNER DASHBOARD: Mobile viewport check', {
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
       isMobile: window.innerWidth < 768
+    });
+  }, []);
+
+  // ✅ COLOR SCHEME: Verification on mount
+  useEffect(() => {
+    console.log('🎨 SPACE OWNER DASHBOARD: Updated color scheme verification', {
+      primaryBlue: '#4668AB',
+      whiteBackground: '#FFFFFF',
+      offWhiteCards: '#F9FAFB',
+      lightGrayBorders: '#E5E7EB',
+      timestamp: new Date().toISOString()
+    });
+  }, []);
+
+  // ✅ Layout restructure verification
+  useEffect(() => {
+    console.log('✅ SPACE OWNER DASHBOARD: Layout restructure verification', {
+      newLayout: '50/50 split to match Advertiser Dashboard',
+      leftSectionTitles: ['Insights', 'Quick Actions'],
+      rightSectionTitle: 'Space Management', 
+      statsLayout: '2x2 grid in left column (was 2x4 across top)',
+      tabContent: 'Moved to right column with proper section title',
+      materialsSection: 'REMOVED per user request',
+      timestamp: new Date().toISOString()
     });
   }, []);
 
@@ -89,22 +138,41 @@ export default function SpaceOwnerDashboardMVP() {
     }
   };
 
+  // ✅ ADDED: Navigation handlers
+  const handleAddNewSpace = () => {
+    console.log('🚀 Navigating to create listing wizard');
+    navigate('/list-space');
+  };
+
+  const handleViewAnalytics = () => {
+    console.log('📊 Analytics feature coming soon');
+    // TODO: Implement analytics page
+  };
+
+  const handleAddSpace = () => {
+    console.log('🚀 Navigating to create listing wizard from listings tab');
+    navigate('/list-space');
+  };
+
   // Calculate derived stats
   const totalPendingRevenue = bookings
     .filter(b => b.status === 'pending_install')
     .reduce((sum, b) => sum + (b.totalAmount || 0), 0);
 
-  // Enhanced Stat Card Component with Elaview styling and mobile responsiveness
+  // Enhanced Stat Card Component with updated brand colors and mobile responsiveness
   const StatCard = ({ icon: Icon, value, label, color, subValue, trend }) => {
     const colorClasses = {
       green: 'bg-green-100 text-green-600',
       blue: 'bg-blue-100 text-blue-600', 
       yellow: 'bg-yellow-100 text-yellow-600',
-      teal: 'bg-teal-100 text-teal-600'
+      brand: 'bg-blue-100 text-blue-600' // Updated from teal to brand blue
     };
 
     return (
-      <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 border border-white/50 shadow-sm hover:shadow-md transition-all duration-200">
+      <div 
+        className="rounded-lg sm:rounded-xl p-3 sm:p-4 border shadow-sm hover:shadow-md transition-all duration-200"
+        style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}
+      >
         <div className="flex items-center justify-between mb-2 sm:mb-3">
           <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center ${colorClasses[color]}`}>
             <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -158,7 +226,10 @@ export default function SpaceOwnerDashboardMVP() {
     };
 
     return (
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200">
+      <div 
+        className="rounded-lg border shadow-sm hover:shadow-md transition-all duration-200"
+        style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' }}
+      >
         <div 
           className="p-3 sm:p-4 cursor-pointer"
           onClick={() => setExpandedBooking(isExpanded ? null : booking.id)}
@@ -207,7 +278,10 @@ export default function SpaceOwnerDashboardMVP() {
 
         {/* Expanded Details */}
         {isExpanded && (
-          <div className="border-t border-gray-200 p-3 sm:p-4 bg-gray-50">
+          <div 
+            className="border-t p-3 sm:p-4"
+            style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}
+          >
             <div className="space-y-4">
               {/* Material Details */}
               <div>
@@ -244,7 +318,8 @@ export default function SpaceOwnerDashboardMVP() {
                       href={booking.trackingUrl || '#'}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-700 font-medium break-all"
+                      className="hover:underline font-medium break-all"
+                      style={{ color: '#4668AB' }}
                     >
                       {booking.trackingNumber}
                     </a>
@@ -259,13 +334,16 @@ export default function SpaceOwnerDashboardMVP() {
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-2">
-                <button className="flex-1 bg-teal-600 text-white px-3 py-3 rounded-lg hover:bg-teal-700 text-sm inline-flex items-center justify-center transition-colors">
+                <button 
+                  className="flex-1 text-white px-3 py-3 rounded-lg hover:opacity-90 text-sm inline-flex items-center justify-center transition-opacity"
+                  style={{ backgroundColor: '#4668AB' }}
+                >
                   <Eye className="w-4 h-4 mr-1" />
-                  View Installation Guide
+                  View Details
                 </button>
                 <button className="flex-1 bg-gray-100 text-gray-700 px-3 py-3 rounded-lg hover:bg-gray-200 text-sm inline-flex items-center justify-center transition-colors">
                   <Camera className="w-4 h-4 mr-1" />
-                  Upload Installation Photo
+                  Contact Advertiser
                 </button>
               </div>
             </div>
@@ -280,7 +358,10 @@ export default function SpaceOwnerDashboardMVP() {
     const difficultyLabels = ['Ground Level', 'Easy Access', 'Moderate', 'Difficult', 'Professional Required'];
     
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-all duration-200">
+      <div 
+        className="rounded-lg border p-3 sm:p-4 hover:shadow-md transition-all duration-200"
+        style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' }}
+      >
         <div className="flex justify-between items-start mb-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -346,7 +427,10 @@ export default function SpaceOwnerDashboardMVP() {
           </div>
         </div>
         
-        <button className="mt-4 w-full text-teal-600 hover:text-teal-700 text-sm font-medium inline-flex items-center justify-center py-2">
+        <button 
+          className="mt-4 w-full text-sm font-medium inline-flex items-center justify-center py-2 hover:underline"
+          style={{ color: '#4668AB' }}
+        >
           Edit Listing
           <ChevronRight className="w-4 h-4 ml-1" />
         </button>
@@ -354,113 +438,19 @@ export default function SpaceOwnerDashboardMVP() {
     );
   };
 
-  // Installation Guide Component - Mobile Responsive
-  const InstallationGuide = ({ installation }) => {
-    return (
-      <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-        <h3 className="font-semibold text-gray-900 mb-4">DIY Installation Guide</h3>
-        
-        <div className="space-y-4">
-          {/* Installation Overview */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
-            <div className="flex items-start">
-              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-blue-900">Window Cling Installation</p>
-                <p className="text-sm text-blue-700 mt-1">
-                  Difficulty: Easy | Time: ~{installation?.estimatedTime || 30} minutes | 
-                  Tools Required: {installation?.requiredTools?.join(', ') || 'Basic tools'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Video Guide */}
-          <div>
-            <h4 className="font-medium text-gray-900 mb-2">Video Tutorial</h4>
-            <a 
-              href={installation?.instructionUrl || '#'}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block bg-gray-100 rounded-lg p-3 sm:p-4 hover:bg-gray-200 transition-colors"
-            >
-              <div className="flex items-center">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
-                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900">Watch Installation Video</p>
-                  <p className="text-sm text-gray-600">Step-by-step visual guide</p>
-                </div>
-              </div>
-            </a>
-          </div>
-
-          {/* Written Steps - Mobile Responsive */}
-          <div>
-            <h4 className="font-medium text-gray-900 mb-2">Installation Steps</h4>
-            <ol className="space-y-2 text-sm">
-              {[
-                "Clean the window surface thoroughly with glass cleaner",
-                "Measure and mark the placement area with tape", 
-                "Spray the window with application solution",
-                "Apply the cling starting from top, smoothing downward",
-                "Use squeegee to remove bubbles from center outward",
-                "Trim excess material with utility knife if needed"
-              ].map((step, index) => (
-                <li key={index} className="flex">
-                  <span className="font-medium text-teal-600 mr-2 flex-shrink-0">{index + 1}.</span>
-                  <span>{step}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-
-          {/* Photo Upload - Mobile Responsive */}
-          <div className="border-t pt-4">
-            <h4 className="font-medium text-gray-900 mb-2">Verify Installation</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div>
-                <p className="text-sm text-gray-600 mb-2">Before Photo</p>
-                <button className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-gray-400 transition-colors">
-                  <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">Upload Photo</p>
-                </button>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-2">After Photo (Required)</p>
-                <button className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-gray-400 transition-colors">
-                  <Camera className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">Take Photo</p>
-                </button>
-              </div>
-            </div>
-            <button 
-              onClick={() => {
-                console.log('🔧 Marking installation complete for:', installation?.id || 'NO_ID');
-                // Call API to update installation status
-              }}
-              className="mt-4 w-full bg-teal-600 text-white py-3 rounded-lg hover:bg-teal-700 transition-colors"
-            >
-              Mark Installation Complete
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   // Empty State Component - Mobile Responsive
-  const EmptyState = ({ icon: Icon, title, description, actionText, actionLink }) => (
+  const EmptyState = ({ icon: Icon, title, description, actionText, onActionClick }) => (
     <div className="text-center py-8 sm:py-12">
       <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
         <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
       </div>
       <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">{title}</h3>
       <p className="text-gray-600 mb-4 sm:mb-6 max-w-sm mx-auto text-sm sm:text-base px-4">{description}</p>
-      <button className="bg-teal-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-teal-700 inline-flex items-center text-sm sm:text-base">
+      <button 
+        onClick={onActionClick}
+        className="text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:opacity-90 inline-flex items-center text-sm sm:text-base transition-opacity"
+        style={{ backgroundColor: '#4668AB' }}
+      >
         <Plus className="w-4 h-4 mr-2" />
         {actionText}
       </button>
@@ -486,9 +476,9 @@ export default function SpaceOwnerDashboardMVP() {
           <EmptyState
             icon={Calendar}
             title="No bookings yet"
-            description="Once advertisers book your spaces, you'll see them here with installation requirements."
+            description="Once advertisers book your spaces, you'll see them here with campaign details."
             actionText="View Your Listings"
-            actionLink="/my-listings"
+            onActionClick={() => setActiveTab('listings')}
           />
         );
         
@@ -497,7 +487,11 @@ export default function SpaceOwnerDashboardMVP() {
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
               <h3 className="font-semibold text-gray-900">Your Ad Spaces</h3>
-              <button className="bg-teal-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-teal-700 text-sm inline-flex items-center self-start sm:self-auto">
+              <button 
+                onClick={handleAddSpace}
+                className="text-white px-3 sm:px-4 py-2 rounded-lg hover:opacity-90 text-sm inline-flex items-center self-start sm:self-auto transition-opacity"
+                style={{ backgroundColor: '#4668AB' }}
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Space
               </button>
@@ -514,39 +508,8 @@ export default function SpaceOwnerDashboardMVP() {
             title="No spaces listed"
             description="Start earning by listing your available advertising spaces."
             actionText="List Your First Space"
-            actionLink="/list-space"
+            onActionClick={handleAddNewSpace}
           />
-        );
-        
-      case 'materials':
-        const pendingInstallation = installations.find(i => i.status === 'PENDING');
-        return pendingInstallation ? (
-          <InstallationGuide installation={pendingInstallation} />
-        ) : (
-          <div className="space-y-6">
-            <h3 className="font-semibold text-gray-900">Material Orders & Installation</h3>
-            
-            {/* No Pending Installations */}
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 sm:p-6 text-center">
-              <CheckCircle className="w-8 h-8 sm:w-12 sm:h-12 text-green-600 mx-auto mb-3" />
-              <h4 className="font-medium text-gray-900 mb-2">All Installations Complete!</h4>
-              <p className="text-sm text-gray-600">
-                You're all caught up. New installation tasks will appear here when materials are delivered.
-              </p>
-            </div>
-            
-            {/* General Tips */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-2">Installation Best Practices</h4>
-              <ul className="space-y-1 text-sm text-gray-700">
-                <li>• Always clean surfaces thoroughly before installation</li>
-                <li>• Check weather conditions - avoid installing in rain or extreme temperatures</li>
-                <li>• Take clear before/after photos for verification</li>
-                <li>• Complete installations 2 days before campaign start date</li>
-                <li>• Keep installation tools ready: squeegee, utility knife, measuring tape</li>
-              </ul>
-            </div>
-          </div>
         );
         
       default:
@@ -559,10 +522,13 @@ export default function SpaceOwnerDashboardMVP() {
     return (
       <div 
         className="min-h-screen flex items-center justify-center px-4"
-        style={{ backgroundColor: '#f7f5e6' }}
+        style={{ backgroundColor: '#FFFFFF' }}
       >
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div 
+            className="w-16 h-16 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4"
+            style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
+          ></div>
           <p className="text-gray-600">Loading your dashboard...</p>
         </div>
       </div>
@@ -574,13 +540,14 @@ export default function SpaceOwnerDashboardMVP() {
     return (
       <div 
         className="min-h-screen flex items-center justify-center px-4"
-        style={{ backgroundColor: '#f7f5e6' }}
+        style={{ backgroundColor: '#FFFFFF' }}
       >
         <div className="text-center">
           <p className="text-red-600 mb-4">{error}</p>
           <button 
             onClick={fetchDashboardData}
-            className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700"
+            className="px-4 py-2 rounded-lg text-white hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: '#4668AB' }}
           >
             Retry
           </button>
@@ -592,8 +559,29 @@ export default function SpaceOwnerDashboardMVP() {
   return (
     <div 
       className="min-h-full w-full overflow-hidden"
-      style={{ backgroundColor: '#f7f5e6' }}
+      style={{ backgroundColor: '#FFFFFF' }}
     >
+      {/* ✅ ADDED: Success Message */}
+      {showSuccessMessage && (
+        <div className="fixed top-4 right-4 z-50 max-w-sm">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 shadow-lg">
+            <div className="flex items-center">
+              <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0" />
+              <div>
+                <p className="text-green-800 font-medium text-sm">Listing Created Successfully!</p>
+                <p className="text-green-700 text-xs mt-1">Your property and spaces are under review.</p>
+              </div>
+              <button 
+                onClick={() => setShowSuccessMessage(false)}
+                className="ml-3 text-green-400 hover:text-green-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ✅ MOBILE RESPONSIVE: Container with proper spacing */}
       <div className="w-full h-full">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
@@ -601,78 +589,206 @@ export default function SpaceOwnerDashboardMVP() {
           {/* ✅ MOBILE: Header with responsive spacing */}
           <div className="mb-4 sm:mb-6">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Space Owner Dashboard</h1>
-            <p className="text-gray-600 text-sm sm:text-base">Manage your ad spaces and installations</p>
           </div>
 
-          {/* ✅ MOBILE: Stats Grid with responsive columns */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
-            <StatCard 
-              icon={DollarSign} 
-              value={stats.totalRevenue} 
-              label="Total Revenue"
-              color="green"
-              subValue="This month"
-              trend={12.5}
-            />
-            <StatCard 
-              icon={Building2} 
-              value={stats.activeListings} 
-              label="Active Spaces"
-              color="blue"
-            />
-            <StatCard 
-              icon={Package} 
-              value={stats.pendingInstalls} 
-              label="Pending Installs"
-              color="yellow"
-            />
-            <StatCard 
-              icon={CheckCircle} 
-              value={stats.completedBookings} 
-              label="Completed"
-              color="teal"
-            />
-          </div>
+          {/* ✅ MAIN LAYOUT: 50/50 split to match Advertiser Dashboard */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* ✅ LEFT SECTION - Key Stats & Quick Actions */}
+            <div className="space-y-6">
+              
+              {/* Key Stats Section */}
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Insights</h2>
+                <div className="grid grid-cols-2 gap-3">
+                  <StatCard 
+                    icon={DollarSign} 
+                    value={stats.totalRevenue} 
+                    label="Total Revenue"
+                    color="green"
+                    subValue="This month"
+                    trend={12.5}
+                  />
+                  <StatCard 
+                    icon={Building2} 
+                    value={stats.activeListings} 
+                    label="Active Spaces"
+                    color="blue"
+                  />
+                  <StatCard 
+                    icon={Calendar} 
+                    value={stats.completedBookings} 
+                    label="Total Bookings"
+                    color="brand"
+                  />
+                  <StatCard 
+                    icon={CheckCircle} 
+                    value={stats.completedBookings} 
+                    label="Completed"
+                    color="green"
+                  />
+                </div>
+              </div>
 
-          {/* ✅ MOBILE: Main Content with responsive glass morphism */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg border border-white/50">
-            {/* ✅ MOBILE: Tabs with responsive layout */}
-            <div className="border-b border-gray-200">
-              <nav className="flex px-3 sm:px-6 overflow-x-auto scrollbar-hide">
-                {[
-                  { id: 'bookings', label: 'Bookings', icon: Calendar },
-                  { id: 'listings', label: 'My Spaces', icon: Building2 },
-                  { id: 'materials', label: 'Materials & Install', icon: Package }
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex-shrink-0 py-3 sm:py-4 px-1 border-b-2 font-medium text-sm transition-colors inline-flex items-center whitespace-nowrap mr-6 sm:mr-8 ${
-                      activeTab === tab.id
-                        ? 'border-teal-500 text-teal-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
+              {/* Quick Actions Section */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+                </div>
+                <div className="grid grid-cols-1 gap-3">
+                  
+                  {/* ✅ UPDATED: Add New Space Card with navigation */}
+                  <div 
+                    onClick={handleAddNewSpace}
+                    className="rounded-lg p-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
+                    style={{ 
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E5E7EB',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
+                    }}
                   >
-                    <tab.icon className="w-4 h-4 mr-2" />
-                    <span className="hidden sm:inline">{tab.label}</span>
-                    <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
-                    {tab.id === 'materials' && stats.pendingInstalls > 0 && (
-                      <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">
-                        {stats.pendingInstalls}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </nav>
+                    <div className="flex items-center">
+                      <div 
+                        className="w-10 h-10 rounded-lg flex items-center justify-center mr-3"
+                        style={{ backgroundColor: '#EFF6FF' }}
+                      >
+                        <Plus className="w-5 h-5" style={{ color: '#4668AB' }} />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900">Add New Space</h3>
+                        <p className="text-sm text-gray-600">List a new advertising location</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </div>
+                  </div>
+
+                  {/* Revenue Summary Card */}
+                  <div 
+                    className="rounded-lg p-4 transition-all duration-200"
+                    style={{ 
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E5E7EB',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-medium text-gray-900">This Month</h3>
+                      <TrendingUp className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-600">Earned</p>
+                        <p className="font-bold text-green-600">${stats.totalRevenue}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600">Pending</p>
+                        <p className="font-bold text-yellow-600">${totalPendingRevenue.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ✅ UPDATED: View Analytics Card with navigation */}
+                  <div 
+                    onClick={handleViewAnalytics}
+                    className="rounded-lg p-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
+                    style={{ 
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E5E7EB',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
+                    }}
+                  >
+                    <div className="flex items-center">
+                      <div 
+                        className="w-10 h-10 rounded-lg flex items-center justify-center mr-3"
+                        style={{ backgroundColor: '#EFF6FF' }}
+                      >
+                        <TrendingUp className="w-5 h-5" style={{ color: '#4668AB' }} />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900">View Analytics</h3>
+                        <p className="text-sm text-gray-600">Track your space performance</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </div>
+                  </div>
+
+                </div>
+              </div>
             </div>
 
-            {/* ✅ MOBILE: Tab Content with responsive padding */}
-            <div className="p-3 sm:p-6">
-              {renderContent()}
+            {/* ✅ RIGHT SECTION - Space Management */}
+            <div>
+              {/* Add section title to match left column */}
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Space Management</h2>
+              
+              <div 
+                className="rounded-lg shadow-md transition-all duration-200"
+                style={{ 
+                  backgroundColor: '#F9FAFB',
+                  border: '1px solid #E5E7EB'
+                }}
+              >
+                {/* ✅ TABS: Only Bookings and Listings */}
+                <div className="border-b border-gray-200">
+                  <nav className="flex px-3 sm:px-6 overflow-x-auto scrollbar-hide">
+                    {[
+                      { id: 'bookings', label: 'Bookings', icon: Calendar },
+                      { id: 'listings', label: 'My Spaces', icon: Building2 }
+                    ].map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`flex-shrink-0 py-3 sm:py-4 px-1 border-b-2 font-medium text-sm transition-colors inline-flex items-center whitespace-nowrap mr-6 sm:mr-8 ${
+                          activeTab === tab.id
+                            ? 'text-white'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`}
+                        style={activeTab === tab.id ? { 
+                          borderBottomColor: '#4668AB',
+                          backgroundColor: '#4668AB'
+                        } : {}}
+                      >
+                        <tab.icon className="w-4 h-4 mr-2" />
+                        <span className="hidden sm:inline">{tab.label}</span>
+                        <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+
+                {/* ✅ MOBILE: Tab Content with responsive padding */}
+                <div className="p-3 sm:p-6">
+                  {renderContent()}
+                </div>
+              </div>
             </div>
+
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+// ✅ Add verification function for testing
+if (typeof window !== 'undefined') {
+  window.verifySpaceOwnerColors = () => {
+    const whiteElements = document.querySelectorAll('[style*="FFFFFF"]');
+    const offWhiteElements = document.querySelectorAll('[style*="F9FAFB"]');
+    const blueElements = document.querySelectorAll('[style*="4668AB"]');
+    
+    console.log('🔍 SPACE OWNER COLOR VERIFICATION:', {
+      whiteElementsFound: whiteElements.length,
+      offWhiteElementsFound: offWhiteElements.length,
+      blueElementsFound: blueElements.length,
+      colorSchemeComplete: whiteElements.length > 0 && offWhiteElements.length > 0 && blueElements.length > 0
+    });
+    
+    return {
+      status: whiteElements.length > 0 && blueElements.length > 0 ? 'SUCCESS' : 'NEEDS_UPDATE',
+      whiteElements: whiteElements.length,
+      offWhiteElements: offWhiteElements.length,
+      blueElements: blueElements.length
+    };
+  };
 }
