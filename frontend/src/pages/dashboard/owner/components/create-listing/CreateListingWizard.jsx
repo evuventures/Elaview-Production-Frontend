@@ -1,5 +1,5 @@
 // src/pages/dashboard/owner/components/create-listing/CreateListingWizard.jsx
-// ✅ FIXED: Google Places zipCode extraction + better error handling
+// ✅ FIXED: Google Places zipCode extraction + centralized Google Maps loading
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import apiClient from '../../../../../api/apiClient.js';
+import googleMapsLoader from '../../../../../services/googleMapsLoader.js'; // ✅ NEW: Use centralized loader
 
 export default function CreateListingWizard() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export default function CreateListingWizard() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [mapsLoaded, setMapsLoaded] = useState(false); // ✅ NEW: Track maps loading state
 
   // Property data
   const [propertyData, setPropertyData] = useState({
@@ -25,7 +27,7 @@ export default function CreateListingWizard() {
     city: '',
     state: '',
     country: '',
-    zipCode: '', // ✅ FIXED: Added zipCode to initial state
+    zipCode: '',
     latitude: null,
     longitude: null,
     propertyType: 'COMMERCIAL',
@@ -47,48 +49,83 @@ export default function CreateListingWizard() {
   const addressInputRef = useRef(null);
   const autocompleteRef = useRef(null);
 
-  // ✅ Initialize Google Places Autocomplete
+  // ✅ FIXED: Initialize Google Places Autocomplete with centralized loader
   useEffect(() => {
-    const initAutocomplete = async () => {
-      if (!window.google?.maps?.places || !addressInputRef.current) return;
+    let mounted = true;
 
+    const initAutocomplete = async () => {
       try {
+        console.log('🗺️ Initializing Google Places Autocomplete...');
+        
+        // Wait for Google Maps to be loaded
+        await googleMapsLoader.waitForLoad();
+        
+        if (!mounted) return;
+        
+        // Check if the input element exists
+        if (!addressInputRef.current) {
+          console.log('⏳ Address input not ready yet');
+          return;
+        }
+
+        // Check if autocomplete is already initialized
+        if (autocompleteRef.current) {
+          console.log('✅ Autocomplete already initialized');
+          return;
+        }
+
+        console.log('🎯 Creating Autocomplete instance...');
+        
+        // Create the autocomplete instance
         autocompleteRef.current = new window.google.maps.places.Autocomplete(
           addressInputRef.current,
           {
-            types: ['address', 'establishment'],
-            fields: ['formatted_address', 'address_components', 'geometry', 'name']
+            types: ['address'],
+            fields: ['formatted_address', 'address_components', 'geometry', 'name', 'place_id']
           }
         );
 
+        // Add the place changed listener
         autocompleteRef.current.addListener('place_changed', handlePlaceSelect);
+        
+        console.log('✅ Google Places Autocomplete initialized successfully');
+        setMapsLoaded(true);
+
       } catch (error) {
-        console.error('Error initializing autocomplete:', error);
+        console.error('❌ Error initializing autocomplete:', error);
+        setError('Failed to initialize address autocomplete. Please refresh and try again.');
       }
     };
 
-    if (window.google?.maps?.places) {
-      initAutocomplete();
-    } else {
-      // Load Google Places if not already loaded
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places&callback=initGooglePlaces`;
-      script.async = true;
-      
-      window.initGooglePlaces = () => {
-        initAutocomplete();
-        delete window.initGooglePlaces;
-      };
-      
-      document.head.appendChild(script);
-    }
+    // Initialize when component mounts
+    initAutocomplete();
 
+    // Cleanup function
     return () => {
-      if (autocompleteRef.current) {
-        window.google?.maps?.event?.clearInstanceListeners(autocompleteRef.current);
+      mounted = false;
+      if (autocompleteRef.current && window.google?.maps?.event) {
+        window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
       }
     };
-  }, []);
+  }, []); // Run once on mount
+
+  // ✅ Re-initialize if the input ref changes (e.g., after re-render)
+  useEffect(() => {
+    if (mapsLoaded && addressInputRef.current && !autocompleteRef.current) {
+      console.log('🔄 Re-initializing autocomplete after input change');
+      
+      if (window.google?.maps?.places) {
+        autocompleteRef.current = new window.google.maps.places.Autocomplete(
+          addressInputRef.current,
+          {
+            types: ['address'],
+            fields: ['formatted_address', 'address_components', 'geometry', 'name', 'place_id']
+          }
+        );
+        autocompleteRef.current.addListener('place_changed', handlePlaceSelect);
+      }
+    }
+  }, [mapsLoaded, currentStep]); // Re-check when step changes
 
   // ✅ Simple currency detection based on country
   const detectCurrency = (countryCode) => {
@@ -100,46 +137,114 @@ export default function CreateListingWizard() {
       'FR': 'EUR',
       'ES': 'EUR',
       'IT': 'EUR',
-      'NL': 'EUR'
+      'NL': 'EUR',
+      'CA': 'CAD',
+      'AU': 'AUD',
+      'JP': 'JPY',
+      'CN': 'CNY',
+      'IN': 'INR',
+      'BR': 'BRL',
+      'MX': 'MXN'
     };
     return currencyMap[countryCode] || 'USD';
   };
 
-  // ✅ FIXED: Handle Google Places selection with zipCode extraction
+  // ✅ ENHANCED: Handle Google Places selection with better extraction
   const handlePlaceSelect = () => {
+    if (!autocompleteRef.current) {
+      console.log('❌ Autocomplete not initialized');
+      return;
+    }
+
     const place = autocompleteRef.current.getPlace();
-    if (!place || !place.geometry) return;
+    
+    if (!place || !place.geometry) {
+      console.log('❌ No place selected or no geometry');
+      setError('Please select a valid address from the dropdown suggestions');
+      return;
+    }
+
+    console.log('📍 Place selected:', place);
 
     const addressComponents = place.address_components || [];
-    let city = '', state = '', country = '', zipCode = '';
+    let streetNumber = '';
+    let route = '';
+    let city = '';
+    let state = '';
+    let country = '';
+    let zipCode = '';
 
-    console.log('🗺️ Google Places address components:', addressComponents);
+    console.log('🗺️ Parsing address components:', addressComponents);
 
+    // Parse each component
     addressComponents.forEach(component => {
       const types = component.types;
-      if (types.includes('locality')) {
+      
+      // Street number
+      if (types.includes('street_number')) {
+        streetNumber = component.long_name;
+      }
+      // Street name
+      else if (types.includes('route')) {
+        route = component.long_name;
+      }
+      // City
+      else if (types.includes('locality')) {
         city = component.long_name;
-      } else if (types.includes('administrative_area_level_1')) {
-        state = component.long_name;
-      } else if (types.includes('country')) {
+      }
+      // Backup city detection
+      else if (!city && types.includes('sublocality_level_1')) {
+        city = component.long_name;
+      }
+      else if (!city && types.includes('administrative_area_level_2')) {
+        city = component.long_name;
+      }
+      // State/Province
+      else if (types.includes('administrative_area_level_1')) {
+        state = component.short_name || component.long_name;
+      }
+      // Country
+      else if (types.includes('country')) {
         country = component.short_name;
-      } else if (types.includes('postal_code')) { // ✅ FIXED: Extract zipCode
+      }
+      // Postal code
+      else if (types.includes('postal_code')) {
         zipCode = component.long_name;
       }
     });
 
+    // Build the street address
+    const streetAddress = streetNumber && route 
+      ? `${streetNumber} ${route}`
+      : route || place.name || '';
+
+    // Use formatted address if we don't have a street address
+    const finalAddress = streetAddress || place.formatted_address || '';
+
     // Auto-detect currency based on country
     const currency = detectCurrency(country);
 
-    console.log('🗺️ Extracted location data:', { city, state, country, zipCode, currency });
+    console.log('✅ Extracted location data:', { 
+      address: finalAddress,
+      city, 
+      state, 
+      country, 
+      zipCode, 
+      currency,
+      coordinates: {
+        lat: place.geometry.location.lat(),
+        lng: place.geometry.location.lng()
+      }
+    });
 
+    // Update property data
     setPropertyData(prev => ({
       ...prev,
-      address: place.formatted_address,
+      address: finalAddress,
       city: city || prev.city,
       state: state || prev.state,
       country: country || prev.country,
-      zipCode: zipCode || prev.zipCode, // ✅ FIXED: Set zipCode
+      zipCode: zipCode || prev.zipCode,
       latitude: place.geometry.location.lat(),
       longitude: place.geometry.location.lng()
     }));
@@ -149,6 +254,28 @@ export default function CreateListingWizard() {
       ...space,
       currency: currency
     })));
+
+    // Clear any previous errors
+    setError('');
+  };
+
+  // ✅ Handle manual address input changes
+  const handleAddressChange = (e) => {
+    setPropertyData(prev => ({ ...prev, address: e.target.value }));
+    
+    // Clear location data if user is typing manually
+    // This ensures they select from dropdown for proper geocoding
+    if (!e.target.value) {
+      setPropertyData(prev => ({
+        ...prev,
+        city: '',
+        state: '',
+        country: '',
+        zipCode: '',
+        latitude: null,
+        longitude: null
+      }));
+    }
   };
 
   // ✅ Handle image upload with REAL API
@@ -236,14 +363,15 @@ export default function CreateListingWizard() {
         setError('Property address is required');
         return;
       }
+      if (!propertyData.latitude || !propertyData.longitude) {
+        setError('Please select a valid address from the dropdown suggestions to get location coordinates');
+        return;
+      }
       if (!propertyData.city.trim()) {
         setError('City is required - please select from address suggestions');
         return;
       }
-      if (!propertyData.zipCode.trim()) {
-        setError('ZIP code is required - please select a complete address from suggestions');
-        return;
-      }
+      // ZIP code is optional for some countries
       if (!propertyData.primary_image) {
         setError('Property image is required');
         return;
@@ -281,9 +409,9 @@ export default function CreateListingWizard() {
         title: propertyData.title,
         address: propertyData.address,
         city: propertyData.city,
-        state: propertyData.state,
+        state: propertyData.state || '',
         country: propertyData.country,
-        zipCode: propertyData.zipCode, // ✅ FIXED: Include zipCode
+        zipCode: propertyData.zipCode || '', // Optional
         latitude: propertyData.latitude,
         longitude: propertyData.longitude,
         propertyType: propertyData.propertyType,
@@ -321,7 +449,7 @@ export default function CreateListingWizard() {
       console.log('📋 Property payload to send:', JSON.stringify(propertyPayload, null, 2));
       
       // ✅ ENHANCED: Validate payload before sending
-      const requiredFields = ['title', 'address', 'city', 'zipCode'];
+      const requiredFields = ['title', 'address', 'city'];
       const missingFields = requiredFields.filter(field => !propertyPayload[field]);
       
       if (missingFields.length > 0) {
@@ -377,7 +505,20 @@ export default function CreateListingWizard() {
 
   // ✅ Helper functions
   const getCurrencySymbol = (currency) => {
-    return { USD: '$', ILS: '₪', EUR: '€', GBP: '£' }[currency] || '$';
+    const symbols = { 
+      USD: '$', 
+      ILS: '₪', 
+      EUR: '€', 
+      GBP: '£',
+      CAD: 'C$',
+      AUD: 'A$',
+      JPY: '¥',
+      CNY: '¥',
+      INR: '₹',
+      BRL: 'R$',
+      MXN: '$'
+    };
+    return symbols[currency] || '$';
   };
 
   const spaceTypeOptions = [
@@ -449,7 +590,7 @@ export default function CreateListingWizard() {
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
             <AlertCircle className="w-5 h-5 text-red-600 mr-3 flex-shrink-0 mt-0.5" />
             <div className="text-red-700 text-sm">
-              <div className="font-medium mb-1">Error creating listing:</div>
+              <div className="font-medium mb-1">Error:</div>
               <div className="whitespace-pre-line">{error}</div>
             </div>
           </div>
@@ -495,24 +636,37 @@ export default function CreateListingWizard() {
                         ref={addressInputRef}
                         type="text"
                         value={propertyData.address}
-                        onChange={(e) => setPropertyData(prev => ({ ...prev, address: e.target.value }))}
+                        onChange={handleAddressChange}
                         placeholder="Start typing address..."
                         className="w-full px-3 py-2 pl-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                       <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Start typing and select from suggestions for complete address
-                    </p>
+                    {!mapsLoaded && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        Loading address autocomplete...
+                      </p>
+                    )}
+                    {mapsLoaded && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Start typing and select from suggestions for complete address
+                      </p>
+                    )}
                     {/* ✅ ENHANCED: Show extracted location data */}
                     {(propertyData.city || propertyData.zipCode) && (
                       <div className="text-xs text-green-600 mt-1 flex items-center gap-2">
                         <Check className="w-3 h-3" />
                         <span>
                           {propertyData.city && `City: ${propertyData.city}`}
-                          {propertyData.city && propertyData.zipCode && ' • '}
-                          {propertyData.zipCode && `ZIP: ${propertyData.zipCode}`}
+                          {propertyData.city && propertyData.state && ` • State: ${propertyData.state}`}
+                          {propertyData.zipCode && ` • ZIP: ${propertyData.zipCode}`}
                         </span>
+                      </div>
+                    )}
+                    {/* Show coordinates for debugging */}
+                    {propertyData.latitude && propertyData.longitude && (
+                      <div className="text-xs text-slate-400 mt-1">
+                        📍 Coordinates: {propertyData.latitude.toFixed(6)}, {propertyData.longitude.toFixed(6)}
                       </div>
                     )}
                   </div>
@@ -735,7 +889,10 @@ export default function CreateListingWizard() {
                     <p className="text-sm text-slate-600">Address</p>
                     <p className="font-medium">{propertyData.address}</p>
                     <p className="text-xs text-slate-500 mt-1">
-                      {propertyData.city}, {propertyData.state} {propertyData.zipCode}
+                      {propertyData.city}
+                      {propertyData.state && `, ${propertyData.state}`}
+                      {propertyData.zipCode && ` ${propertyData.zipCode}`}
+                      {propertyData.country && `, ${propertyData.country}`}
                     </p>
                   </div>
                 </div>
