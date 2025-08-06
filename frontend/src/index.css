@@ -189,355 +189,361 @@
     display: none;
   }
 
-  /* Typography - Enhanced for mobile */
+  /* ✅ ADDED: Messages-specific mobile optimizations */
+  .messages-container {
+    @apply h-full max-h-screen flex overflow-hidden;
+  }
+  
+  .messages-sidebar {
+    @apply w-full md:w-[380px] lg:w-[420px] xl:w-[480px] md:block h-full;
+  }
+  
+  .messages-panel {
+    @apply md:flex-1 md:block h-full flex flex-col;
+  }
+  
+  .messages-header {
+    @apply flex-shrink-0 h-16 md:h-20;
+  }
+  
+  .messages-area {
+    @apply flex-1 min-h-0 overflow-hidden;
+  }
+  
+  .messages-input {
+    @apply flex-shrink-0;
+  }
+  
+  /* Mobile keyboard handling */
+  .mobile-input-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  @media (max-height: 500px) and (orientation: landscape) {
+    .mobile-input-safe {
+      padding-bottom: 1rem;
+    }
+  }
+  
+  /* Enhanced touch targets for messages */
+  .message-touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  .message-touch-target-lg {
+    @apply min-h-[48px] min-w-[48px];
+  }
+  
+  /* Message bubble optimizations */
+  .message-bubble {
+    @apply max-w-[85%] md:max-w-[70%] lg:max-w-[60%];
+  }
+  
+  .message-bubble-mobile {
+    @apply max-w-[90%];
+  }
+  
+  /* Conversation item optimizations */
+  .conversation-item {
+    @apply h-16 md:h-20 px-3 py-2 rounded-lg transition-colors duration-200;
+  }
+  
+  .conversation-item:hover {
+    @apply bg-slate-50;
+  }
+  
+  .conversation-item.selected {
+    @apply bg-teal-50 border-teal-200;
+  }
+
+  /* Typography */
   .heading-1 {
-    @apply text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight;
+    @apply text-3xl md:text-4xl font-bold text-slate-900;
   }
-  
+
   .heading-2 {
-    @apply text-xl sm:text-2xl font-semibold text-slate-800 tracking-tight;
+    @apply text-2xl md:text-3xl font-semibold text-slate-900;
   }
-  
+
   .heading-3 {
-    @apply text-lg sm:text-xl font-medium text-slate-700;
+    @apply text-xl md:text-2xl font-semibold text-slate-900;
   }
-  
+
   .body-large {
-    @apply text-base sm:text-lg text-slate-700 leading-relaxed;
+    @apply text-lg text-slate-700;
   }
-  
+
   .body-medium {
-    @apply text-sm sm:text-base text-slate-600 leading-relaxed;
+    @apply text-base text-slate-700;
   }
-  
+
   .body-small {
-    @apply text-xs sm:text-sm text-slate-500 leading-relaxed;
+    @apply text-sm text-slate-600;
   }
-  
+
   .label {
-    @apply text-xs sm:text-sm font-medium text-slate-700;
+    @apply text-sm font-medium text-slate-700;
   }
-  
+
   .caption {
     @apply text-xs text-slate-500;
   }
-  
-  /* ✅ UPDATED: Buttons - Enhanced for mobile touch targets with new brand colors */
+
+  /* Buttons */
   .btn-base {
-    @apply inline-flex items-center justify-center rounded-lg font-medium;
-    @apply transition-all duration-200;
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
-    @apply disabled:opacity-50 disabled:cursor-not-allowed;
-    /* ✅ MOBILE: Ensure minimum touch target */
-    min-height: var(--touch-target-min);
+    @apply inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
   }
-  
+
   .btn-primary {
-    @apply btn-base px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base text-white;
-    background-color: rgb(var(--color-primary));
-    @apply hover:shadow-lg hover:-translate-y-0.5;
-    @apply active:translate-y-0 active:shadow-md;
-    @apply focus:ring-2 focus:ring-offset-2;
+    @apply btn-base bg-teal-500 text-white hover:bg-teal-600 focus:ring-teal-500 shadow-sm;
   }
-  
+
   .btn-primary:hover {
-    background-color: rgb(var(--color-primary-600));
+    @apply shadow-md;
   }
-  
+
   .btn-primary:active {
-    background-color: rgb(var(--color-primary-700));
+    @apply transform scale-95;
   }
-  
+
   .btn-primary:focus {
-    box-shadow: 0 0 0 2px rgb(var(--color-primary) / 0.5);
+    @apply ring-2 ring-teal-500 ring-offset-2;
   }
-  
+
   .btn-secondary {
-    @apply btn-base px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base;
-    color: rgb(var(--color-gray-600));
-    border: 1px solid rgb(var(--color-light-gray));
-    background-color: rgb(var(--color-white));
-    @apply hover:bg-gray-50 hover:border-gray-400;
-    @apply focus:ring-2 focus:ring-offset-2;
+    @apply btn-base bg-slate-100 text-slate-700 hover:bg-slate-200 focus:ring-slate-500 border border-slate-300;
   }
-  
+
   .btn-secondary:focus {
-    box-shadow: 0 0 0 2px rgb(var(--color-primary) / 0.5);
+    @apply ring-2 ring-slate-500 ring-offset-2;
   }
-  
+
   .btn-outline {
-    @apply btn-base px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base;
-    @apply bg-transparent hover:text-white;
-    border: 2px solid rgb(var(--color-primary));
-    color: rgb(var(--color-primary));
-    @apply focus:ring-2 focus:ring-offset-2;
+    @apply btn-base border border-slate-300 text-slate-700 hover:bg-slate-50 focus:ring-slate-500;
   }
-  
+
   .btn-outline:hover {
-    background-color: rgb(var(--color-primary));
+    @apply bg-slate-50;
   }
-  
+
   .btn-outline:focus {
-    box-shadow: 0 0 0 2px rgb(var(--color-primary) / 0.5);
+    @apply ring-2 ring-slate-500 ring-offset-2;
   }
 
   .btn-ghost {
-    @apply btn-base px-3 sm:px-4 py-2 text-sm sm:text-base;
-    color: rgb(var(--color-gray-600));
-    @apply hover:text-gray-900;
-    background-color: transparent;
-    @apply hover:bg-gray-100;
-    @apply focus:ring-2 focus:ring-offset-2;
+    @apply btn-base text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:ring-slate-500;
   }
-  
+
   .btn-ghost:focus {
-    box-shadow: 0 0 0 2px rgb(var(--color-gray-300));
+    @apply ring-2 ring-slate-500 ring-offset-2;
   }
-  
+
   .btn-small {
-    @apply px-3 sm:px-4 py-2 text-xs sm:text-sm;
-    min-height: 40px; /* Slightly smaller but still touch-friendly */
+    @apply px-3 py-1.5 text-sm;
   }
-  
+
   .btn-large {
-    @apply px-6 sm:px-8 py-3.5 sm:py-4 text-base sm:text-lg;
-    min-height: var(--touch-target-large);
+    @apply px-6 py-3 text-lg;
   }
-  
-  /* ✅ UPDATED: Forms - Enhanced for mobile with new colors */
+
+  /* Forms */
   .form-group {
-    @apply space-y-1.5 sm:space-y-2;
+    @apply space-y-2;
   }
-  
+
   .form-label {
-    @apply label;
+    @apply block text-sm font-medium text-slate-700;
   }
-  
+
   .form-input {
-    @apply w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg;
-    border: 1px solid rgb(var(--color-light-gray));
-    background-color: rgb(var(--color-white));
-    @apply focus:outline-none;
-    @apply transition-all duration-200 placeholder:text-gray-400;
-    @apply text-sm sm:text-base;
-    /* ✅ MOBILE: Ensure minimum touch target */
-    min-height: var(--touch-target-min);
-    /* ✅ MOBILE: Prevent iOS zoom */
-    font-size: 16px;
+    @apply block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed;
   }
-  
+
   .form-input:focus {
-    background-color: rgb(var(--color-white));
-    border-color: rgb(var(--color-primary));
-    box-shadow: 0 0 0 2px rgb(var(--color-primary) / 0.2);
+    @apply ring-2 ring-teal-500 ring-offset-2;
   }
-  
+
   .form-select {
-    @apply form-input appearance-none;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 12px center;
-    background-repeat: no-repeat;
-    background-size: 16px 12px;
-    padding-right: 40px;
+    @apply block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed;
   }
-  
+
   .form-textarea {
     @apply form-input resize-none;
-    min-height: 120px;
   }
-  
+
   .form-error {
-    @apply text-xs sm:text-sm text-red-600 mt-1;
+    @apply text-sm text-red-600;
   }
-  
-  /* ✅ CORRECTED: Cards - Off-white background instead of pure white */
+
+  /* Cards */
   .card {
-    background-color: rgb(var(--color-off-white));
-    @apply rounded-lg sm:rounded-xl;
-    border: 1px solid rgb(var(--color-light-gray));
-    @apply transition-all duration-300;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+    @apply bg-white rounded-lg border border-slate-200 shadow-sm;
   }
-  
+
   .card-hover {
-    @apply card cursor-pointer;
-    @apply hover:shadow-lg hover:-translate-y-1;
+    @apply card hover:shadow-md transition-shadow duration-200;
   }
-  
+
   .card-compact {
-    @apply p-3 sm:p-4;
+    @apply p-4;
   }
-  
+
   .card-comfortable {
-    @apply p-4 sm:p-6;
+    @apply p-6;
   }
-  
+
   .card-spacious {
-    @apply p-6 sm:p-8;
+    @apply p-8;
   }
-  
-  /* ✅ UPDATED: Property Components - Enhanced for mobile with new colors */
+
+  /* Property Listings */
   .property-listing {
-    @apply card-hover card-comfortable space-y-3 sm:space-y-4;
+    @apply card-hover overflow-hidden;
   }
-  
+
   .property-image {
-    @apply w-full h-40 sm:h-48 rounded-lg object-cover;
-    @apply transition-transform duration-300;
+    @apply w-full h-48 object-cover transition-transform duration-300;
   }
-  
+
   .property-listing:hover .property-image {
-    transform: scale(1.05);
+    @apply transform scale-105;
   }
-  
+
   .property-title {
-    @apply text-base sm:text-lg font-semibold text-slate-900;
+    @apply text-lg font-semibold text-slate-900;
   }
-  
+
   .property-location {
-    @apply text-xs sm:text-sm text-slate-600 flex items-center gap-1;
+    @apply text-sm text-slate-600;
   }
-  
+
   .property-price {
-    color: rgb(var(--color-primary));
-    @apply text-lg sm:text-xl font-bold;
+    @apply text-xl font-bold text-teal-600;
   }
-  
+
   .property-status {
-    @apply inline-flex px-2 py-1 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
-  
+
   .property-status.active {
     @apply bg-green-100 text-green-800;
   }
-  
+
   .property-status.pending {
     @apply bg-yellow-100 text-yellow-800;
   }
-  
+
   .property-status.draft {
-    @apply bg-gray-100 text-gray-800;
+    @apply bg-slate-100 text-slate-800;
   }
-  
+
   .property-status.rejected {
     @apply bg-red-100 text-red-800;
   }
-  
-  /* ✅ CORRECTED: Campaign Components - Off-white gradient */
+
+  /* Campaign Cards */
   .campaign-card {
-    @apply card card-comfortable space-y-3 sm:space-y-4;
-    background: linear-gradient(145deg, rgb(var(--color-off-white)), rgb(var(--color-gray-100)));
+    @apply card-hover;
   }
-  
+
   .campaign-header {
-    @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0;
+    @apply flex items-center justify-between mb-4;
   }
-  
+
   .campaign-title {
-    @apply text-base sm:text-lg font-semibold text-slate-900;
+    @apply text-lg font-semibold text-slate-900;
   }
-  
+
   .campaign-status {
-    @apply inline-flex px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium self-start sm:self-auto;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
-  
+
   .campaign-status.active {
     @apply bg-green-100 text-green-800;
   }
-  
+
   .campaign-status.paused {
     @apply bg-yellow-100 text-yellow-800;
   }
-  
+
   .campaign-status.draft {
-    @apply bg-gray-100 text-gray-800;
+    @apply bg-slate-100 text-slate-800;
   }
-  
+
   .campaign-status.completed {
-    background-color: rgb(var(--color-primary-100));
-    color: rgb(var(--color-primary-700));
+    @apply bg-blue-100 text-blue-800;
   }
-  
+
   .campaign-metrics {
-    @apply grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 pt-3 sm:pt-4 border-t border-slate-200;
+    @apply grid grid-cols-2 gap-4 mt-4;
   }
-  
+
   .metric-item {
     @apply text-center;
   }
-  
+
   .metric-value {
-    @apply text-xl sm:text-2xl font-bold text-slate-900;
+    @apply text-2xl font-bold text-slate-900;
   }
-  
+
   .metric-label {
-    @apply text-xs sm:text-sm text-slate-600;
+    @apply text-sm text-slate-600;
   }
-  
-  /* ✅ UPDATED: Upload Components - Enhanced for mobile with new colors */
+
+  /* Upload Areas */
   .upload-area {
-    border: 2px dashed rgb(var(--color-light-gray));
-    @apply rounded-lg p-6 sm:p-8;
-    @apply text-center transition-all duration-200;
-    @apply cursor-pointer;
-    /* ✅ MOBILE: Ensure adequate touch area */
-    min-height: 120px;
+    @apply border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-slate-400 transition-colors duration-200;
   }
-  
+
   .upload-area:hover {
-    border-color: rgb(var(--color-primary));
-    background-color: rgb(var(--color-primary-50));
+    @apply border-slate-400;
   }
-  
+
   .upload-area.dragover {
-    border-color: rgb(var(--color-primary));
-    background-color: rgb(var(--color-primary-100));
+    @apply border-teal-500 bg-teal-50;
   }
-  
+
+  /* Creative Grid */
   .creative-grid {
-    @apply grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4;
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4;
   }
-  
+
   .creative-item {
-    @apply aspect-square rounded-lg overflow-hidden;
-    background-color: rgb(var(--color-gray-100));
-    @apply border-2 border-transparent transition-all duration-200;
-    @apply cursor-pointer;
+    @apply relative rounded-lg overflow-hidden cursor-pointer transition-transform duration-200 hover:scale-105;
   }
-  
+
   .creative-item:hover {
-    border-color: rgb(var(--color-primary));
+    @apply shadow-lg;
   }
-  
+
   .creative-item.selected {
-    border-color: rgb(var(--color-primary));
-    box-shadow: 0 0 0 2px rgb(var(--color-primary) / 0.2);
+    @apply ring-2 ring-teal-500 ring-offset-2;
   }
-  
-  /* Layout - Enhanced for mobile */
+
+  /* Dashboard Layout */
   .dashboard-layout {
-    @apply grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-4;
+    @apply grid grid-cols-1 lg:grid-cols-4 gap-6;
   }
-  
+
   .dashboard-sidebar {
     @apply lg:col-span-1;
   }
-  
+
   .dashboard-main {
     @apply lg:col-span-3;
   }
-  
+
+  /* Property Grid */
   .property-grid {
-    @apply grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4;
   }
 
-  /* ✅ MOBILE: Enhanced responsive grids */
   .mobile-grid-1 {
-    @apply grid grid-cols-1 gap-3 sm:gap-4;
+    @apply grid grid-cols-1 gap-3;
   }
 
   .mobile-grid-2 {
-    @apply grid grid-cols-2 gap-3 sm:gap-4;
+    @apply grid grid-cols-2 gap-3;
   }
 
   .mobile-grid-responsive {
@@ -644,34 +650,32 @@
   
   /* Animations - Optimized for mobile performance */
   .stagger-in {
-    @apply opacity-0 translate-y-5;
-    animation: stagger-in 0.4s ease-out forwards;
+    animation: staggerIn 0.3s ease-out forwards;
   }
-  
+
   .stagger-in:nth-child(1) { animation-delay: 0ms; }
   .stagger-in:nth-child(2) { animation-delay: 50ms; }
   .stagger-in:nth-child(3) { animation-delay: 100ms; }
   .stagger-in:nth-child(4) { animation-delay: 150ms; }
   .stagger-in:nth-child(5) { animation-delay: 200ms; }
   .stagger-in:nth-child(6) { animation-delay: 250ms; }
-  
+
   .hover-lift {
-    @apply transition-transform duration-200;
+    transition: transform 0.2s ease-out;
   }
-  
+
   .hover-lift:hover {
     transform: translateY(-2px);
   }
-  
+
   .fade-in {
     animation: fadeIn 0.3s ease-out;
   }
-  
+
   .shake {
-    animation: shake 0.4s ease-in-out;
+    animation: shake 0.5s ease-in-out;
   }
 
-  /* ✅ MOBILE: Performance optimized animations */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -679,7 +683,6 @@
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
     }
 
     .hover-lift:hover {
@@ -687,65 +690,67 @@
     }
 
     .stagger-in {
+      animation: none;
       opacity: 1;
-      transform: translateY(0);
     }
   }
-  
-  /* Utilities - Enhanced for mobile */
+
+  /* Loading States */
   .loading-spinner {
-    @apply inline-block w-4 h-4 border-2 border-transparent border-t-current;
-    @apply rounded-full animate-spin;
+    @apply animate-spin rounded-full border-2 border-slate-200 border-t-teal-500;
   }
 
   .loading-spinner-lg {
-    @apply w-6 h-6 sm:w-8 sm:h-8;
-  }
-  
-  .skeleton {
-    @apply bg-gradient-to-r from-slate-200 via-slate-300 to-slate-200;
-    @apply animate-pulse rounded;
-  }
-  
-  .divider {
-    @apply border-t border-slate-200 my-4 sm:my-6;
+    @apply w-8 h-8 border-3;
   }
 
-  /* ✅ MOBILE: Badge and status utilities */
+  /* Skeleton Loading */
+  .skeleton {
+    @apply animate-pulse bg-slate-200 rounded;
+  }
+
+  /* Dividers */
+  .divider {
+    @apply border-t border-slate-200 my-4;
+  }
+
+  /* Badges */
   .mobile-badge {
-    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
 
   .mobile-badge-sm {
-    @apply px-1.5 py-0.5 text-xs;
+    @apply px-2 py-0.5 text-xs;
   }
 
   .mobile-badge-lg {
-    @apply px-3 py-1.5 text-sm;
+    @apply px-3 py-1 text-sm;
   }
 
-  /* ✅ UPDATED: Focus states optimized for touch with new brand colors */
+  /* Focus States */
   .focus-visible-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
-  }
-  
-  .focus-visible-ring:focus-visible {
-    box-shadow: 0 0 0 2px rgb(var(--color-primary) / 0.5);
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2;
   }
 
-  /* ✅ MOBILE: List utilities */
+  .focus-visible-ring:focus-visible {
+    @apply ring-2 ring-teal-500 ring-offset-2;
+  }
+
+  /* Mobile List Items */
   .mobile-list-item {
-    @apply flex items-center justify-between p-3 sm:p-4 border-b border-slate-200 last:border-b-0;
-    min-height: var(--touch-target-min);
+    @apply flex items-center justify-between p-4 hover:bg-slate-50 transition-colors duration-200;
   }
 
   .mobile-list-item:active {
-    @apply bg-slate-50;
+    @apply bg-slate-100;
   }
 }
 
-/* ✅ MOBILE: Custom keyframes remain the same */
-@keyframes stagger-in {
+@keyframes staggerIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
   to {
     opacity: 1;
     transform: translateY(0);
@@ -753,50 +758,53 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-4px); }
-  75% { transform: translateX(4px); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
 }
 
-/* ✅ MOBILE: Additional responsive utilities */
+/* ✅ MOBILE: Extra small screens */
 @media (max-width: 374px) {
-  /* Extra small phones */
   .mobile-container {
     @apply px-2;
   }
-  
+
   .btn-base {
-    @apply text-xs px-3 py-2;
+    @apply text-sm px-3 py-2;
   }
 }
 
+/* ✅ MOBILE: Small screens */
 @media (min-width: 375px) and (max-width: 424px) {
-  /* Standard mobile phones */
   .property-grid {
     @apply grid-cols-1;
   }
 }
 
+/* ✅ MOBILE: Tablet screens */
 @media (min-width: 768px) and (max-width: 1023px) {
-  /* Tablets */
   .property-grid {
     @apply grid-cols-2;
   }
-  
+
   .dashboard-layout {
-    @apply grid-cols-2;
+    @apply grid-cols-1;
   }
 }
 
-/* ✅ MOBILE: Landscape phone optimizations */
+/* ✅ MOBILE: Landscape orientation on small screens */
 @media (max-height: 500px) and (orientation: landscape) {
   .mobile-nav-full-spacing {
-    padding-top: 56px; /* Reduced top padding in landscape */
-    padding-bottom: 60px; /* Reduced bottom padding in landscape */
+    padding-top: 1rem;
+    padding-bottom: 1rem;
   }
 }

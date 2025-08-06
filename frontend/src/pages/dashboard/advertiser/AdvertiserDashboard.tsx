@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
+import apiClient from '../../../api/apiClient.js';
 import {
   Calendar, TrendingUp, Eye, MessageCircle, ChevronRight,
-  DollarSign, Clock, MapPin, User, Receipt
+  DollarSign, Clock, MapPin, User, Receipt, Plus
 } from 'lucide-react';
 
-// ✅ FIXED: Import real apiClient instead of mock
-import apiClient from '../../../api/apiClient.js';
+
 
 // Types
 interface DashboardStats {
@@ -56,56 +56,7 @@ export default function AdvertiserDashboard() {
     totalSpent: 0
   });
 
-  const [campaigns, setCampaigns] = useState<Campaign[]>([
-    {
-      id: '1',
-      name: 'Campaign name',
-      startDate: '12/01',
-      budget: 18,
-      performance: '$350640',
-      status: 'active'
-    },
-    {
-      id: '2', 
-      name: 'Status',
-      startDate: '20/20',
-      budget: 24,
-      performance: '$580640',
-      status: 'active'
-    },
-    {
-      id: '3',
-      name: 'End Date',
-      startDate: '10/25',
-      budget: 14,
-      performance: '$500640',
-      status: 'completed'
-    },
-    {
-      id: '4',
-      name: 'Budget',
-      startDate: '22%',
-      budget: 18,
-      performance: '$570640',
-      status: 'active'
-    },
-    {
-      id: '5',
-      name: 'Widget',
-      startDate: '25/10',
-      budget: 16,
-      performance: '$560640',
-      status: 'active'
-    },
-    {
-      id: '6',
-      name: 'Managed',
-      startDate: '20/4',
-      budget: 32,
-      performance: '$270640',
-      status: 'paused'
-    }
-  ]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
   const [invoices, setInvoices] = useState<Invoice[]>([
     {
@@ -181,11 +132,37 @@ export default function AdvertiserDashboard() {
 
   // Fetch data on mount
   useEffect(() => {
-    if (userLoaded && user?.id) {
-      // Simulate loading
-      setTimeout(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch campaigns
+        const campaignsResponse = await apiClient.getCampaigns();
+        if (campaignsResponse.success) {
+          setCampaigns(campaignsResponse.data || []);
+        }
+        
+        // Fetch dashboard stats
+        const dashboardResponse = await apiClient.getAdvertiserDashboard();
+        if (dashboardResponse.success) {
+          setStats({
+            activeCampaigns: dashboardResponse.data.stats.activeCampaigns || 0,
+            completedCampaigns: dashboardResponse.data.stats.completedCampaigns || 0,
+            estimatedImpressions: dashboardResponse.data.stats.estimatedImpressions || 0,
+            totalSpent: dashboardResponse.data.stats.totalSpent || 0
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        setError('Failed to load dashboard data');
+      } finally {
         setIsLoading(false);
-      }, 1000);
+      }
+    };
+
+    if (userLoaded && user?.id) {
+      fetchDashboardData();
     } else if (userLoaded && !user) {
       setError('Please sign in to view your dashboard');
       setIsLoading(false);
@@ -473,10 +450,19 @@ export default function AdvertiserDashboard() {
 
               {/* Tab Content */}
               <div className="p-6">
-                <div className="mb-4">
+                <div className="mb-4 flex justify-between items-center">
                   <h3 className="text-lg font-semibold text-gray-900">
                     {activeTab === 'campaigns' ? 'Campaign Performance' : 'Recent Invoices'}
                   </h3>
+                  {activeTab === 'campaigns' && (
+                    <button
+                      onClick={() => window.location.href = '/create-campaign'}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Campaign
+                    </button>
+                  )}
                 </div>
 
                 {activeTab === 'campaigns' ? <CampaignTable /> : <InvoiceTable />}

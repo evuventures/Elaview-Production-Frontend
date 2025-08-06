@@ -772,7 +772,7 @@ export default function SpaceOwnerDashboardMVP() {
 
 // ✅ Add verification function for testing
 if (typeof window !== 'undefined') {
-  window.verifySpaceOwnerColors = () => {
+  (window as any).verifySpaceOwnerColors = () => {
     const whiteElements = document.querySelectorAll('[style*="FFFFFF"]');
     const offWhiteElements = document.querySelectorAll('[style*="F9FAFB"]');
     const blueElements = document.querySelectorAll('[style*="4668AB"]');

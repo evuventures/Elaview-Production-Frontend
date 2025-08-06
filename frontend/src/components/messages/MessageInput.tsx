@@ -1,6 +1,7 @@
 // src/components/messages/MessageInput.tsx
 // ✅ EXTRACTED: From MessagesPage.tsx inline JSX
 // ✅ ENHANCED: With proper TypeScript interfaces and B2B features
+// ✅ FIXED: Mobile input handling with proper keyboard support
 
 import React, { useRef } from 'react';
 import { 
@@ -58,28 +59,28 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const messageInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="mobile-container bg-white border-t border-slate-200">
-      <div className="py-4 mobile-space-sm">
+    <div className="bg-white border-t border-slate-200">
+      <div className="px-4 py-4">
         
-        {/* Attachment preview */}
+        {/* ✅ FIXED: Attachment preview with mobile optimization */}
         {attachments.length > 0 && (
           <div className="mb-3">
-            <div className="flex items-center mobile-gap-xs flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               {attachments.map(att => (
-                <div key={att.id} className="flex items-center mobile-gap-xs bg-slate-100 rounded-lg p-2">
+                <div key={att.id} className="flex items-center gap-2 bg-slate-100 rounded-lg p-2 max-w-full">
                   {att.type.startsWith('image/') ? (
-                    <Image className="w-4 h-4 text-slate-500" />
+                    <Image className="w-4 h-4 text-slate-500 flex-shrink-0" />
                   ) : (
-                    <FileText className="w-4 h-4 text-slate-500" />
+                    <FileText className="w-4 h-4 text-slate-500 flex-shrink-0" />
                   )}
-                  <span className="mobile-text-small text-slate-700 truncate max-w-[100px]">
+                  <span className="text-sm text-slate-700 truncate flex-1 min-w-0">
                     {att.name}
                   </span>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onRemoveAttachment(att.id)}
-                    className="text-slate-500 hover:text-slate-700 touch-target"
+                    className="h-8 w-8 p-0 text-slate-500 hover:text-slate-700"
                   >
                     <X className="w-3 h-3" />
                   </Button>
@@ -89,80 +90,77 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           </div>
         )}
         
-        {/* Input area */}
-        <div className="flex items-end mobile-gap-sm">
+        {/* ✅ FIXED: Input area with proper mobile layout */}
+        <div className="flex items-end gap-3">
           {/* Attachment button */}
-          <div className="flex flex-col mobile-gap-xs">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              className="text-slate-500 hover:text-slate-700 touch-target"
-            >
-              <Paperclip className="w-4 h-4" />
-            </Button>
-            
-            {/* Voice message button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggleRecording}
-              className={`touch-target ${
-                isRecording 
-                  ? 'text-red-500 hover:text-red-700 bg-red-50' 
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            </Button>
-          </div>
-          
-          <div className="flex-1">
-            <Input 
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            className="h-12 w-12 p-0 text-slate-500 hover:text-slate-700 flex-shrink-0"
+          >
+            <Paperclip className="w-5 h-5" />
+          </Button>
+
+          {/* Message input */}
+          <div className="flex-1 relative">
+            <Input
               ref={messageInputRef}
-              placeholder="Type your message..."
               value={newMessage}
               onChange={(e) => onMessageChange(e.target.value)}
               onKeyPress={onKeyPress}
-              disabled={isSending}
-              className="touch-target bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:ring-teal-500 focus:border-teal-500 rounded-2xl resize-none"
+              placeholder={`Message ${otherUserName}...`}
+              className="h-12 pr-12 bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:ring-teal-500 focus:border-teal-500"
             />
+            
+            {/* Send button */}
+            <Button
+              onClick={onSendMessage}
+              disabled={!newMessage.trim() || isSending}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 bg-teal-500 hover:bg-teal-600 text-white disabled:opacity-50"
+            >
+              {isSending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
           </div>
-          
-          <Button 
-            onClick={onSendMessage}
-            disabled={isSending || (!newMessage.trim() && attachments.length === 0)}
-            className="touch-target bg-teal-500 hover:bg-teal-600 text-white rounded-2xl shadow-sm disabled:opacity-50"
+
+          {/* Voice recording button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggleRecording}
+            className={`h-12 w-12 p-0 flex-shrink-0 ${
+              isRecording ? 'text-red-500 hover:text-red-600' : 'text-slate-500 hover:text-slate-700'
+            }`}
           >
-            {isSending ? (
-              <Loader2 className="w-4 h-4 animate-spin"/>
-            ) : (
-              <Send className="w-4 h-4"/>
-            )}
+            {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
           </Button>
         </div>
         
-        {/* Typing indicator */}
+        {/* ✅ FIXED: Typing indicator */}
         {isTyping && (
-          <div className="flex items-center mobile-gap-xs mt-2 text-slate-500">
-            <div className="flex mobile-gap-xs">
+          <div className="flex items-center gap-2 mt-2 text-slate-500">
+            <div className="flex gap-1">
               <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
               <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
               <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
             </div>
-            <span className="mobile-text-small">{otherUserName} is typing...</span>
+            <span className="text-sm">{otherUserName} is typing...</span>
           </div>
         )}
       </div>
       
       {/* Hidden file input */}
       <input
-        type="file"
         ref={fileInputRef}
+        type="file"
         multiple
-        accept="image/*,.pdf,.doc,.docx,.txt"
         onChange={onFileSelect}
         className="hidden"
+        accept="image/*,.pdf,.doc,.docx,.txt"
       />
     </div>
   );

@@ -5,10 +5,10 @@ import Map from "./browse/BrowsePage.jsx";
 import Messages from "./messages/MessagesPage.tsx";
 import Profile from "./user/Profile.jsx";
 import Help from "./help/Help.jsx";
-import Dashboard from "./dashboard/owner/OwnerDashboard.tsx";
+import Dashboard from "./dashboard/owner/OwnerDashboard.tsx"; // Space Owner Dashboard
 import Invoices from "./payments/Invoices.jsx";
 import BookingManagement from "./bookings/BookingManagement.jsx";
-import CreateCampaign from "./campaigns/CreateCampaign.jsx";
+import CreateCampaignWizard from "./campaigns/CreateCampaignWizard.jsx";
 // ❌ REMOVED: import CreateProperty from "./properties/CreateProperty.tsx"; // OLD LEGACY COMPONENT
 import CreateListingWizard from "./dashboard/owner/components/create-listing"; // ✅ NEW: Our minimal wizard
 import PropertyManagement from "./properties/PropertyManagement.jsx";
@@ -51,10 +51,10 @@ const PAGES = {
     AdvertisingPage: AdvertisingPage, // ✅ NEW: Bookings management page
     Profile: Profile,
     Help: Help,
-    Dashboard: Dashboard,
+    Dashboard: Dashboard, // Space Owner Dashboard
     Invoices: Invoices,
     BookingManagement: BookingManagement,
-    CreateCampaign: CreateCampaign,
+    CreateCampaign: CreateCampaignWizard,
     // ❌ REMOVED: ListSpace: CreateProperty, // OLD LEGACY COMPONENT
     ListSpace: CreateListingWizard, // ✅ NEW: Use our minimal wizard
     PropertyManagement: PropertyManagement,
@@ -218,7 +218,7 @@ function PagesContent() {
             <Route path="/create-campaign" element={
                 <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="create-campaign-protected">
                     <Layout currentPageName="CreateCampaign" key="create-campaign-page">
-                        <CreateCampaign key="create-campaign-component" />
+                        <CreateCampaignWizard key="create-campaign-component" />
                     </Layout>
                 </ProtectedRoute>
             } />

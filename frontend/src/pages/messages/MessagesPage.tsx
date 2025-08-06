@@ -1,66 +1,87 @@
-// src/pages/MessagesPage.tsx - Enhanced Mobile Responsive B2B Messaging
-// ✅ FIXED: All syntax errors and type issues
-// ✅ MOBILE RESPONSIVE: Optimized for B2B advertising marketplace
-// ✅ B2B FEATURES: File sharing, business context, video calls, RFQ system
-
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useAuth, useUser } from '@clerk/clerk-react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
+import { 
+  MessageSquare, 
+  Send, 
+  Paperclip, 
+  Search, 
+  Phone, 
+  Video, 
+  ChevronLeft,
+  MoreVertical,
+  Plus,
+  Mic,
+  MicOff,
+  Image,
+  FileText,
+  X,
+  Check,
+  CheckCheck,
+  Building2,
+  Briefcase,
+  Calendar,
+  MapPin,
+  User,
+  Loader2,
+  MessageCircle
+} from 'lucide-react';
 
-// ✅ FIXED: Proper component imports
-import { MessagesSidebar } from '@/components/messages/MessagesSidebar';
-import { MessagesHeader } from '@/components/messages/MessagesHeader';
-import { MessagesArea } from '@/components/messages/MessagesArea';
-import { MessageInput } from '@/components/messages/MessageInput';
-import { EmptyState } from '@/components/messages/EmptyState';
-
-// ✅ ICONS - Only what's needed for main page
-import { MessageSquare, Loader2 } from 'lucide-react';
-
-// ✅ TYPES - Enhanced for B2B
-import { User, Conversation, ConversationMessage } from '@/types/messages';
-
-// ✅ FIXED: Enhanced type definitions for B2B
-interface ExtendedUser extends User {
+// ==================== TYPE DEFINITIONS ====================
+interface UserType {
+  id: string;
+  full_name: string;
+  profile_image?: string | null;
   businessName?: string;
   isVerified?: boolean;
 }
 
-interface ExtendedConversation extends Conversation {
+interface Conversation {
+  id: string;
+  participant_ids: string[];
+  lastMessage: string;
+  lastActivity: Date;
+  unreadCount: number;
   context?: {
-    type: string;
+    type: 'property' | 'campaign' | 'booking';
     id: string;
     name: string;
   };
   businessType?: string;
 }
 
-interface ExtendedMessage extends ConversationMessage {
+interface Message {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  content: string;
+  message_type: string;
+  created_date: string;
+  is_read: boolean;
+  isOptimistic?: boolean;
+  attachments?: Attachment[];
   businessContext?: {
     type: string;
     priority?: string;
   };
-  attachments?: Array<{
-    id: string;
-    name: string;
-    type: string;
-    size: number;
-    file: File;
-    preview?: string | null;
-  }>;
 }
 
-// Enhanced B2B mock data with proper typing
-const mockUsers: Record<string, ExtendedUser> = {
-  'user1': { id: 'user1', full_name: 'Current User', profile_image: null, businessName: 'Your Company' },
-  'user2': { id: 'user2', full_name: 'Sarah Johnson', profile_image: null, businessName: 'Metro Advertising Co.', isVerified: true },
-  'user3': { id: 'user3', full_name: 'Mike Chen', profile_image: null, businessName: 'Downtown Properties LLC', isVerified: true },
-  'user4': { id: 'user4', full_name: 'David Martinez', profile_image: null, businessName: 'Creative Campaigns Inc.', isVerified: false },
-  'user5': { id: 'user5', full_name: 'Emily Carter', profile_image: null, businessName: 'Prime Locations Group', isVerified: true }
+interface Attachment {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  preview?: string | null;
+}
+
+// ==================== MOCK DATA ====================
+const mockUsers: Record<string, UserType> = {
+  'user1': { id: 'user1', full_name: 'Current User', businessName: 'Your Company' },
+  'user2': { id: 'user2', full_name: 'Sarah Johnson', businessName: 'Metro Advertising Co.', isVerified: true },
+  'user3': { id: 'user3', full_name: 'Mike Chen', businessName: 'Downtown Properties LLC', isVerified: true },
+  'user4': { id: 'user4', full_name: 'David Martinez', businessName: 'Creative Campaigns Inc.', isVerified: false }
 };
 
-const mockConversations: ExtendedConversation[] = [
+const mockConversations: Conversation[] = [
   {
     id: 'conv_1',
     participant_ids: ['user1', 'user2'],
@@ -71,7 +92,7 @@ const mockConversations: ExtendedConversation[] = [
     businessType: 'property_inquiry'
   },
   {
-    id: 'conv_2', 
+    id: 'conv_2',
     participant_ids: ['user1', 'user3'],
     lastMessage: 'Campaign looks great! Ready to move forward with installation.',
     lastActivity: new Date(Date.now() - 1000 * 60 * 60 * 2),
@@ -85,17 +106,17 @@ const mockConversations: ExtendedConversation[] = [
     lastMessage: 'Contract attached. Please review and let me know if you have questions.',
     lastActivity: new Date(Date.now() - 1000 * 60 * 60 * 24),
     unreadCount: 1,
-    context: { type: 'booking', id: 'book_1', name: 'Storefront Display Booking' },
+    context: { type: 'booking', id: 'book_1', name: 'Q1 2025 Ad Placement' },
     businessType: 'contract_review'
   }
 ];
 
-const mockMessages: ExtendedMessage[] = [
+const mockMessages: Message[] = [
   {
     id: 'msg1',
     sender_id: 'user2',
     recipient_id: 'user1',
-    content: 'Hi! I\'m interested in your downtown billboard space for a summer campaign.',
+    content: 'Hi! I\'m interested in your downtown billboard space for our summer campaign.',
     message_type: 'text',
     created_date: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
     is_read: false
@@ -103,7 +124,7 @@ const mockMessages: ExtendedMessage[] = [
   {
     id: 'msg2',
     sender_id: 'user2',
-    recipient_id: 'user1', 
+    recipient_id: 'user1',
     content: 'Could you provide pricing for a 4-week campaign starting July 1st?',
     message_type: 'text',
     created_date: new Date(Date.now() - 1000 * 60 * 25).toISOString(),
@@ -118,109 +139,91 @@ const mockMessages: ExtendedMessage[] = [
     message_type: 'text',
     created_date: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
     is_read: true
+  },
+  {
+    id: 'msg4',
+    sender_id: 'user1',
+    recipient_id: 'user2',
+    content: 'I\'ve attached our full rate sheet and availability calendar. We also have a special promotion for first-time advertisers - 15% off for campaigns booked before March 1st.',
+    message_type: 'text',
+    created_date: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+    is_read: true,
+    attachments: [
+      { id: 'att1', name: 'Rate_Sheet_Q1_2025.pdf', type: 'application/pdf', size: 245000, preview: null },
+      { id: 'att2', name: 'Availability_Calendar.pdf', type: 'application/pdf', size: 180000, preview: null }
+    ]
   }
 ];
 
-// ✅ Enhanced Mobile Responsive Messages Page Component
-const MessagesPage: React.FC = () => {
-  // State management
-  const [conversations, setConversations] = useState<ExtendedConversation[]>(mockConversations);
-  const [selectedConversation, setSelectedConversation] = useState<ExtendedConversation | null>(null);
-  const [messages, setMessages] = useState<ExtendedMessage[]>([]);
+// ==================== MAIN MESSAGES PAGE COMPONENT ====================
+export default function MessagesPage() {
+  const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [allUsers, setAllUsers] = useState<Record<string, ExtendedUser>>(mockUsers);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isPageLoading, setIsPageLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showMobileConversations, setShowMobileConversations] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  
-  // ✅ MOBILE: Enhanced mobile state management
-  const [showConversations, setShowConversations] = useState(true);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isRecording, setIsRecording] = useState(false);
-  const [attachments, setAttachments] = useState<Array<{
-    id: string;
-    name: string;
-    type: string;
-    size: number;
-    file: File;
-    preview?: string | null;
-  }>>([]);
-  const [showBusinessContext, setShowBusinessContext] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [onlineUsers, setOnlineUsers] = useState(new Set(['user2', 'user3']));
-  
-  // ✅ MOBILE: Refs for mobile optimization
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  // ✅ MOBILE: Enhanced hooks
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { isSignedIn, isLoaded } = useAuth();
-  const { user: currentUser } = useUser();
+  const [onlineUsers] = useState(new Set(['user2', 'user3']));
 
-  // ✅ FIXED: Current user ID handling for Clerk compatibility
-  const currentUserId = useMemo(() => {
-    // For development with mock data, use 'user1'
-    // In production, use currentUser?.id from Clerk
-    return currentUser?.id || 'user1';
-  }, [currentUser]);
+  const currentUserId = 'user1';
 
-  // ✅ MOBILE: Enhanced derived state with business context
-  const otherUser = useMemo(() => {
-    if (!selectedConversation) return null;
-    const otherParticipantId = selectedConversation.participant_ids.find(id => id !== currentUserId);
-    return otherParticipantId ? allUsers[otherParticipantId] || null : null;
-  }, [selectedConversation, currentUserId, allUsers]);
-
+  // Filtered conversations based on search
   const filteredConversations = useMemo(() => {
     if (!searchTerm) return conversations;
-    return conversations.filter(conversation => {
-      const otherParticipantId = conversation.participant_ids.find(id => id !== currentUserId);
-      const otherParticipant = otherParticipantId ? allUsers[otherParticipantId] : null;
-      return otherParticipant?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             otherParticipant?.businessName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             conversation.lastMessage.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             conversation.context?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    return conversations.filter(conv => {
+      const otherId = conv.participant_ids.find(id => id !== currentUserId);
+      const otherUser = otherId ? mockUsers[otherId] : null;
+      return otherUser?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             otherUser?.businessName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             conv.lastMessage.toLowerCase().includes(searchTerm.toLowerCase());
     });
-  }, [conversations, searchTerm, allUsers, currentUserId]);
+  }, [conversations, searchTerm]);
 
-  // ✅ MOBILE: Enhanced business context
-  const businessContext = useMemo(() => {
-    if (!selectedConversation?.context) return null;
-    return {
-      ...selectedConversation.context,
-      businessType: selectedConversation.businessType || 'general'
-    };
+  // Get other user in conversation
+  const otherUser = useMemo(() => {
+    if (!selectedConversation) return null;
+    const otherId = selectedConversation.participant_ids.find(id => id !== currentUserId);
+    return otherId ? mockUsers[otherId] : null;
   }, [selectedConversation]);
 
-  // ✅ MOBILE: Auto-scroll optimization
+  // Auto-scroll to bottom
   const scrollToBottom = useCallback(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'end'
-      });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  // ✅ FIXED: Keyboard handling for mobile
-  const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  }, []); // ✅ FIXED: Removed newMessage dependency since handleSendMessage handles the current state
-
-  // ✅ MOBILE: Enhanced message sending with business context
-  const handleSendMessage = useCallback(async () => {
-    if (!newMessage.trim() || !otherUser) return;
+  // Select conversation
+  const handleSelectConversation = useCallback((conversation: Conversation) => {
+    setSelectedConversation(conversation);
+    setShowMobileConversations(false);
+    setIsLoading(true);
     
-    const messageContent = newMessage.trim();
-    const optimisticMessage: ExtendedMessage = {
-      id: `optimistic-${Date.now()}`,
+    // Simulate loading messages
+    setTimeout(() => {
+      setMessages(mockMessages);
+      setIsLoading(false);
+      setTimeout(scrollToBottom, 100);
+    }, 500);
+
+    // Mark as read
+    setConversations(prev => 
+      prev.map(c => c.id === conversation.id ? { ...c, unreadCount: 0 } : c)
+    );
+  }, [scrollToBottom]);
+
+  // Send message
+  const handleSendMessage = useCallback(async () => {
+    if (!newMessage.trim() || !otherUser || !selectedConversation) return;
+    
+    const optimisticMessage: Message = {
+      id: `msg_${Date.now()}`,
       sender_id: currentUserId,
       recipient_id: otherUser.id,
-      content: messageContent,
+      content: newMessage.trim(),
       message_type: 'text',
       created_date: new Date().toISOString(),
       is_read: false,
@@ -228,237 +231,422 @@ const MessagesPage: React.FC = () => {
       attachments: [...attachments]
     };
 
-    // Add message optimistically
     setMessages(prev => [...prev, optimisticMessage]);
     setNewMessage('');
     setAttachments([]);
     setIsSending(true);
+    scrollToBottom();
 
-    // Auto-scroll after state update
-    setTimeout(scrollToBottom, 100);
-
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const sentMessage: ExtendedMessage = {
-        ...optimisticMessage,
-        id: `msg_${Date.now()}`,
-        isOptimistic: false
-      };
-      
-      setMessages(prev => prev.map(m => m.id === optimisticMessage.id ? sentMessage : m));
-      
-      // Update conversation
-      if (selectedConversation) {
-        setConversations(prev => {
-          const updatedConvo: ExtendedConversation = {
-            ...selectedConversation,
-            lastMessage: sentMessage.content,
-            lastActivity: new Date(sentMessage.created_date),
-            isNew: false
-          };
-
-          setSelectedConversation(updatedConvo);
-          const otherConvos = prev.filter(c => c.id !== selectedConversation.id);
-          return [updatedConvo, ...otherConvos].sort((a, b) => 
-            new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()
-          );
-        });
-      }
-    } catch(err) {
-      console.error("Error sending message:", err);
-      setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
-      setNewMessage(messageContent);
-    } finally {
+    // Simulate API call
+    setTimeout(() => {
+      setMessages(prev => 
+        prev.map(m => m.id === optimisticMessage.id 
+          ? { ...m, isOptimistic: false } 
+          : m
+        )
+      );
       setIsSending(false);
-    }
-  }, [newMessage, otherUser, attachments, selectedConversation, scrollToBottom, currentUserId]);
+    }, 1000);
+  }, [newMessage, otherUser, selectedConversation, attachments, scrollToBottom]);
 
-  // ✅ MOBILE: Enhanced conversation selection with haptic feedback
-  const handleSelectConversation = useCallback((conversation: ExtendedConversation) => {
-    setSelectedConversation(conversation);
-    setShowConversations(false);
-    
-    // Load messages for this conversation
-    const conversationMessages = mockMessages.filter(msg => {
-      const otherUserId = conversation.participant_ids.find(id => id !== currentUserId);
-      const sentByMe = msg.sender_id === currentUserId && msg.recipient_id === otherUserId;
-      const sentToMe = msg.sender_id === otherUserId && msg.recipient_id === currentUserId;
-      return sentByMe || sentToMe;
-    });
-    
-    setMessages(conversationMessages.sort((a, b) => 
-      new Date(a.created_date).getTime() - new Date(b.created_date).getTime()
-    ));
-
-    // Mark as read
-    setConversations(prev => 
-      prev.map(c => 
-        c.id === conversation.id ? { ...c, unreadCount: 0 } : c
-      )
-    );
-    
-    // Auto-scroll after loading
-    setTimeout(scrollToBottom, 200);
-  }, [scrollToBottom, currentUserId]);
-
-  // ✅ MOBILE: Back navigation
-  const handleBackToConversations = useCallback(() => {
-    setShowConversations(true);
-    setSelectedConversation(null);
-    setMessages([]);
-  }, []);
-
-  // ✅ MOBILE: File attachment handling
-  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
+  // Handle file selection
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
     const newAttachments = files.map(file => ({
       id: `att_${Date.now()}_${Math.random()}`,
-      file,
       name: file.name,
-      size: file.size,
       type: file.type,
+      size: file.size,
       preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null
     }));
-    
     setAttachments(prev => [...prev, ...newAttachments]);
   }, []);
 
-  // ✅ MOBILE: Remove attachment
-  const removeAttachment = useCallback((attachmentId: string) => {
-    setAttachments(prev => prev.filter(att => att.id !== attachmentId));
-  }, []);
-
-  // ✅ MOBILE: Toggle recording
-  const handleToggleRecording = useCallback(() => {
-    setIsRecording(prev => !prev);
-  }, []);
-
-  // ✅ MOBILE: Effects
-  useEffect(() => {
-    if (isLoaded) {
-      setIsPageLoading(true);
-      // Simulate loading
-      setTimeout(() => {
-        setAllUsers(mockUsers);
-        setConversations(mockConversations);
-        if (mockConversations.length > 0) {
-          handleSelectConversation(mockConversations[0]);
-        }
-        setIsPageLoading(false);
-      }, 1000);
-    }
-  }, [isLoaded, handleSelectConversation]);
-
-  // ✅ MOBILE: Auto-scroll when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // ✅ MOBILE: Loading states
-  if (!isLoaded || isPageLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center mobile-safe-area">
-        <div className="text-center mobile-container">
-          <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-6 bg-teal-500 rounded-2xl md:rounded-3xl flex items-center justify-center shadow-xl">
-            <Loader2 className="w-8 h-8 md:w-10 md:h-10 animate-spin text-white" />
-          </div>
-          <p className="text-slate-600 font-semibold mobile-text-responsive">
-            {!isLoaded ? 'Loading authentication...' : 'Loading your conversations...'}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isSignedIn) {
-    return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 mobile-safe-area">
-        <div className="mobile-container mobile-full-height flex items-center justify-center">
-          <div className="bg-white border border-slate-200 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl p-8 md:p-12 text-center max-w-md mx-auto">
-            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-6 bg-slate-200 rounded-2xl md:rounded-3xl flex items-center justify-center">
-              <MessageSquare className="w-8 h-8 md:w-10 md:h-10 text-slate-500" />
-            </div>
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">
-              Please sign in to view messages
-            </h2>
-            <p className="text-slate-600 mobile-text-responsive">
-              Access your conversations and connect with other businesses
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Initial selection
+  useEffect(() => {
+    if (conversations.length > 0 && !selectedConversation) {
+      handleSelectConversation(conversations[0]);
+    }
+  }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 mobile-nav-full-spacing">
-      <div className="h-full max-h-screen flex overflow-hidden">
+    // Replace line 323 in MessagesPage component
+<div className="h-screen md:h-screen h-[calc(100vh-4rem)] md:flex flex" 
+     style={{ backgroundColor: '#F8FAFF' }}>
+      {/* CONVERSATIONS SIDEBAR */}
+      <div className={`${
+        showMobileConversations ? 'w-full' : 'hidden'
+      } md:flex md:w-[380px] lg:w-[420px] xl:w-[480px] border-r flex-col`}
+      style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' }}>
         
-        {/* ✅ MOBILE: Enhanced Conversations Sidebar - Now extracted component */}
-        <div className={`${showConversations ? 'w-full' : 'hidden'} md:w-[35%] md:block h-full`}>
-          <MessagesSidebar
-            conversations={conversations}
-            selectedConversation={selectedConversation}
-            allUsers={allUsers}
-            onlineUsers={onlineUsers}
-            searchTerm={searchTerm}
-            filteredConversations={filteredConversations}
-            onSelectConversation={handleSelectConversation}
-            onSearchChange={setSearchTerm}
-          />
-        </div>
+        {/* Sidebar Header */}
+        <div className="flex-shrink-0 p-4 md:p-6 border-b" style={{ borderColor: '#E5E7EB' }}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
+                style={{ backgroundColor: '#4668AB' }}>
+                <MessageSquare className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Messages</h1>
+                <p className="text-sm text-gray-600">
+                  {filteredConversations.length} conversations
+                </p>
+              </div>
+            </div>
+            <button className="p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <Plus className="w-5 h-5 text-gray-600" />
+            </button>
+          </div>
 
-        {/* ✅ MOBILE: Enhanced Messages Panel - Now extracted components */}
-        <div className={`${showConversations ? 'hidden' : 'w-full'} md:w-[65%] md:block h-full flex flex-col bg-slate-25`}>
-          {selectedConversation && otherUser ? (
-            <>
-              {/* Messages Header */}
-              <MessagesHeader
-                otherUser={otherUser}
-                businessContext={businessContext}
-                showBusinessContext={showBusinessContext}
-                onlineUsers={onlineUsers}
-                onBack={handleBackToConversations}
-                onToggleBusinessContext={() => setShowBusinessContext(!showBusinessContext)}
-              />
-
-              {/* Messages Area */}
-              <MessagesArea
-                messages={messages}
-                isLoading={isLoading}
-                messagesEndRef={messagesEndRef}
-              />
-
-              {/* Message Input */}
-              <MessageInput
-                newMessage={newMessage}
-                attachments={attachments}
-                isSending={isSending}
-                isRecording={isRecording}
-                isTyping={isTyping}
-                otherUserName={otherUser.full_name}
-                onMessageChange={setNewMessage}
-                onSendMessage={handleSendMessage}
-                onKeyPress={handleKeyPress}
-                onFileSelect={handleFileSelect}
-                onRemoveAttachment={removeAttachment}
-                onToggleRecording={handleToggleRecording}
-              />
-            </>
-          ) : (
-            /* Welcome state */
-            <EmptyState
-              type="welcome"
-              title="Welcome to Messages"
-              description="Select a conversation to start chatting with other businesses"
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search conversations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 rounded-lg border bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              style={{ borderColor: '#E5E7EB' }}
             />
-          )}
+          </div>
         </div>
+
+        {/* Conversations List */}
+        <div className="flex-1 overflow-y-auto">
+          {filteredConversations.map(conversation => {
+            const otherId = conversation.participant_ids.find(id => id !== currentUserId);
+            const user = otherId ? mockUsers[otherId] : null;
+            if (!user) return null;
+            
+            const isSelected = selectedConversation?.id === conversation.id;
+            const isOnline = onlineUsers.has(otherId);
+            
+            return (
+              <div
+                key={conversation.id}
+                onClick={() => handleSelectConversation(conversation)}
+                className={`p-4 cursor-pointer transition-all hover:bg-gray-50 ${
+                  isSelected ? 'bg-blue-50 border-l-4' : ''
+                }`}
+                style={isSelected ? { 
+                  borderLeftColor: '#4668AB',
+                  backgroundColor: '#EFF6FF' 
+                } : {}}
+              >
+                <div className="flex items-start gap-3">
+                  {/* Avatar */}
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
+                      <User className="w-6 h-6 text-gray-600" />
+                    </div>
+                    {isOnline && (
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
+                    )}
+                    {user.isVerified && (
+                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: '#4668AB' }}>
+                        <Check className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-semibold text-gray-900 truncate">
+                        {user.full_name}
+                      </h3>
+                      <span className="text-xs text-gray-500">
+                        {formatDistanceToNow(conversation.lastActivity, { addSuffix: true })}
+                      </span>
+                    </div>
+                    
+                    <p className="text-xs text-gray-600 font-medium mb-1">
+                      {user.businessName}
+                    </p>
+                    
+                    <p className="text-sm text-gray-600 truncate">
+                      {conversation.lastMessage}
+                    </p>
+
+                    {/* Business Context */}
+                    {conversation.context && (
+                      <div className="flex items-center gap-1 mt-2">
+                        {conversation.context.type === 'property' && <MapPin className="w-3 h-3 text-gray-400" />}
+                        {conversation.context.type === 'campaign' && <Briefcase className="w-3 h-3 text-gray-400" />}
+                        {conversation.context.type === 'booking' && <Calendar className="w-3 h-3 text-gray-400" />}
+                        <span className="text-xs text-gray-500 truncate">
+                          {conversation.context.name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Unread Badge */}
+                  {conversation.unreadCount > 0 && (
+                    <div className="flex-shrink-0">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white"
+                        style={{ backgroundColor: '#4668AB' }}>
+                        {conversation.unreadCount}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* MESSAGES PANEL */}
+      <div className={`${
+        showMobileConversations ? 'hidden' : 'flex'
+      } md:flex flex-1 flex-col`}
+      style={{ backgroundColor: '#FFFFFF' }}>
+        
+        {selectedConversation && otherUser ? (
+          <>
+            {/* Messages Header */}
+            <div className="flex-shrink-0 p-4 border-b" style={{ borderColor: '#E5E7EB' }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowMobileConversations(true)}
+                    className="md:hidden p-2 rounded-lg hover:bg-gray-50"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-gray-600" />
+                  </button>
+                  
+                  <div className="relative">
+                    <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+                      <User className="w-5 h-5 text-gray-600" />
+                    </div>
+                    {onlineUsers.has(otherUser.id) && (
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                    )}
+                  </div>
+                  
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="font-semibold text-gray-900">{otherUser.full_name}</h2>
+                      {otherUser.isVerified && (
+                        <div className="px-2 py-0.5 rounded-full text-xs font-medium"
+                          style={{ backgroundColor: '#EFF6FF', color: '#4668AB' }}>
+                          Verified
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">{otherUser.businessName}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button className="p-2 rounded-lg hover:bg-gray-50">
+                    <Phone className="w-5 h-5 text-gray-600" />
+                  </button>
+                  <button className="p-2 rounded-lg hover:bg-gray-50">
+                    <Video className="w-5 h-5 text-gray-600" />
+                  </button>
+                  <button className="p-2 rounded-lg hover:bg-gray-50">
+                    <MoreVertical className="w-5 h-5 text-gray-600" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Business Context Bar */}
+              {selectedConversation.context && (
+                <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: '#F8FAFF' }}>
+                  <div className="flex items-center gap-2">
+                    {selectedConversation.context.type === 'property' && <Building2 className="w-4 h-4 text-gray-500" />}
+                    {selectedConversation.context.type === 'campaign' && <Briefcase className="w-4 h-4 text-gray-500" />}
+                    {selectedConversation.context.type === 'booking' && <Calendar className="w-4 h-4 text-gray-500" />}
+                    <span className="text-sm font-medium text-gray-700">
+                      {selectedConversation.context.name}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" style={{ color: '#4668AB' }} />
+                    <p className="text-gray-600">Loading messages...</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {messages.map((message, index) => {
+                    const isMyMessage = message.sender_id === currentUserId;
+                    const showDate = index === 0 || 
+                      new Date(message.created_date).toDateString() !== 
+                      new Date(messages[index - 1].created_date).toDateString();
+                    
+                    return (
+                      <div key={message.id}>
+                        {showDate && (
+                          <div className="flex justify-center mb-4">
+                            <div className="px-3 py-1 rounded-full text-xs text-gray-600"
+                              style={{ backgroundColor: '#F8FAFF' }}>
+                              {format(new Date(message.created_date), 'MMMM d, yyyy')}
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'} mb-4`}>
+                          <div className={`max-w-[70%] md:max-w-[60%] ${isMyMessage ? 'order-2' : 'order-1'}`}>
+                            {/* Message Bubble */}
+                            <div className={`rounded-2xl px-4 py-2 ${
+                              isMyMessage 
+                                ? 'text-white' 
+                                : 'bg-gray-100 text-gray-900'
+                            } ${message.isOptimistic ? 'opacity-70' : ''}`}
+                            style={isMyMessage ? { backgroundColor: '#4668AB' } : {}}>
+                              {/* Business Context Badge */}
+                              {message.businessContext && (
+                                <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium mb-2 ${
+                                  isMyMessage ? 'bg-white/20 text-white' : 'bg-white text-gray-700'
+                                }`}>
+                                  {message.businessContext.type === 'rfq' && 'Quote Request'}
+                                  {message.businessContext.priority === 'high' && ' • High Priority'}
+                                </div>
+                              )}
+                              
+                              <p className="text-sm">{message.content}</p>
+                              
+                              {/* Attachments */}
+                              {message.attachments && message.attachments.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                  {message.attachments.map(att => (
+                                    <div key={att.id} className={`flex items-center gap-2 p-2 rounded ${
+                                      isMyMessage ? 'bg-white/10' : 'bg-white'
+                                    }`}>
+                                      {att.type.startsWith('image/') ? 
+                                        <Image className="w-4 h-4" /> : 
+                                        <FileText className="w-4 h-4" />
+                                      }
+                                      <span className="text-xs truncate">{att.name}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              <div className={`flex items-center gap-2 mt-1 text-xs ${
+                                isMyMessage ? 'text-white/70' : 'text-gray-500'
+                              }`}>
+                                <span>{format(new Date(message.created_date), 'h:mm a')}</span>
+                                {isMyMessage && (
+                                  message.is_read ? 
+                                    <CheckCheck className="w-3 h-3" /> : 
+                                    <Check className="w-3 h-3" />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </>
+              )}
+            </div>
+
+            {/* Message Input */}
+            <div className="flex-shrink-0 p-4 pb-8 md:pb-4 border-t" style={{ borderColor: '#E5E7EB' }}>
+              {/* Attachments Preview */}
+              {attachments.length > 0 && (
+                <div className="mb-3 flex gap-2 flex-wrap">
+                  {attachments.map(att => (
+                    <div key={att.id} className="flex items-center gap-2 p-2 rounded-lg bg-gray-100">
+                      {att.type.startsWith('image/') ? 
+                        <Image className="w-4 h-4 text-gray-500" /> : 
+                        <FileText className="w-4 h-4 text-gray-500" />
+                      }
+                      <span className="text-sm text-gray-700 max-w-[150px] truncate">{att.name}</span>
+                      <button
+                        onClick={() => setAttachments(prev => prev.filter(a => a.id !== att.id))}
+                        className="p-1 rounded hover:bg-gray-200"
+                      >
+                        <X className="w-3 h-3 text-gray-500" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className="flex items-center gap-3">
+                <label className="p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <Paperclip className="w-5 h-5 text-gray-600" />
+                  <input
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileSelect}
+                    accept="image/*,.pdf,.doc,.docx"
+                  />
+                </label>
+                
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                    placeholder={`Message ${otherUser.full_name}...`}
+                    className="w-full px-4 py-3 pr-12 rounded-lg border bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2"
+                    style={{ borderColor: '#E5E7EB', focusRingColor: '#4668AB' }}
+                  />
+                  
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={!newMessage.trim() || isSending}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-white"
+                    style={{ backgroundColor: newMessage.trim() ? '#4668AB' : '#9CA3AF' }}
+                  >
+                    {isSending ? 
+                      <Loader2 className="w-4 h-4 animate-spin" /> : 
+                      <Send className="w-4 h-4" />
+                    }
+                  </button>
+                </div>
+                
+                <button
+                  onClick={() => setIsRecording(!isRecording)}
+                  className={`p-2 rounded-lg hover:bg-gray-50 ${
+                    isRecording ? 'text-red-500' : 'text-gray-600'
+                  }`}
+                >
+                  {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Empty State */
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-4"
+                style={{ backgroundColor: '#F8FAFF' }}>
+                <MessageCircle className="w-10 h-10" style={{ color: '#4668AB' }} />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Messages</h3>
+              <p className="text-gray-600 max-w-md">
+                Select a conversation to start chatting with other businesses
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
-};
-
-export default MessagesPage;
+}

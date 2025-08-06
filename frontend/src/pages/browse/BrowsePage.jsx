@@ -650,15 +650,24 @@ export default function BrowsePage() {
     }
   };
 
-  const handleBookingNavigation = async (space) => {
+  const handleBookingNavigation = async (space, campaign = null) => {
     console.log('📅 Booking navigation requested:', space.id, space.property?.id || space.propertyId);
     
     const canProceed = await checkBusinessProfileBeforeBooking(space);
     
     if (canProceed) {
       const propertyId = space.property?.id || space.propertyId;
-      console.log('✅ Profile complete, navigating to checkout:', `/checkout/${propertyId}/${space.id}`);
-      navigate(`/checkout/${propertyId}/${space.id}`);
+      let checkoutUrl = `/checkout/${propertyId}/${space.id}`;
+      
+      // If campaign is provided, add it to the URL
+      if (campaign) {
+        checkoutUrl += `?campaignId=${campaign.id}`;
+        console.log('✅ Profile complete, navigating to checkout with campaign:', checkoutUrl);
+      } else {
+        console.log('✅ Profile complete, navigating to checkout:', checkoutUrl);
+      }
+      
+      navigate(checkoutUrl);
     }
   };
 
@@ -675,6 +684,26 @@ export default function BrowsePage() {
     count += filters.features.length;
     return count;
   }, [filters]);
+
+  // Check for campaign creation success from URL parameters
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const campaignCreated = urlParams.get('campaignCreated');
+    const spaceId = urlParams.get('spaceId');
+    
+    if (campaignCreated === 'true' && spaceId) {
+      // Find the space and open its details modal
+      const space = allSpaces.find(s => s.id === spaceId);
+      if (space) {
+        setSelectedSpace(space);
+        setDetailsExpanded(true);
+      }
+      
+      // Clean up URL parameters
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [allSpaces]);
 
   // ✅ MOBILE LAYOUT: Enhanced with proper nav bar spacing and safe areas
   if (isMobile) {
