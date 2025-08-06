@@ -1,0 +1,43 @@
+# Elaview Frontend - Docker Compose  
+# Works with existing nested structure: frontend/
+# Load Docker-specific environment from .env.docker file
+
+version: '3.8'
+
+services:
+  # Frontend Application
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
+    container_name: elaview-frontend
+    restart: unless-stopped
+    env_file:
+      # Load your existing frontend/.env file first
+      - ./frontend/.env
+    environment:
+      # Docker-specific overrides (these override values from frontend/.env)
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3001/api}
+      NODE_ENV: ${NODE_ENV:-development}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    networks:
+      - elaview-shared  # Connect to backend if available
+    volumes:
+      # Mount the actual frontend directory where your code lives
+      - ./frontend:/app:cached
+      - frontend_node_modules:/app/node_modules
+      # Mount your existing .env file from frontend/ directory
+      - ./frontend/.env:/app/.env:ro
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]
+
+volumes:
+  frontend_node_modules:
+    name: elaview_frontend_node_modules
+
+networks:
+  elaview-shared:
+    driver: bridge
+    name: elaview-shared
+    external: true
