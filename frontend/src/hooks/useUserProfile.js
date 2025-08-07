@@ -1,9 +1,10 @@
 // src/hooks/useUserProfile.js
+// ✅ FIXED: Updated to use apiClient instead of entities
 // ✅ RATE LIMITING: Centralized user profile fetching to prevent duplicate calls
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth, useUser } from '@clerk/clerk-react';
-import { User } from '@/api/entities';
+import apiClient from '@/api/apiClient'; // ✅ FIXED: Use apiClient instead of entities
 
 // Global state to prevent duplicate user profile fetching across components
 let globalUserProfileState = {
@@ -92,9 +93,10 @@ export const useUserProfile = (options = {}) => {
         let profile = null;
         let businessProfile = null;
 
-        // Fetch basic user profile
+        // ✅ FIXED: Fetch basic user profile using apiClient
         try {
-          profile = await User.getProfile();
+          const profileResponse = await apiClient.getUserProfile();
+          profile = profileResponse.success ? profileResponse.data : null;
           console.log(`👤 USER PROFILE: Basic profile fetched in ${Date.now() - startTime}ms`);
         } catch (error) {
           if (error.message.includes('404')) {
@@ -105,14 +107,15 @@ export const useUserProfile = (options = {}) => {
           }
         }
 
-        // Fetch business profile if requested
+        // ✅ FIXED: Fetch business profile using apiClient
         if (includeBusinessProfile) {
           try {
             const businessStartTime = Date.now();
-            businessProfile = await User.getBusinessProfile();
+            const businessResponse = await apiClient.getUserBusinessProfile();
+            businessProfile = businessResponse.success ? businessResponse.data : null;
             console.log(`👤 USER PROFILE: Business profile fetched in ${Date.now() - businessStartTime}ms`);
           } catch (error) {
-            if (error.message.includes('404')) {
+            if (error.message.includes('404') || error.message.includes('Business profile not found')) {
               console.log('👤 USER PROFILE: No business profile found');
               businessProfile = null;
             } else {
@@ -163,7 +166,7 @@ export const useUserProfile = (options = {}) => {
     }
   }, [isSignedIn, isLoaded, clerkUser, includeBusinessProfile, notifySubscribers]);
 
-  // ✅ RATE LIMITING: Update user profile with optimistic updates
+  // ✅ FIXED: Update user profile using apiClient
   const updateProfile = useCallback(async (updates) => {
     if (!isSignedIn || !clerkUser) {
       throw new Error('User not signed in');
@@ -180,10 +183,9 @@ export const useUserProfile = (options = {}) => {
       notifySubscribers(optimisticState);
       console.log('👤 USER PROFILE: Optimistic profile update applied');
 
-      // Update on server
-      const updatedProfile = currentState.profile 
-        ? await User.updateProfile(updates)
-        : await User.createProfile(updates);
+      // ✅ FIXED: Update on server using apiClient
+      const response = await apiClient.updateUser(clerkUser.id, updates);
+      const updatedProfile = response.success ? response.data : updates;
       
       // Update with server response
       const serverState = {
@@ -205,7 +207,7 @@ export const useUserProfile = (options = {}) => {
     }
   }, [isSignedIn, clerkUser, fetchUserProfile, notifySubscribers]);
 
-  // ✅ RATE LIMITING: Update business profile
+  // ✅ FIXED: Update business profile using apiClient
   const updateBusinessProfile = useCallback(async (updates) => {
     if (!isSignedIn || !clerkUser) {
       throw new Error('User not signed in');
@@ -224,10 +226,9 @@ export const useUserProfile = (options = {}) => {
       notifySubscribers(optimisticState);
       console.log('👤 USER PROFILE: Optimistic business profile update applied');
 
-      // Update on server
-      const updatedBusinessProfile = currentState.businessProfile
-        ? await User.updateBusinessProfile(updates)
-        : await User.createBusinessProfile(updates);
+      // ✅ FIXED: Update on server using apiClient
+      const response = await apiClient.updateBusinessProfile(updates);
+      const updatedBusinessProfile = response.success ? response.data : updates;
       
       // Update with server response
       const serverState = {

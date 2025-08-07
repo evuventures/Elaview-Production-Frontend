@@ -1,5 +1,10 @@
+// src/pages/messages/MessagesPage.tsx
+// ✅ TypeScript version to match your import in Pages.js
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow, format } from 'date-fns';
+import { useUser } from '@clerk/clerk-react';
 import { 
   MessageSquare, 
   Send, 
@@ -23,46 +28,36 @@ import {
   MapPin,
   User,
   Loader2,
-  MessageCircle
+  MessageCircle,
+  AlertCircle
 } from 'lucide-react';
+import apiClient from '@/api/apiClient';
 
-// ==================== TYPE DEFINITIONS ====================
-interface UserType {
+// ✅ TypeScript interfaces
+interface User {
   id: string;
-  full_name: string;
-  profile_image?: string | null;
+  firstName?: string;
+  lastName?: string;
+  full_name?: string;
   businessName?: string;
-  isVerified?: boolean;
+  imageUrl?: string;
+  isBusinessVerified?: boolean;
 }
 
-interface Conversation {
-  id: string;
-  participant_ids: string[];
-  lastMessage: string;
-  lastActivity: Date;
-  unreadCount: number;
-  context?: {
-    type: 'property' | 'campaign' | 'booking';
-    id: string;
-    name: string;
-  };
-  businessType?: string;
+interface Participant {
+  userId: string;
+  user: User;
 }
 
 interface Message {
   id: string;
-  sender_id: string;
-  recipient_id: string;
   content: string;
-  message_type: string;
-  created_date: string;
-  is_read: boolean;
+  senderId: string;
+  createdAt: string;
+  isRead: boolean;
   isOptimistic?: boolean;
+  sender?: User;
   attachments?: Attachment[];
-  businessContext?: {
-    type: string;
-    priority?: string;
-  };
 }
 
 interface Attachment {
@@ -73,91 +68,36 @@ interface Attachment {
   preview?: string | null;
 }
 
-// ==================== MOCK DATA ====================
-const mockUsers: Record<string, UserType> = {
-  'user1': { id: 'user1', full_name: 'Current User', businessName: 'Your Company' },
-  'user2': { id: 'user2', full_name: 'Sarah Johnson', businessName: 'Metro Advertising Co.', isVerified: true },
-  'user3': { id: 'user3', full_name: 'Mike Chen', businessName: 'Downtown Properties LLC', isVerified: true },
-  'user4': { id: 'user4', full_name: 'David Martinez', businessName: 'Creative Campaigns Inc.', isVerified: false }
-};
+interface BusinessContext {
+  id: string;
+  title?: string;
+  name?: string;
+  address?: string;
+}
 
-const mockConversations: Conversation[] = [
-  {
-    id: 'conv_1',
-    participant_ids: ['user1', 'user2'],
-    lastMessage: 'I\'d like to request a quote for your downtown billboard space.',
-    lastActivity: new Date(Date.now() - 1000 * 60 * 30),
-    unreadCount: 2,
-    context: { type: 'property', id: 'prop_1', name: 'Downtown Billboard - Main St' },
-    businessType: 'property_inquiry'
-  },
-  {
-    id: 'conv_2',
-    participant_ids: ['user1', 'user3'],
-    lastMessage: 'Campaign looks great! Ready to move forward with installation.',
-    lastActivity: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    unreadCount: 0,
-    context: { type: 'campaign', id: 'camp_1', name: 'Summer Sale Campaign 2025' },
-    businessType: 'campaign_discussion'
-  },
-  {
-    id: 'conv_3',
-    participant_ids: ['user1', 'user4'],
-    lastMessage: 'Contract attached. Please review and let me know if you have questions.',
-    lastActivity: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    unreadCount: 1,
-    context: { type: 'booking', id: 'book_1', name: 'Q1 2025 Ad Placement' },
-    businessType: 'contract_review'
-  }
-];
+interface Conversation {
+  id: string;
+  type: 'DIRECT' | 'GROUP';
+  subject?: string;
+  createdAt: string;
+  updatedAt: string;
+  unreadCount: number;
+  otherParticipants?: Participant[];
+  lastMessage?: Message;
+  property?: BusinessContext;
+  campaign?: BusinessContext;
+  booking?: BusinessContext;
+}
 
-const mockMessages: Message[] = [
-  {
-    id: 'msg1',
-    sender_id: 'user2',
-    recipient_id: 'user1',
-    content: 'Hi! I\'m interested in your downtown billboard space for our summer campaign.',
-    message_type: 'text',
-    created_date: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    is_read: false
-  },
-  {
-    id: 'msg2',
-    sender_id: 'user2',
-    recipient_id: 'user1',
-    content: 'Could you provide pricing for a 4-week campaign starting July 1st?',
-    message_type: 'text',
-    created_date: new Date(Date.now() - 1000 * 60 * 25).toISOString(),
-    is_read: false,
-    businessContext: { type: 'rfq', priority: 'high' }
-  },
-  {
-    id: 'msg3',
-    sender_id: 'user1',
-    recipient_id: 'user2',
-    content: 'Hi Sarah! Thanks for your interest. Our rates for that location are $450/day. I\'ll send over our rate sheet with all the details.',
-    message_type: 'text',
-    created_date: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
-    is_read: true
-  },
-  {
-    id: 'msg4',
-    sender_id: 'user1',
-    recipient_id: 'user2',
-    content: 'I\'ve attached our full rate sheet and availability calendar. We also have a special promotion for first-time advertisers - 15% off for campaigns booked before March 1st.',
-    message_type: 'text',
-    created_date: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-    is_read: true,
-    attachments: [
-      { id: 'att1', name: 'Rate_Sheet_Q1_2025.pdf', type: 'application/pdf', size: 245000, preview: null },
-      { id: 'att2', name: 'Availability_Calendar.pdf', type: 'application/pdf', size: 180000, preview: null }
-    ]
-  }
-];
-
-// ==================== MAIN MESSAGES PAGE COMPONENT ====================
-export default function MessagesPage() {
-  const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
+export default function MessagesPage(): JSX.Element {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user: currentUser } = useUser();
+  
+  // ✅ Handle navigation state for opening specific conversations
+  const navigationState = location.state as { conversationId?: string; openConversation?: boolean } | null;
+  
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -167,28 +107,129 @@ export default function MessagesPage() {
   const [isSending, setIsSending] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isRecording, setIsRecording] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const [onlineUsers] = useState(new Set<string>()); // TODO: Implement real-time presence
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [onlineUsers] = useState(new Set(['user2', 'user3']));
+  const isMountedRef = useRef(true);
 
-  const currentUserId = 'user1';
+  // ✅ Helper to get user display name
+  const getUserDisplayName = (user: User | undefined): string => {
+    if (!user) return 'Unknown User';
+    return user.full_name || 
+           `${user.firstName || ''} ${user.lastName || ''}`.trim() || 
+           user.businessName || 
+           'Anonymous';
+  };
+
+  // ✅ Load conversations from API
+  const loadConversations = useCallback(async () => {
+    if (!currentUser?.id) return;
+    
+    setIsLoadingConversations(true);
+    setError(null);
+    
+    try {
+      console.log('💬 Loading conversations for user:', currentUser.id);
+      
+      const response = await apiClient.getConversations({
+        includeArchived: false
+      });
+      
+      if (response.success && isMountedRef.current) {
+        console.log(`✅ Loaded ${response.data.length} conversations`);
+        setConversations(response.data);
+        
+        // ✅ Handle navigation state - auto-open specific conversation
+        if (navigationState?.conversationId && navigationState?.openConversation) {
+          const targetConversation = response.data.find(
+            (conv: Conversation) => conv.id === navigationState.conversationId
+          );
+          
+          if (targetConversation) {
+            console.log('🎯 Auto-opening conversation from navigation:', targetConversation.id);
+            handleSelectConversation(targetConversation);
+          }
+        }
+      } else {
+        throw new Error(response.error || 'Failed to load conversations');
+      }
+    } catch (error: any) {
+      console.error('❌ Error loading conversations:', error);
+      if (isMountedRef.current) {
+        setError(error.message);
+        setConversations([]);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoadingConversations(false);
+      }
+    }
+  }, [currentUser?.id, navigationState]);
+
+  // ✅ Load messages for a conversation
+  const loadMessages = useCallback(async (conversationId: string) => {
+    if (!conversationId) return;
+    
+    setIsLoading(true);
+    
+    try {
+      console.log('💬 Loading messages for conversation:', conversationId);
+      
+      const response = await apiClient.getConversation(conversationId);
+      
+      if (response.success && isMountedRef.current) {
+        console.log(`✅ Loaded ${response.data.messages.length} messages`);
+        setMessages(response.data.messages || []);
+        
+        // Update conversation data with any new info
+        setConversations(prev => 
+          prev.map(conv => 
+            conv.id === conversationId 
+              ? { ...conv, ...response.data, unreadCount: 0 }
+              : conv
+          )
+        );
+      } else {
+        throw new Error(response.error || 'Failed to load messages');
+      }
+    } catch (error: any) {
+      console.error('❌ Error loading messages:', error);
+      if (isMountedRef.current) {
+        setError(error.message);
+        setMessages([]);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
 
   // Filtered conversations based on search
   const filteredConversations = useMemo(() => {
     if (!searchTerm) return conversations;
+    
     return conversations.filter(conv => {
-      const otherId = conv.participant_ids.find(id => id !== currentUserId);
-      const otherUser = otherId ? mockUsers[otherId] : null;
-      return otherUser?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             otherUser?.businessName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             conv.lastMessage.toLowerCase().includes(searchTerm.toLowerCase());
+      const otherParticipants = conv.otherParticipants || [];
+      const searchLower = searchTerm.toLowerCase();
+      
+      return otherParticipants.some(participant => {
+        const user = participant.user;
+        const displayName = getUserDisplayName(user).toLowerCase();
+        const businessName = user?.businessName?.toLowerCase() || '';
+        return displayName.includes(searchLower) || businessName.includes(searchLower);
+      }) || 
+      conv.lastMessage?.content?.toLowerCase().includes(searchLower) ||
+      conv.subject?.toLowerCase().includes(searchLower);
     });
   }, [conversations, searchTerm]);
 
   // Get other user in conversation
-  const otherUser = useMemo(() => {
-    if (!selectedConversation) return null;
-    const otherId = selectedConversation.participant_ids.find(id => id !== currentUserId);
-    return otherId ? mockUsers[otherId] : null;
+  const otherUser = useMemo((): User | null => {
+    if (!selectedConversation?.otherParticipants?.length) return null;
+    return selectedConversation.otherParticipants[0]?.user || null;
   }, [selectedConversation]);
 
   // Auto-scroll to bottom
@@ -197,57 +238,104 @@ export default function MessagesPage() {
   }, []);
 
   // Select conversation
-  const handleSelectConversation = useCallback((conversation: Conversation) => {
+  const handleSelectConversation = useCallback(async (conversation: Conversation) => {
+    if (!isMountedRef.current) return;
+    
+    console.log('💬 Selecting conversation:', conversation.id);
+    
     setSelectedConversation(conversation);
     setShowMobileConversations(false);
-    setIsLoading(true);
+    setMessages([]);
     
-    // Simulate loading messages
-    setTimeout(() => {
-      setMessages(mockMessages);
-      setIsLoading(false);
-      setTimeout(scrollToBottom, 100);
-    }, 500);
-
-    // Mark as read
-    setConversations(prev => 
-      prev.map(c => c.id === conversation.id ? { ...c, unreadCount: 0 } : c)
-    );
-  }, [scrollToBottom]);
+    // Load messages for this conversation
+    await loadMessages(conversation.id);
+    
+    // Scroll to bottom after messages load
+    setTimeout(scrollToBottom, 100);
+  }, [loadMessages, scrollToBottom]);
 
   // Send message
   const handleSendMessage = useCallback(async () => {
-    if (!newMessage.trim() || !otherUser || !selectedConversation) return;
+    if (!newMessage.trim() || !selectedConversation?.id || !currentUser?.id) return;
     
+    const messageContent = newMessage.trim();
+    setNewMessage('');
+    setIsSending(true);
+    
+    // Optimistic update
     const optimisticMessage: Message = {
-      id: `msg_${Date.now()}`,
-      sender_id: currentUserId,
-      recipient_id: otherUser.id,
-      content: newMessage.trim(),
-      message_type: 'text',
-      created_date: new Date().toISOString(),
-      is_read: false,
+      id: `temp_${Date.now()}`,
+      content: messageContent,
+      senderId: currentUser.id,
+      createdAt: new Date().toISOString(),
+      isRead: false,
       isOptimistic: true,
+      sender: {
+        id: currentUser.id,
+        firstName: currentUser.firstName || undefined,
+        lastName: currentUser.lastName || undefined,
+        full_name: currentUser.fullName || undefined,
+        imageUrl: currentUser.imageUrl || undefined
+      },
       attachments: [...attachments]
     };
 
     setMessages(prev => [...prev, optimisticMessage]);
-    setNewMessage('');
     setAttachments([]);
-    setIsSending(true);
     scrollToBottom();
 
-    // Simulate API call
-    setTimeout(() => {
-      setMessages(prev => 
-        prev.map(m => m.id === optimisticMessage.id 
-          ? { ...m, isOptimistic: false } 
-          : m
-        )
+    try {
+      const response = await apiClient.sendMessageToConversation(
+        selectedConversation.id,
+        {
+          content: messageContent,
+          type: 'GENERAL',
+          businessContext: attachments.length > 0 ? { hasAttachments: true } : undefined
+        }
       );
-      setIsSending(false);
-    }, 1000);
-  }, [newMessage, otherUser, selectedConversation, attachments, scrollToBottom]);
+
+      if (response.success && isMountedRef.current) {
+        // Replace optimistic message with real one
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === optimisticMessage.id 
+              ? { ...response.data, isOptimistic: false }
+              : msg
+          )
+        );
+        
+        // Update conversation's last message
+        setConversations(prev =>
+          prev.map(conv =>
+            conv.id === selectedConversation.id
+              ? { 
+                  ...conv, 
+                  lastMessage: response.data,
+                  updatedAt: response.data.createdAt
+                }
+              : conv
+          )
+        );
+        
+        console.log('✅ Message sent successfully');
+      } else {
+        throw new Error(response.error || 'Failed to send message');
+      }
+    } catch (error: any) {
+      console.error('❌ Error sending message:', error);
+      
+      // Remove optimistic message on error
+      if (isMountedRef.current) {
+        setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+        setNewMessage(messageContent); // Restore message text
+        alert(`Failed to send message: ${error.message}`);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsSending(false);
+      }
+    }
+  }, [newMessage, selectedConversation, currentUser, attachments, scrollToBottom]);
 
   // Handle file selection
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -262,16 +350,87 @@ export default function MessagesPage() {
     setAttachments(prev => [...prev, ...newAttachments]);
   }, []);
 
+  // Handle enter key
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  }, [handleSendMessage]);
+
+  // ✅ Component mount/unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    
+    if (currentUser?.id) {
+      loadConversations();
+    }
+    
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [currentUser?.id, loadConversations]);
+
+  // Auto-scroll when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Initial selection
-  useEffect(() => {
-    if (conversations.length > 0 && !selectedConversation) {
-      handleSelectConversation(conversations[0]);
-    }
-  }, []);
+  // ✅ Show loading state while conversations load
+  if (isLoadingConversations) {
+    return (
+      <div 
+        className="flex w-full absolute inset-0 md:relative md:h-screen items-center justify-center"
+        style={{ 
+          backgroundColor: '#F8FAFF',
+          top: '64px',
+          bottom: '80px',
+          left: 0,
+          right: 0
+        }}
+      >
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+            style={{ backgroundColor: '#4668AB' }}>
+            <Loader2 className="w-8 h-8 text-white animate-spin" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-1">Loading Messages</h3>
+          <p className="text-gray-600">Getting your conversations...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Show error state
+  if (error) {
+    return (
+      <div 
+        className="flex w-full absolute inset-0 md:relative md:h-screen items-center justify-center"
+        style={{ 
+          backgroundColor: '#F8FAFF',
+          top: '64px',
+          bottom: '80px',
+          left: 0,
+          right: 0
+        }}
+      >
+        <div className="text-center max-w-md mx-4">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-red-100">
+            <AlertCircle className="w-8 h-8 text-red-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Connection Error</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => loadConversations()}
+            className="px-4 py-2 rounded-lg text-white font-medium"
+            style={{ backgroundColor: '#4668AB' }}
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -340,88 +499,126 @@ export default function MessagesPage() {
 
         {/* Conversations List - Scrollable */}
         <div className="flex-1 overflow-y-auto">
-          {filteredConversations.map(conversation => {
-            const otherId = conversation.participant_ids.find(id => id !== currentUserId);
-            const user = otherId ? mockUsers[otherId] : null;
-            if (!user) return null;
-            
-            const isSelected = selectedConversation?.id === conversation.id;
-            const isOnline = onlineUsers.has(otherId);
-            
-            return (
-              <div
-                key={conversation.id}
-                onClick={() => handleSelectConversation(conversation)}
-                className={`p-4 cursor-pointer transition-all hover:bg-gray-50 ${
-                  isSelected ? 'bg-blue-50 border-l-4' : ''
-                }`}
-                style={isSelected ? { 
-                  borderLeftColor: '#4668AB',
-                  backgroundColor: '#EFF6FF' 
-                } : {}}
-              >
-                <div className="flex items-start gap-3">
-                  {/* Avatar */}
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
-                      <User className="w-6 h-6 text-gray-600" />
-                    </div>
-                    {isOnline && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
-                    )}
-                    {user.isVerified && (
-                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: '#4668AB' }}>
-                        <Check className="w-3 h-3 text-white" />
+          {filteredConversations.length === 0 ? (
+            <div className="p-6 text-center">
+              <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+              <h3 className="font-medium text-gray-900 mb-1">No conversations yet</h3>
+              <p className="text-sm text-gray-600">
+                Start messaging property owners to see conversations here
+              </p>
+            </div>
+          ) : (
+            filteredConversations.map(conversation => {
+              const otherParticipant = conversation.otherParticipants?.[0];
+              const user = otherParticipant?.user;
+              
+              if (!user) return null;
+              
+              const isSelected = selectedConversation?.id === conversation.id;
+              const isOnline = onlineUsers.has(user.id);
+              
+              return (
+                <div
+                  key={conversation.id}
+                  onClick={() => handleSelectConversation(conversation)}
+                  className={`p-4 cursor-pointer transition-all hover:bg-gray-50 ${
+                    isSelected ? 'bg-blue-50 border-l-4' : ''
+                  }`}
+                  style={isSelected ? { 
+                    borderLeftColor: '#4668AB',
+                    backgroundColor: '#EFF6FF' 
+                  } : {}}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Avatar */}
+                    <div className="relative">
+                      <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
+                        {user.imageUrl ? (
+                          <img 
+                            src={user.imageUrl} 
+                            alt={getUserDisplayName(user)}
+                            className="w-12 h-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <User className="w-6 h-6 text-gray-600" />
+                        )}
                       </div>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-semibold text-gray-900 truncate">
-                        {user.full_name}
-                      </h3>
-                      <span className="text-xs text-gray-500">
-                        {formatDistanceToNow(conversation.lastActivity, { addSuffix: true })}
-                      </span>
+                      {isOnline && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
+                      )}
+                      {user.isBusinessVerified && (
+                        <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: '#4668AB' }}>
+                          <Check className="w-3 h-3 text-white" />
+                        </div>
+                      )}
                     </div>
-                    
-                    <p className="text-xs text-gray-600 font-medium mb-1">
-                      {user.businessName}
-                    </p>
-                    
-                    <p className="text-sm text-gray-600 truncate">
-                      {conversation.lastMessage}
-                    </p>
 
-                    {/* Business Context */}
-                    {conversation.context && (
-                      <div className="flex items-center gap-1 mt-2">
-                        {conversation.context.type === 'property' && <MapPin className="w-3 h-3 text-gray-400" />}
-                        {conversation.context.type === 'campaign' && <Briefcase className="w-3 h-3 text-gray-400" />}
-                        {conversation.context.type === 'booking' && <Calendar className="w-3 h-3 text-gray-400" />}
-                        <span className="text-xs text-gray-500 truncate">
-                          {conversation.context.name}
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="font-semibold text-gray-900 truncate">
+                          {getUserDisplayName(user)}
+                        </h3>
+                        <span className="text-xs text-gray-500">
+                          {conversation.lastMessage ? 
+                            formatDistanceToNow(new Date(conversation.lastMessage.createdAt), { addSuffix: true }) :
+                            formatDistanceToNow(new Date(conversation.createdAt), { addSuffix: true })
+                          }
                         </span>
                       </div>
+                      
+                      <p className="text-xs text-gray-600 font-medium mb-1">
+                        {user.businessName || 'Business User'}
+                      </p>
+                      
+                      <p className="text-sm text-gray-600 truncate">
+                        {conversation.lastMessage?.content || conversation.subject || 'New conversation'}
+                      </p>
+
+                      {/* Business Context */}
+                      {conversation.property && (
+                        <div className="flex items-center gap-1 mt-2">
+                          <MapPin className="w-3 h-3 text-gray-400" />
+                          <span className="text-xs text-gray-500 truncate">
+                            {conversation.property.title || conversation.property.name}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {conversation.campaign && (
+                        <div className="flex items-center gap-1 mt-2">
+                          <Briefcase className="w-3 h-3 text-gray-400" />
+                          <span className="text-xs text-gray-500 truncate">
+                            {conversation.campaign.title || conversation.campaign.name}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {conversation.booking && (
+                        <div className="flex items-center gap-1 mt-2">
+                          <Calendar className="w-3 h-3 text-gray-400" />
+                          <span className="text-xs text-gray-500 truncate">
+                            Booking #{conversation.booking.id.slice(-6)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Unread Badge */}
+                    {conversation.unreadCount > 0 && (
+                      <div className="flex-shrink-0">
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white"
+                          style={{ backgroundColor: '#4668AB' }}>
+                          {conversation.unreadCount}
+                        </div>
+                      </div>
                     )}
                   </div>
-
-                  {/* Unread Badge */}
-                  {conversation.unreadCount > 0 && (
-                    <div className="flex-shrink-0">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white"
-                        style={{ backgroundColor: '#4668AB' }}>
-                        {conversation.unreadCount}
-                      </div>
-                    </div>
-                  )}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -448,7 +645,15 @@ export default function MessagesPage() {
                     
                     <div className="relative">
                       <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-                        <User className="w-5 h-5 text-gray-600" />
+                        {otherUser.imageUrl ? (
+                          <img 
+                            src={otherUser.imageUrl} 
+                            alt={getUserDisplayName(otherUser)}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <User className="w-5 h-5 text-gray-600" />
+                        )}
                       </div>
                       {onlineUsers.has(otherUser.id) && (
                         <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
@@ -457,15 +662,19 @@ export default function MessagesPage() {
                     
                     <div>
                       <div className="flex items-center gap-2">
-                        <h2 className="font-semibold text-gray-900">{otherUser.full_name}</h2>
-                        {otherUser.isVerified && (
+                        <h2 className="font-semibold text-gray-900">
+                          {getUserDisplayName(otherUser)}
+                        </h2>
+                        {otherUser.isBusinessVerified && (
                           <div className="px-2 py-0.5 rounded-full text-xs font-medium"
                             style={{ backgroundColor: '#EFF6FF', color: '#4668AB' }}>
                             Verified
                           </div>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600">{otherUser.businessName}</p>
+                      <p className="text-sm text-gray-600">
+                        {otherUser.businessName || 'Business User'}
+                      </p>
                     </div>
                   </div>
 
@@ -483,14 +692,18 @@ export default function MessagesPage() {
                 </div>
 
                 {/* Business Context Bar */}
-                {selectedConversation.context && (
+                {(selectedConversation.property || selectedConversation.campaign || selectedConversation.booking) && (
                   <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: '#F8FAFF' }}>
                     <div className="flex items-center gap-2">
-                      {selectedConversation.context.type === 'property' && <Building2 className="w-4 h-4 text-gray-500" />}
-                      {selectedConversation.context.type === 'campaign' && <Briefcase className="w-4 h-4 text-gray-500" />}
-                      {selectedConversation.context.type === 'booking' && <Calendar className="w-4 h-4 text-gray-500" />}
+                      {selectedConversation.property && <Building2 className="w-4 h-4 text-gray-500" />}
+                      {selectedConversation.campaign && <Briefcase className="w-4 h-4 text-gray-500" />}
+                      {selectedConversation.booking && <Calendar className="w-4 h-4 text-gray-500" />}
                       <span className="text-sm font-medium text-gray-700">
-                        {selectedConversation.context.name}
+                        {selectedConversation.property?.title || 
+                         selectedConversation.property?.name ||
+                         selectedConversation.campaign?.title || 
+                         selectedConversation.campaign?.name ||
+                         `Booking #${selectedConversation.booking?.id?.slice(-6)}`}
                       </span>
                     </div>
                   </div>
@@ -502,8 +715,8 @@ export default function MessagesPage() {
             <div 
               className="flex-1 overflow-y-auto p-4"
               style={{ 
-                paddingTop: selectedConversation.context ? '140px' : '100px', // Space for header
-                paddingBottom: attachments.length > 0 ? '140px' : '100px' // Space for input
+                paddingTop: (selectedConversation.property || selectedConversation.campaign || selectedConversation.booking) ? '140px' : '100px',
+                paddingBottom: attachments.length > 0 ? '140px' : '100px'
               }}
             >
               {isLoading ? (
@@ -516,10 +729,10 @@ export default function MessagesPage() {
               ) : (
                 <div className="space-y-4">
                   {messages.map((message, index) => {
-                    const isMyMessage = message.sender_id === currentUserId;
+                    const isMyMessage = message.senderId === currentUser?.id;
                     const showDate = index === 0 || 
-                      new Date(message.created_date).toDateString() !== 
-                      new Date(messages[index - 1].created_date).toDateString();
+                      new Date(message.createdAt).toDateString() !== 
+                      new Date(messages[index - 1].createdAt).toDateString();
                     
                     return (
                       <div key={message.id}>
@@ -527,7 +740,7 @@ export default function MessagesPage() {
                           <div className="flex justify-center mb-4">
                             <div className="px-3 py-1 rounded-full text-xs text-gray-600"
                               style={{ backgroundColor: '#F8FAFF' }}>
-                              {format(new Date(message.created_date), 'MMMM d, yyyy')}
+                              {format(new Date(message.createdAt), 'MMMM d, yyyy')}
                             </div>
                           </div>
                         )}
@@ -541,16 +754,6 @@ export default function MessagesPage() {
                                 : 'bg-gray-100 text-gray-900'
                             } ${message.isOptimistic ? 'opacity-70' : ''}`}
                             style={isMyMessage ? { backgroundColor: '#4668AB' } : {}}>
-                              {/* Business Context Badge */}
-                              {message.businessContext && (
-                                <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium mb-2 ${
-                                  isMyMessage ? 'bg-white/20 text-white' : 'bg-white text-gray-700'
-                                }`}>
-                                  {message.businessContext.type === 'rfq' && 'Quote Request'}
-                                  {message.businessContext.priority === 'high' && ' • High Priority'}
-                                </div>
-                              )}
-                              
                               <p className="text-sm">{message.content}</p>
                               
                               {/* Attachments */}
@@ -573,9 +776,9 @@ export default function MessagesPage() {
                               <div className={`flex items-center gap-2 mt-1 text-xs ${
                                 isMyMessage ? 'text-white/70' : 'text-gray-500'
                               }`}>
-                                <span>{format(new Date(message.created_date), 'h:mm a')}</span>
+                                <span>{format(new Date(message.createdAt), 'h:mm a')}</span>
                                 {isMyMessage && (
-                                  message.is_read ? 
+                                  message.isRead ? 
                                     <CheckCheck className="w-3 h-3" /> : 
                                     <Check className="w-3 h-3" />
                                 )}
@@ -591,7 +794,7 @@ export default function MessagesPage() {
               )}
             </div>
 
-            {/* Message Input - Fixed at bottom with proper height */}
+            {/* Message Input - Fixed at bottom */}
             <div 
               className="absolute bottom-0 left-0 right-0 bg-white border-t" 
               style={{ 
@@ -639,10 +842,11 @@ export default function MessagesPage() {
                       type="text"
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                      placeholder={`Message ${otherUser.full_name}...`}
+                      onKeyPress={handleKeyPress}
+                      placeholder={`Message ${getUserDisplayName(otherUser)}...`}
                       className="w-full px-3 py-2 pr-10 rounded-lg border bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 text-sm"
                       style={{ borderColor: '#E5E7EB', focusRingColor: '#4668AB' }}
+                      disabled={isSending}
                     />
                     
                     <button

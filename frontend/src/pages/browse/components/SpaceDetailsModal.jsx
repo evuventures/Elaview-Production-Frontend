@@ -1,16 +1,20 @@
 // src/pages/browse/components/SpaceDetailsModal.jsx
+// ✅ FIXED: JSX structure error resolved
 // ✅ FIXED: Proper handling of dimensions object to prevent React render error
+// ✅ NEW: Added "Message Owner" functionality with conversation creation
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
 import { Button } from "@/components/ui/button";
 import { 
   X, ShoppingCart, Plus, CheckCircle, Star, MapPin, Users, TrendingUp, Eye,
   Calendar, Heart, Calculator, ChevronRight, Package, Clock, DollarSign,
-  Building2, Info, AlertCircle
+  Building2, Info, AlertCircle, MessageSquare, Send
 } from "lucide-react";
 import { getAreaName, getNumericPrice } from '../utils/areaHelpers';
+import apiClient from '@/api/apiClient';
 
 export default function SpaceDetailsModal({ 
   selectedSpace, 
@@ -23,10 +27,16 @@ export default function SpaceDetailsModal({
   setShowROICalculator
 }) {
   const navigate = useNavigate();
+  const { user: currentUser } = useUser();
   const [activeTab, setActiveTab] = useState('overview');
   const [isSaved, setIsSaved] = useState(false);
   const [duration, setDuration] = useState(30);
   const [showPricingDetails, setShowPricingDetails] = useState(false);
+  
+  // ✅ NEW: Message Owner state
+  const [isMessageLoading, setIsMessageLoading] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageContent, setMessageContent] = useState('');
 
   // Helper function to format dimensions object
   const formatDimensions = (dimensions) => {
@@ -68,16 +78,123 @@ export default function SpaceDetailsModal({
       setActiveTab('overview');
       setDuration(30);
       setShowPricingDetails(false);
+      setShowMessageModal(false);
+      setMessageContent('');
       
       // Debug log the selectedSpace to help identify data structure
       console.log('🏢 Selected Space Data:', {
         id: selectedSpace.id,
         dimensions: selectedSpace.dimensions,
         dimensionsType: typeof selectedSpace.dimensions,
+        property: selectedSpace.property,
+        ownerId: selectedSpace.property?.ownerId || selectedSpace.ownerId,
         fullSpace: selectedSpace
       });
     }
   }, [detailsExpanded, selectedSpace]);
+
+  // ✅ NEW: Get property owner information
+  const getPropertyOwner = () => {
+    if (!selectedSpace) return null;
+    
+    // The owner ID should be the database ID, not Clerk ID
+    const ownerId = selectedSpace.property?.ownerId || 
+                   selectedSpace.ownerId || 
+                   selectedSpace.property?.users?.id;
+                   
+    return {
+      id: ownerId,
+      name: selectedSpace.property?.users?.firstName ? 
+            `${selectedSpace.property.users.firstName} ${selectedSpace.property.users.lastName}`.trim() :
+            selectedSpace.property?.users?.full_name ||
+            'Property Owner'
+    };
+  };
+
+  // ✅ SIMPLIFIED: Handle message owner functionality
+  const handleMessageOwner = async () => {
+    console.log('💬 Message Owner clicked for space:', selectedSpace.id);
+    
+    if (!currentUser?.id) {
+      alert('Please sign in to message the property owner');
+      return;
+    }
+
+    const owner = getPropertyOwner();
+    
+    if (!owner?.id) {
+      alert('Unable to identify the property owner for this space');
+      return;
+    }
+
+    // Show message modal for composing message
+    setShowMessageModal(true);
+  };
+
+  // ✅ SIMPLIFIED: Send message and create conversation
+  const handleSendMessage = async () => {
+    if (!messageContent.trim()) {
+      alert('Please enter a message');
+      return;
+    }
+
+    setIsMessageLoading(true);
+
+    try {
+      const owner = getPropertyOwner();
+      
+      console.log('💬 Creating conversation between users:');
+      console.log('👤 Current user (Clerk ID):', currentUser.id);
+      console.log('👤 Property owner (DB ID):', owner.id);
+      console.log('💬 Message content:', messageContent);
+
+      // ✅ SIMPLIFIED: Let the backend middleware handle user ID mapping
+      // Just pass the Clerk ID - the backend will map it to database ID
+      const conversationResponse = await apiClient.post('/conversations/create', {
+        participantIds: [currentUser.id, owner.id], // Backend will handle ID mapping
+        initialMessage: messageContent,
+        type: 'DIRECT',
+        propertyId: selectedSpace.property?.id || selectedSpace.propertyId,
+        businessType: 'PROPERTY_INQUIRY',
+        subject: `Inquiry about ${getAreaName(selectedSpace)}`,
+        businessContext: {
+          spaceId: selectedSpace.id,
+          spaceName: getAreaName(selectedSpace),
+          spaceType: selectedSpace.type || 'advertising_space',
+          propertyAddress: selectedSpace.property?.address || selectedSpace.address,
+          inquiryType: 'space_inquiry'
+        }
+      });
+
+      if (conversationResponse.success) {
+        console.log('✅ Conversation created successfully:', conversationResponse.data);
+        
+        // Close modals
+        setShowMessageModal(false);
+        setDetailsExpanded(false);
+        setSelectedSpace(null);
+        
+        // Navigate to messages page with the conversation
+        navigate('/messages', { 
+          state: { 
+            conversationId: conversationResponse.data.id,
+            openConversation: true
+          } 
+        });
+        
+        // Success feedback
+        alert('Message sent successfully! Redirecting to your conversations.');
+      } else {
+        throw new Error(conversationResponse.error || 'Failed to send message');
+      }
+
+    } catch (error) {
+      console.error('❌ Error sending message:', error);
+      alert(`Failed to send message: ${error.message}`);
+    } finally {
+      setIsMessageLoading(false);
+    }
+  };
 
   // Handle booking - Navigate to checkout with single item
   const handleBookNow = () => {
@@ -157,6 +274,7 @@ export default function SpaceDetailsModal({
   const totalPrice = dailyPrice * duration;
   const platformFee = totalPrice * 0.1;
   const grandTotal = totalPrice + platformFee;
+  const owner = getPropertyOwner();
 
   return (
     <AnimatePresence>
@@ -305,6 +423,30 @@ export default function SpaceDetailsModal({
                     ))}
                   </div>
                 </div>
+
+                {/* ✅ NEW: Property Owner Information */}
+                {owner && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <Building2 className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="font-medium text-slate-900 mb-1">Property Owner</h4>
+                        <p className="text-sm text-slate-600 mb-2">
+                          Managed by {owner.name}
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleMessageOwner}
+                          className="text-blue-600 border-blue-300 hover:bg-blue-50 flex items-center gap-2"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          Message Owner
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -480,6 +622,26 @@ export default function SpaceDetailsModal({
               </div>
               
               <div className="flex items-center gap-3">
+                {/* ✅ NEW: Message Owner Button */}
+                <Button
+                  variant="outline"
+                  onClick={handleMessageOwner}
+                  className="flex items-center gap-2"
+                  style={{ 
+                    borderColor: '#4668AB',
+                    color: '#4668AB'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = '#EFF6FF';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Message Owner
+                </Button>
+
                 {isInCart && isInCart(selectedSpace.id) ? (
                   <Button
                     variant="outline"
@@ -518,6 +680,85 @@ export default function SpaceDetailsModal({
             </div>
           </div>
         </motion.div>
+
+        {/* ✅ NEW: Message Composition Modal */}
+        {showMessageModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-60 flex items-center justify-center p-4"
+            onClick={() => setShowMessageModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <MessageSquare className="w-6 h-6" style={{ color: '#4668AB' }} />
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    Message {owner?.name}
+                  </h3>
+                  <p className="text-sm text-slate-600">
+                    About: {getAreaName(selectedSpace)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Your Message
+                </label>
+                <textarea
+                  value={messageContent}
+                  onChange={(e) => setMessageContent(e.target.value)}
+                  placeholder={`Hi ${owner?.name}, I'm interested in your advertising space "${getAreaName(selectedSpace)}". Could you provide more information about availability and pricing?`}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  rows={4}
+                  maxLength={500}
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  {messageContent.length}/500 characters
+                </p>
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowMessageModal(false)}
+                  disabled={isMessageLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={!messageContent.trim() || isMessageLoading}
+                  className="flex items-center gap-2"
+                  style={{ 
+                    backgroundColor: '#4668AB',
+                    borderColor: '#4668AB'
+                  }}
+                >
+                  {isMessageLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Send Message
+                    </>
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </motion.div>
     </AnimatePresence>
   );

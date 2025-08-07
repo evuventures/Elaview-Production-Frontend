@@ -1,11 +1,10 @@
 // src/api/apiClient.js
+// ✅ FIXED: Complete ApiClient with conversation methods properly integrated
 // ✅ RATE LIMITING FIXES: Request deduplication, caching, and exponential backoff
-// ✅ FIXED: Business Profile 404 handling + Advertiser Dashboard
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const API_TIMEOUT = 30000;
 const CACHE_DURATION = 60000; // 1 minute cache
-// const DEDUP_DURATION = 5000; // 5 second deduplication window (reserved for future use)
 
 console.log('🚀 API Client initialized with rate limiting:', API_BASE_URL);
 
@@ -471,34 +470,6 @@ class ApiClient {
     return this.delete(`/properties/${id}`);
   }
 
-  // ✅ ADVERTISING AREAS - NOW DEPRECATED, USE SPACES INSTEAD
-  // These methods are kept for backward compatibility but route to spaces
-  async getAreas(params = {}) {
-    console.log('⚠️ getAreas() is deprecated - use getSpaces() instead');
-    const queryString = new URLSearchParams(params).toString();
-    return this.get(`/spaces${queryString ? `?${queryString}` : ''}`);
-  }
-
-  async getArea(id) {
-    console.log('⚠️ getArea() is deprecated - use getSpace() instead');
-    return this.get(`/spaces/${id}`);
-  }
-
-  async createArea(data) {
-    console.log('⚠️ createArea() is deprecated - use createSpace() instead');
-    return this.post('/spaces', data);
-  }
-
-  async updateArea(id, data) {
-    console.log('⚠️ updateArea() is deprecated - use updateSpace() instead');
-    return this.put(`/spaces/${id}`, data);
-  }
-
-  async deleteArea(id) {
-    console.log('⚠️ deleteArea() is deprecated - use deleteSpace() instead');
-    return this.delete(`/spaces/${id}`);
-  }
-
   // ✅ SPACES (Unified API for all advertising spaces)
   async getSpaces(params = {}) {
     console.log('🏢 Getting spaces with params:', params);
@@ -629,6 +600,110 @@ class ApiClient {
 
   async deleteMessage(id) {
     return this.delete(`/messages/${id}`);
+  }
+
+  // ✅ CONVERSATIONS (Enhanced B2B messaging) - PROPERLY INTEGRATED
+  async getConversations(params = {}) {
+    console.log('💬 Getting conversations with params:', params);
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/conversations${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getConversation(id) {
+    console.log('💬 Getting conversation:', id);
+    return this.get(`/conversations/${id}`);
+  }
+
+  async createConversation(data) {
+    console.log('💬 Creating conversation:', data);
+    return this.post('/conversations/create', data);
+  }
+
+  async sendMessageToConversation(conversationId, messageData) {
+    console.log('💬 Sending message to conversation:', conversationId, messageData);
+    return this.post(`/conversations/${conversationId}/messages`, messageData);
+  }
+
+  async archiveConversation(conversationId, isArchived = true) {
+    console.log('💬 Archiving conversation:', conversationId, isArchived);
+    return this.patch(`/conversations/${conversationId}/archive`, { isArchived });
+  }
+
+  // ✅ ENHANCED MESSAGES (B2B specific message types)
+  async sendPropertyInquiry(propertyData) {
+    console.log('🏢 Sending property inquiry:', propertyData);
+    return this.post('/messages/property-inquiry', propertyData);
+  }
+
+  async sendRFQ(rfqData) {
+    console.log('📋 Sending RFQ:', rfqData);
+    return this.post('/messages/rfq', rfqData);
+  }
+
+  async sendContract(contractData) {
+    console.log('📄 Sending contract:', contractData);
+    return this.post('/messages/contract', contractData);
+  }
+
+  async getUnreadMessagesCount() {
+    console.log('📨 Getting unread messages count');
+    try {
+      const response = await this.get('/messages/unread/count');
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to get unread count:', error);
+      return { success: true, data: { count: 0 } };
+    }
+  }
+
+  async markConversationAsRead(conversationId) {
+    console.log('✅ Marking conversation as read:', conversationId);
+    return this.post(`/conversations/${conversationId}/mark-read`);
+  }
+
+  // ✅ USER LOOKUP (for messaging)
+  async findUsersByBusinessName(searchTerm) {
+    console.log('🔍 Searching users by business name:', searchTerm);
+    const params = { search: searchTerm, type: 'business' };
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/users/search?${queryString}`);
+  }
+
+  async getUserByClerkId(clerkId) {
+    console.log('👤 Getting user by Clerk ID:', clerkId);
+    return this.get(`/users/clerk/${clerkId}`);
+  }
+
+  // ✅ PROPERTY OWNER LOOKUP (specific to messaging property owners)
+  async getPropertyOwner(propertyId) {
+    console.log('🏢 Getting property owner for property:', propertyId);
+    try {
+      const response = await this.get(`/properties/${propertyId}/owner`);
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to get property owner:', error);
+      // Fallback: try to get from property data
+      const property = await this.get(`/properties/${propertyId}`);
+      if (property.success && property.data.ownerId) {
+        const owner = await this.get(`/users/${property.data.ownerId}`);
+        return owner;
+      }
+      throw error;
+    }
+  }
+
+  async getSpaceOwner(spaceId) {
+    console.log('🏢 Getting space owner for space:', spaceId);
+    try {
+      const space = await this.getSpace(spaceId);
+      if (space.success && space.data.property?.ownerId) {
+        return this.getUser(space.data.property.ownerId);
+      }
+      throw new Error('Space owner not found');
+    } catch (error) {
+      console.error('❌ Failed to get space owner:', error);
+      throw error;
+    }
   }
 
   // ✅ INVOICES (matches your actual schema - with Stripe integration)
@@ -829,5 +904,5 @@ class ApiClient {
   }
 }
 
-// ✅ CRITICAL: Export the instance as default
+// ✅ CRITICAL: Export the instance as default - NO CODE AFTER THIS LINE
 export default new ApiClient();
