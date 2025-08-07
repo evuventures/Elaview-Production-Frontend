@@ -274,15 +274,36 @@ export default function MessagesPage() {
   }, []);
 
   return (
-    // Replace line 323 in MessagesPage component
-<div className="h-screen md:h-screen h-[calc(100vh-4rem)] md:flex flex" 
-     style={{ backgroundColor: '#F8FAFF' }}>
+    <div 
+      className="flex w-full absolute inset-0 md:relative md:h-screen"
+      style={{ 
+        backgroundColor: '#F8FAFF',
+        // Mobile: Account for fixed navigation bars
+        top: '64px',
+        bottom: '80px',
+        left: 0,
+        right: 0
+      }}
+    >
+      {/* Desktop override - full height without nav spacing */}
+      <style jsx>{`
+        @media (min-width: 768px) {
+          div[style*="top: 64px"] {
+            position: relative !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            height: 100vh !important;
+          }
+        }
+      `}</style>
+
       {/* CONVERSATIONS SIDEBAR */}
-      <div className={`${
-        showMobileConversations ? 'w-full' : 'hidden'
-      } md:flex md:w-[380px] lg:w-[420px] xl:w-[480px] border-r flex-col`}
-      style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' }}>
-        
+      <div 
+        className={`${
+          showMobileConversations ? 'w-full' : 'hidden'
+        } md:flex md:w-[380px] lg:w-[420px] xl:w-[480px] border-r flex flex-col h-full`}
+        style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' }}
+      >
         {/* Sidebar Header */}
         <div className="flex-shrink-0 p-4 md:p-6 border-b" style={{ borderColor: '#E5E7EB' }}>
           <div className="flex items-center justify-between mb-4">
@@ -317,7 +338,7 @@ export default function MessagesPage() {
           </div>
         </div>
 
-        {/* Conversations List */}
+        {/* Conversations List - Scrollable */}
         <div className="flex-1 overflow-y-auto">
           {filteredConversations.map(conversation => {
             const otherId = conversation.participant_ids.find(id => id !== currentUserId);
@@ -405,77 +426,86 @@ export default function MessagesPage() {
       </div>
 
       {/* MESSAGES PANEL */}
-      <div className={`${
-        showMobileConversations ? 'hidden' : 'flex'
-      } md:flex flex-1 flex-col`}
-      style={{ backgroundColor: '#FFFFFF' }}>
-        
+      <div 
+        className={`${
+          showMobileConversations ? 'hidden' : 'flex'
+        } md:flex flex-1 flex-col h-full relative`}
+        style={{ backgroundColor: '#FFFFFF' }}
+      >
         {selectedConversation && otherUser ? (
           <>
-            {/* Messages Header */}
-            <div className="flex-shrink-0 p-4 border-b" style={{ borderColor: '#E5E7EB' }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setShowMobileConversations(true)}
-                    className="md:hidden p-2 rounded-lg hover:bg-gray-50"
-                  >
-                    <ChevronLeft className="w-5 h-5 text-gray-600" />
-                  </button>
-                  
-                  <div className="relative">
-                    <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-                      <User className="w-5 h-5 text-gray-600" />
-                    </div>
-                    {onlineUsers.has(otherUser.id) && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
-                    )}
-                  </div>
-                  
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="font-semibold text-gray-900">{otherUser.full_name}</h2>
-                      {otherUser.isVerified && (
-                        <div className="px-2 py-0.5 rounded-full text-xs font-medium"
-                          style={{ backgroundColor: '#EFF6FF', color: '#4668AB' }}>
-                          Verified
-                        </div>
+            {/* Messages Header - Fixed at top */}
+            <div className="absolute top-0 left-0 right-0 z-10 bg-white border-b" style={{ borderColor: '#E5E7EB' }}>
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setShowMobileConversations(true)}
+                      className="md:hidden p-2 rounded-lg hover:bg-gray-50"
+                    >
+                      <ChevronLeft className="w-5 h-5 text-gray-600" />
+                    </button>
+                    
+                    <div className="relative">
+                      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+                        <User className="w-5 h-5 text-gray-600" />
+                      </div>
+                      {onlineUsers.has(otherUser.id) && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
                       )}
                     </div>
-                    <p className="text-sm text-gray-600">{otherUser.businessName}</p>
+                    
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="font-semibold text-gray-900">{otherUser.full_name}</h2>
+                        {otherUser.isVerified && (
+                          <div className="px-2 py-0.5 rounded-full text-xs font-medium"
+                            style={{ backgroundColor: '#EFF6FF', color: '#4668AB' }}>
+                            Verified
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600">{otherUser.businessName}</p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <button className="p-2 rounded-lg hover:bg-gray-50">
-                    <Phone className="w-5 h-5 text-gray-600" />
-                  </button>
-                  <button className="p-2 rounded-lg hover:bg-gray-50">
-                    <Video className="w-5 h-5 text-gray-600" />
-                  </button>
-                  <button className="p-2 rounded-lg hover:bg-gray-50">
-                    <MoreVertical className="w-5 h-5 text-gray-600" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Business Context Bar */}
-              {selectedConversation.context && (
-                <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: '#F8FAFF' }}>
                   <div className="flex items-center gap-2">
-                    {selectedConversation.context.type === 'property' && <Building2 className="w-4 h-4 text-gray-500" />}
-                    {selectedConversation.context.type === 'campaign' && <Briefcase className="w-4 h-4 text-gray-500" />}
-                    {selectedConversation.context.type === 'booking' && <Calendar className="w-4 h-4 text-gray-500" />}
-                    <span className="text-sm font-medium text-gray-700">
-                      {selectedConversation.context.name}
-                    </span>
+                    <button className="p-2 rounded-lg hover:bg-gray-50">
+                      <Phone className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <button className="p-2 rounded-lg hover:bg-gray-50">
+                      <Video className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <button className="p-2 rounded-lg hover:bg-gray-50">
+                      <MoreVertical className="w-5 h-5 text-gray-600" />
+                    </button>
                   </div>
                 </div>
-              )}
+
+                {/* Business Context Bar */}
+                {selectedConversation.context && (
+                  <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: '#F8FAFF' }}>
+                    <div className="flex items-center gap-2">
+                      {selectedConversation.context.type === 'property' && <Building2 className="w-4 h-4 text-gray-500" />}
+                      {selectedConversation.context.type === 'campaign' && <Briefcase className="w-4 h-4 text-gray-500" />}
+                      {selectedConversation.context.type === 'booking' && <Calendar className="w-4 h-4 text-gray-500" />}
+                      <span className="text-sm font-medium text-gray-700">
+                        {selectedConversation.context.name}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Messages Area - Scrollable with proper spacing */}
+            <div 
+              className="flex-1 overflow-y-auto p-4"
+              style={{ 
+                paddingTop: selectedConversation.context ? '140px' : '100px', // Space for header
+                paddingBottom: attachments.length > 0 ? '140px' : '100px' // Space for input
+              }}
+            >
               {isLoading ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
@@ -484,7 +514,7 @@ export default function MessagesPage() {
                   </div>
                 </div>
               ) : (
-                <>
+                <div className="space-y-4">
                   {messages.map((message, index) => {
                     const isMyMessage = message.sender_id === currentUserId;
                     const showDate = index === 0 || 
@@ -557,77 +587,86 @@ export default function MessagesPage() {
                     );
                   })}
                   <div ref={messagesEndRef} />
-                </>
+                </div>
               )}
             </div>
 
-            {/* Message Input */}
-            <div className="flex-shrink-0 p-4 pb-8 md:pb-4 border-t" style={{ borderColor: '#E5E7EB' }}>
-              {/* Attachments Preview */}
-              {attachments.length > 0 && (
-                <div className="mb-3 flex gap-2 flex-wrap">
-                  {attachments.map(att => (
-                    <div key={att.id} className="flex items-center gap-2 p-2 rounded-lg bg-gray-100">
-                      {att.type.startsWith('image/') ? 
-                        <Image className="w-4 h-4 text-gray-500" /> : 
-                        <FileText className="w-4 h-4 text-gray-500" />
-                      }
-                      <span className="text-sm text-gray-700 max-w-[150px] truncate">{att.name}</span>
-                      <button
-                        onClick={() => setAttachments(prev => prev.filter(a => a.id !== att.id))}
-                        className="p-1 rounded hover:bg-gray-200"
-                      >
-                        <X className="w-3 h-3 text-gray-500" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              <div className="flex items-center gap-3">
-                <label className="p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-                  <Paperclip className="w-5 h-5 text-gray-600" />
-                  <input
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={handleFileSelect}
-                    accept="image/*,.pdf,.doc,.docx"
-                  />
-                </label>
+            {/* Message Input - Fixed at bottom with proper height */}
+            <div 
+              className="absolute bottom-0 left-0 right-0 bg-white border-t" 
+              style={{ 
+                borderColor: '#E5E7EB',
+                minHeight: 'auto',
+                maxHeight: attachments.length > 0 ? '120px' : '80px'
+              }}
+            >
+              <div className="p-3">
+                {/* Attachments Preview */}
+                {attachments.length > 0 && (
+                  <div className="mb-2 flex gap-2 flex-wrap">
+                    {attachments.map(att => (
+                      <div key={att.id} className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 text-xs">
+                        {att.type.startsWith('image/') ? 
+                          <Image className="w-3 h-3 text-gray-500" /> : 
+                          <FileText className="w-3 h-3 text-gray-500" />
+                        }
+                        <span className="text-gray-700 max-w-[100px] truncate">{att.name}</span>
+                        <button
+                          onClick={() => setAttachments(prev => prev.filter(a => a.id !== att.id))}
+                          className="p-0.5 rounded hover:bg-gray-200 ml-1"
+                        >
+                          <X className="w-3 h-3 text-gray-500" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                    placeholder={`Message ${otherUser.full_name}...`}
-                    className="w-full px-4 py-3 pr-12 rounded-lg border bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2"
-                    style={{ borderColor: '#E5E7EB', focusRingColor: '#4668AB' }}
-                  />
+                <div className="flex items-center gap-2">
+                  <label className="p-2 rounded-lg hover:bg-gray-50 cursor-pointer flex-shrink-0">
+                    <Paperclip className="w-5 h-5 text-gray-600" />
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={handleFileSelect}
+                      accept="image/*,.pdf,.doc,.docx"
+                    />
+                  </label>
+                  
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                      placeholder={`Message ${otherUser.full_name}...`}
+                      className="w-full px-3 py-2 pr-10 rounded-lg border bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 text-sm"
+                      style={{ borderColor: '#E5E7EB', focusRingColor: '#4668AB' }}
+                    />
+                    
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={!newMessage.trim() || isSending}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-white"
+                      style={{ backgroundColor: newMessage.trim() ? '#4668AB' : '#9CA3AF' }}
+                    >
+                      {isSending ? 
+                        <Loader2 className="w-4 h-4 animate-spin" /> : 
+                        <Send className="w-4 h-4" />
+                      }
+                    </button>
+                  </div>
                   
                   <button
-                    onClick={handleSendMessage}
-                    disabled={!newMessage.trim() || isSending}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-white"
-                    style={{ backgroundColor: newMessage.trim() ? '#4668AB' : '#9CA3AF' }}
+                    onClick={() => setIsRecording(!isRecording)}
+                    className={`p-2 rounded-lg hover:bg-gray-50 flex-shrink-0 ${
+                      isRecording ? 'text-red-500' : 'text-gray-600'
+                    }`}
                   >
-                    {isSending ? 
-                      <Loader2 className="w-4 h-4 animate-spin" /> : 
-                      <Send className="w-4 h-4" />
-                    }
+                    {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                   </button>
                 </div>
-                
-                <button
-                  onClick={() => setIsRecording(!isRecording)}
-                  className={`p-2 rounded-lg hover:bg-gray-50 ${
-                    isRecording ? 'text-red-500' : 'text-gray-600'
-                  }`}
-                >
-                  {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                </button>
               </div>
             </div>
           </>
