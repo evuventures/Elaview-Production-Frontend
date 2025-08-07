@@ -253,7 +253,7 @@
   }
   
   .conversation-item.selected {
-    @apply bg-teal-50 border-teal-200;
+    @apply bg-blue-50 border-blue-200;
   }
 
   /* Typography */
@@ -289,25 +289,29 @@
     @apply text-xs text-slate-500;
   }
 
-  /* Buttons */
+  /* ✅ UPDATED: Buttons - Changed from teal to brand blue */
   .btn-base {
     @apply inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-primary {
-    @apply btn-base bg-teal-500 text-white hover:bg-teal-600 focus:ring-teal-500 shadow-sm;
+    @apply btn-base text-white shadow-sm;
+    background-color: rgb(70, 104, 171); /* #4668AB - Brand Blue */
   }
 
   .btn-primary:hover {
     @apply shadow-md;
+    background-color: rgb(57, 85, 140); /* #39558C - Darker blue for hover */
   }
 
   .btn-primary:active {
     @apply transform scale-95;
+    background-color: rgb(45, 67, 111); /* #2D436F - Even darker for active */
   }
 
   .btn-primary:focus {
-    @apply ring-2 ring-teal-500 ring-offset-2;
+    @apply ring-2 ring-offset-2;
+    --tw-ring-color: rgb(70, 104, 171); /* Brand blue ring */
   }
 
   .btn-secondary {
@@ -346,6 +350,35 @@
     @apply px-6 py-3 text-lg;
   }
 
+  /* ✅ NEW: Brand Blue Button Variants */
+  .btn-brand {
+    @apply btn-base text-white shadow-sm;
+    background-color: rgb(70, 104, 171); /* #4668AB */
+  }
+
+  .btn-brand:hover {
+    @apply shadow-md;
+    background-color: rgb(57, 85, 140); /* #39558C */
+  }
+
+  .btn-brand:active {
+    @apply transform scale-95;
+    background-color: rgb(45, 67, 111); /* #2D436F */
+  }
+
+  .btn-brand-outline {
+    @apply btn-base border-2;
+    color: rgb(70, 104, 171);
+    border-color: rgb(70, 104, 171);
+    background-color: transparent;
+  }
+
+  .btn-brand-outline:hover {
+    background-color: rgb(239, 246, 255); /* #EFF6FF */
+    color: rgb(57, 85, 140);
+    border-color: rgb(57, 85, 140);
+  }
+
   /* Forms */
   .form-group {
     @apply space-y-2;
@@ -356,15 +389,24 @@
   }
 
   .form-input {
-    @apply block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed;
+    @apply block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed;
+    --tw-ring-color: rgb(70, 104, 171); /* Brand blue for focus */
   }
 
   .form-input:focus {
-    @apply ring-2 ring-teal-500 ring-offset-2;
+    @apply ring-2 ring-offset-2;
+    --tw-ring-color: rgb(70, 104, 171); /* Brand blue */
+    border-color: rgb(70, 104, 171);
   }
 
   .form-select {
-    @apply block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed;
+    @apply block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed;
+    --tw-ring-color: rgb(70, 104, 171); /* Brand blue for focus */
+  }
+
+  .form-select:focus {
+    --tw-ring-color: rgb(70, 104, 171);
+    border-color: rgb(70, 104, 171);
   }
 
   .form-textarea {
@@ -418,7 +460,8 @@
   }
 
   .property-price {
-    @apply text-xl font-bold text-teal-600;
+    @apply text-xl font-bold;
+    color: rgb(70, 104, 171); /* Brand blue for prices */
   }
 
   .property-status {
@@ -500,7 +543,9 @@
   }
 
   .upload-area.dragover {
-    @apply border-teal-500 bg-teal-50;
+    @apply border-blue-500 bg-blue-50;
+    border-color: rgb(70, 104, 171);
+    background-color: rgb(239, 246, 255);
   }
 
   /* Creative Grid */
@@ -517,7 +562,8 @@
   }
 
   .creative-item.selected {
-    @apply ring-2 ring-teal-500 ring-offset-2;
+    @apply ring-2 ring-offset-2;
+    --tw-ring-color: rgb(70, 104, 171);
   }
 
   /* Dashboard Layout */
@@ -697,7 +743,8 @@
 
   /* Loading States */
   .loading-spinner {
-    @apply animate-spin rounded-full border-2 border-slate-200 border-t-teal-500;
+    @apply animate-spin rounded-full border-2 border-slate-200;
+    border-top-color: rgb(70, 104, 171); /* Brand blue spinner */
   }
 
   .loading-spinner-lg {
@@ -729,11 +776,13 @@
 
   /* Focus States */
   .focus-visible-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+    --tw-ring-color: rgb(70, 104, 171); /* Brand blue focus */
   }
 
   .focus-visible-ring:focus-visible {
-    @apply ring-2 ring-teal-500 ring-offset-2;
+    @apply ring-2 ring-offset-2;
+    --tw-ring-color: rgb(70, 104, 171);
   }
 
   /* Mobile List Items */

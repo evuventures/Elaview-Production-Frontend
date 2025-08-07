@@ -4,6 +4,7 @@
 // ✅ NEW: Enhanced mobile cart integration and business profile support
 // ✅ UPDATED: New color scheme and removed middle layer
 // ✅ FIXED: Pagination moved inside scrollable container and scroll bar hidden
+// ✅ FIXED: All checkout navigation properly passes full cart data
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate } from 'react-router-dom';
@@ -438,6 +439,7 @@ export default function BrowsePage() {
     }
   };
 
+  // ✅ FIXED: Business profile completion handler with proper checkout navigation
   const handleBusinessProfileComplete = (profileData) => {
     console.log('✅ Business profile completed successfully:', profileData);
     
@@ -449,7 +451,33 @@ export default function BrowsePage() {
       if (pendingNavigation.type === 'booking' && pendingNavigation.space) {
         const space = pendingNavigation.space;
         console.log('📅 Proceeding to booking after profile completion:', space.id);
-        navigate(`/checkout/${space.property.id}/${space.id}`);
+        
+        // Create cart item for the pending booking
+        const cartItem = {
+          id: `${space.id}_${Date.now()}`,
+          spaceId: space.id,
+          space: space,
+          duration: 30,
+          pricePerDay: getNumericPrice(space),
+          totalPrice: getNumericPrice(space) * 30,
+          addedAt: new Date()
+        };
+        
+        // Navigate to checkout with single item cart
+        navigate('/checkout', { 
+          state: { 
+            cart: [cartItem],
+            fromPendingBooking: true
+          } 
+        });
+      } else if (pendingNavigation.type === 'checkout') {
+        // If it was a cart checkout, proceed with the full cart
+        navigate('/checkout', { 
+          state: { 
+            cart: cart,
+            fromCart: true
+          } 
+        });
       }
       
       setPendingNavigation(null);
@@ -477,6 +505,7 @@ export default function BrowsePage() {
     setShowMobileCartDrawer(false);
   };
 
+  // ✅ FIXED: Proceed to checkout with full cart
   const handleProceedToCheckout = async () => {
     console.log('🛒 Proceeding to checkout with cart:', cart);
     
@@ -485,13 +514,31 @@ export default function BrowsePage() {
       return;
     }
     
-    const firstItem = cart[0];
-    const canProceed = await checkBusinessProfileBeforeBooking(firstItem.space);
-    
-    if (canProceed) {
-      navigate(`/checkout/${firstItem.space.property.id}/${firstItem.space.id}`);
-      setShowMobileCartDrawer(false);
+    // Check business profile before navigating
+    if (currentUser?.id) {
+      const firstItem = cart[0];
+      const canProceed = await checkBusinessProfileBeforeBooking(firstItem.space);
+      
+      if (!canProceed) {
+        // Set pending navigation for checkout
+        setPendingNavigation({
+          type: 'checkout',
+          timestamp: Date.now()
+        });
+        return;
+      }
     }
+    
+    // Navigate to checkout with the FULL cart
+    navigate('/checkout', { 
+      state: { 
+        cart: cart,
+        fromCart: true
+      } 
+    });
+    
+    // Close the mobile cart drawer if open
+    setShowMobileCartDrawer(false);
   };
 
   // ✅ FIXED: Property click handler with real-time mobile detection
@@ -650,30 +697,102 @@ export default function BrowsePage() {
     }
   };
 
+  // ✅ FIXED: Booking navigation with proper cart creation
   const handleBookingNavigation = async (space, campaign = null) => {
     console.log('📅 Booking navigation requested:', space.id, space.property?.id || space.propertyId);
     
     const canProceed = await checkBusinessProfileBeforeBooking(space);
     
     if (canProceed) {
-      const propertyId = space.property?.id || space.propertyId;
-      let checkoutUrl = `/checkout/${propertyId}/${space.id}`;
+      // For single space booking, create a cart item and navigate
+      const cartItem = {
+        id: `${space.id}_${Date.now()}`,
+        spaceId: space.id,
+        space: space,
+        duration: 30, // default duration
+        pricePerDay: getNumericPrice(space),
+        totalPrice: getNumericPrice(space) * 30,
+        addedAt: new Date(),
+        campaign: campaign || null
+      };
       
-      // If campaign is provided, add it to the URL
-      if (campaign) {
-        checkoutUrl += `?campaignId=${campaign.id}`;
-        console.log('✅ Profile complete, navigating to checkout with campaign:', checkoutUrl);
-      } else {
-        console.log('✅ Profile complete, navigating to checkout:', checkoutUrl);
-      }
+      // Create a single-item cart for immediate checkout
+      const checkoutCart = [cartItem];
       
-      navigate(checkoutUrl);
+      // Navigate to checkout with the single item cart
+      navigate('/checkout', { 
+        state: { 
+          cart: checkoutCart,
+          fromSingleBooking: true,
+          campaign: campaign
+        } 
+      });
     }
   };
 
+  // ✅ FIXED: Mobile booking handler
   const handleMobileBooking = async (space) => {
     console.log('📱 Mobile booking for space:', space.id);
-    await handleBookingNavigation(space);
+    
+    // For mobile booking, create cart item and navigate
+    const cartItem = {
+      id: `${space.id}_${Date.now()}`,
+      spaceId: space.id,
+      space: space,
+      duration: 30, // default duration
+      pricePerDay: getNumericPrice(space),
+      totalPrice: getNumericPrice(space) * 30,
+      addedAt: new Date()
+    };
+    
+    // Check business profile
+    const canProceed = await checkBusinessProfileBeforeBooking(space);
+    
+    if (canProceed) {
+      // Create a single-item cart for immediate checkout
+      const checkoutCart = [cartItem];
+      
+      // Navigate to checkout
+      navigate('/checkout', { 
+        state: { 
+          cart: checkoutCart,
+          fromMobileBooking: true
+        } 
+      });
+    }
+  };
+
+  // ✅ NEW: Add to cart and checkout handler
+  const handleAddToCartAndCheckout = async (space, duration = 30) => {
+    console.log('🛒 Add to cart and checkout for space:', space.id);
+    
+    // Create cart item
+    const cartItem = {
+      id: `${space.id}_${Date.now()}`,
+      spaceId: space.id,
+      space: space,
+      duration: duration,
+      pricePerDay: getNumericPrice(space),
+      totalPrice: getNumericPrice(space) * duration,
+      addedAt: new Date()
+    };
+    
+    // Add to existing cart
+    const updatedCart = [...cart, cartItem];
+    setCart(updatedCart);
+    
+    // Check business profile
+    const canProceed = await checkBusinessProfileBeforeBooking(space);
+    
+    if (canProceed) {
+      // Navigate to checkout with updated cart
+      navigate('/checkout', { 
+        state: { 
+          cart: updatedCart,
+          fromAddToCart: true
+        } 
+      });
+    }
   };
 
   const activeFiltersCount = useMemo(() => {

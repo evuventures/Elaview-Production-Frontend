@@ -1,5 +1,6 @@
 import Layout from "../components/layout/Layout.tsx";
-import CheckoutPage from "./checkout/CheckoutPage.jsx"; // ✅ FIXED: Renamed from Bookings to CheckoutPage for clarity
+import Landing from "./landing/LandingPage.jsx"; // ✅ ADDED: Import your Landing page
+import CheckoutPage from "./checkout/CheckoutPage.jsx"; // ✅ FIXED: This is for cart checkout
 import AdvertisingPage from "./dashboard/advertiser/AdvertiserDashboard.tsx"; // ✅ NEW: Import the bookings management page
 import Map from "./browse/BrowsePage.jsx";
 import Messages from "./messages/MessagesPage.tsx";
@@ -15,7 +16,7 @@ import PropertyManagement from "./properties/PropertyManagement.jsx";
 import DataSeeder from "./DataSeeder.jsx";
 import Admin from "./dashboard/admin/Admin.tsx";
 import EditProperty from "./properties/EditProperty.jsx";
-import Checkout from "./payments/Checkout.jsx";
+import CampaignCheckout from "./payments/Checkout.jsx"; // ✅ RENAMED: This is for campaign checkout only
 import CampaignDetails from "./campaigns/CampaignDetails.jsx";
 import PaymentTest from "./payments/PaymentTest.jsx";
 import ProtectedRoute from "../components/auth/ProtectedRoute.jsx";
@@ -43,11 +44,13 @@ import MinimalTestMap from "@/dev/debug/MinimalTestMap.tsx";
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation, useParams } from 'react-router-dom';
 import { useEffect } from 'react';
 
-// ✅ UPDATED: No more CreateProperty in PAGES object
+// ✅ UPDATED: Added Landing to PAGES object
 const PAGES = {
+    Landing: Landing, // ✅ NEW: Landing page component
     Browse: Map, // ✅ Map.jsx is your browse page
     Messages: Messages,
-    CheckoutPage: CheckoutPage, // ✅ UPDATED: Checkout flow (formerly Bookings)
+    CheckoutPage: CheckoutPage, // ✅ UPDATED: Cart checkout (from checkout folder)
+    CampaignCheckout: CampaignCheckout, // ✅ Campaign checkout (from payments folder)
     AdvertisingPage: AdvertisingPage, // ✅ NEW: Bookings management page
     Profile: Profile,
     Help: Help,
@@ -69,7 +72,6 @@ const PAGES = {
     MaterialOrderProcessing: MaterialOrderProcessing,
     ClientOnboardingSystem: ClientOnboardingSystem,
     EditProperty: EditProperty,
-    Checkout: Checkout,
     CampaignDetails: CampaignDetails,
     PaymentTest: PaymentTest,
     // Search: Search,
@@ -116,8 +118,8 @@ function PagesContent() {
 
     return (
         <Routes>
-            {/* ✅ DEFAULT ROUTE - Redirect to browse */}
-            <Route path="/" element={<Navigate to="/browse" replace />} />
+            {/* ✅ DEFAULT ROUTE - Landing page (no layout wrapper) */}
+            <Route path="/" element={<Landing />} />
             
             {/* 🧪 TEMPORARY DEBUG ROUTES - Remove after fixing Map component */}
             <Route path="/debug-api" element={
@@ -196,11 +198,29 @@ function PagesContent() {
                 </ProtectedRoute>
             } />
 
-            {/* ✅ CHECKOUT FLOW - Individual booking creation */}
+            {/* ✅ FIXED: CART CHECKOUT - Now uses the correct CheckoutPage component */}
+            <Route path="/checkout" element={
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="cart-checkout-protected">
+                    <Layout currentPageName="Checkout" key="cart-checkout-page">
+                        <CheckoutPage key="cart-checkout-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            {/* ✅ INDIVIDUAL SPACE CHECKOUT - Direct booking from space details */}
             <Route path="/checkout/:propertyId/:spaceId" element={
-                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="checkout-protected">
-                    <Layout currentPageName="Checkout" key="checkout-page">
-                        <CheckoutPage key="checkout-component" />
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="space-checkout-protected">
+                    <Layout currentPageName="Checkout" key="space-checkout-page">
+                        <CheckoutPage key="space-checkout-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            {/* ✅ CAMPAIGN CHECKOUT - For campaign-based checkouts only */}
+            <Route path="/campaign-checkout" element={
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="campaign-checkout-protected">
+                    <Layout currentPageName="Campaign Checkout" key="campaign-checkout-page">
+                        <CampaignCheckout key="campaign-checkout-component" />
                     </Layout>
                 </ProtectedRoute>
             } />
@@ -245,13 +265,6 @@ function PagesContent() {
                 <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="edit-property-protected">
                     <Layout currentPageName="EditProperty" key="edit-property-page">
                         <EditProperty key="edit-property-component" />
-                    </Layout>
-                </ProtectedRoute>
-            } />
-            <Route path="/checkout" element={
-                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="checkout-alt-protected">
-                    <Layout currentPageName="Checkout" key="checkout-alt-page">
-                        <Checkout key="checkout-alt-component" />
                     </Layout>
                 </ProtectedRoute>
             } />

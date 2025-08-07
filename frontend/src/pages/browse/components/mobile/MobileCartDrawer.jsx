@@ -1,9 +1,11 @@
 // src/pages/browse/components/mobile/MobileCartDrawer.jsx
 // ✅ RESEARCH-BASED: Bottom sheet pattern increases conversions by 5.2%
 // ✅ MOBILE-OPTIMIZED: Thumb-friendly design that preserves map context
+// ✅ FIXED: Proper checkout navigation with full cart data
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   X, ShoppingCart, Calendar, Plus, Minus, Trash2, 
   ChevronRight, Package, MapPin, AlertCircle, 
@@ -20,6 +22,7 @@ const MobileCartDrawer = ({
   onProceedToCheckout,
   onClearCart
 }) => {
+  const navigate = useNavigate();
   const [isAnimating, setIsAnimating] = useState(false);
   
   // ✅ RESEARCH-BASED: Calculate cart totals with platform fee
@@ -67,7 +70,7 @@ const MobileCartDrawer = ({
     onRemoveItem(itemId);
   };
 
-  // ✅ Handle checkout with validation
+  // ✅ FIXED: Handle checkout with proper navigation
   const handleCheckout = () => {
     if (!cartItems || cartItems.length === 0) {
       alert('Your cart is empty. Please add some spaces first.');
@@ -75,7 +78,22 @@ const MobileCartDrawer = ({
     }
     
     console.log('🛒 Proceeding to checkout from mobile drawer with', cartItems.length, 'items');
-    onProceedToCheckout();
+    
+    // Navigate to checkout with the full cart
+    navigate('/checkout', { 
+      state: { 
+        cart: cartItems,
+        fromMobileCart: true
+      } 
+    });
+    
+    // Call the callback for any cleanup in the parent
+    if (onProceedToCheckout) {
+      onProceedToCheckout();
+    }
+    
+    // Close the drawer
+    onClose();
   };
 
   // ✅ Handle clear cart with confirmation
@@ -123,7 +141,7 @@ const MobileCartDrawer = ({
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
             <div className="flex items-center gap-3">
-              <ShoppingCart className="w-5 h-5 text-teal-600" />
+              <ShoppingCart className="w-5 h-5" style={{ color: '#4668AB' }} />
               <div>
                 <h2 className="font-bold text-slate-900">Your Cart</h2>
                 <p className="text-sm text-slate-600">
@@ -190,8 +208,8 @@ const MobileCartDrawer = ({
                         {/* Material Configuration Badge */}
                         {item.space?.materialConfiguration && (
                           <div className="flex items-center gap-1 mt-1">
-                            <Package className="w-3 h-3 text-teal-600" />
-                            <span className="text-xs text-teal-600 font-medium">
+                            <Package className="w-3 h-3" style={{ color: '#4668AB' }} />
+                            <span className="text-xs font-medium" style={{ color: '#4668AB' }}>
                               Materials configured
                             </span>
                           </div>
@@ -272,7 +290,7 @@ const MobileCartDrawer = ({
           {cartItems.length > 0 && (
             <div className="border-t border-slate-200 bg-white p-4 pt-3">
               {/* Quick Summary */}
-              <div className="bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg p-3 mb-4">
+              <div className="bg-gradient-to-r from-blue-50 to-slate-50 rounded-lg p-3 mb-4">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-600">Subtotal ({cartSummary.totalDays} days):</span>
                   <span className="font-semibold">${cartSummary.subtotal.toFixed(2)}</span>
@@ -281,10 +299,10 @@ const MobileCartDrawer = ({
                   <span className="text-slate-600">Platform fee (10%):</span>
                   <span className="font-semibold">${cartSummary.platformFee.toFixed(2)}</span>
                 </div>
-                <div className="border-t border-teal-200 mt-2 pt-2">
+                <div className="border-t border-slate-200 mt-2 pt-2">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-900">Total:</span>
-                    <span className="font-bold text-lg text-teal-600">
+                    <span className="font-bold text-lg" style={{ color: '#4668AB' }}>
                       ${cartSummary.total.toFixed(2)}
                     </span>
                   </div>
