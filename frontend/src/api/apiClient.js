@@ -2,7 +2,7 @@
 // ✅ RATE LIMITING FIXES: Request deduplication, caching, and exponential backoff
 // ✅ FIXED: Business Profile 404 handling + Advertiser Dashboard
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 const API_TIMEOUT = 30000;
 const CACHE_DURATION = 60000; // 1 minute cache
 // const DEDUP_DURATION = 5000; // 5 second deduplication window (reserved for future use)
