@@ -1,0 +1,149 @@
+# Elaview Frontend - Docker ignore file
+# Prevents unnecessary files from being copied into Docker image
+
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Production build (will be created during build)
+build
+dist
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Development and testing
+coverage
+.nyc_output
+.cache
+.parcel-cache
+
+# Linting and formatting
+.eslintcache
+.stylelintcache
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+.vite
+
+# Documentation
+README.md
+*.md
+docs/
+
+# Testing files
+test/
+tests/
+__tests__/
+*.test.js
+*.test.jsx
+*.test.ts
+*.test.tsx
+*.spec.js
+*.spec.jsx
+*.spec.ts
+*.spec.tsx
+
+# Storybook
+.storybook/
+storybook-static/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# Local development files
+LOCAL_SETUP_GUIDE.md
+MIGRATION_*.md
+
+# Legacy and cleanup
+LEGACY/
+oldglobals/
+_cleanup_notes/
+BACKUP_*/
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Husky
+.husky/
+
+# Vercel
+.vercel
+
+# Turbo
+.turbo
+
+# Sentry
+.sentryclirc
+
+# Development server cache
+.next/
+
+# Misc development files
+.eslintrc*
+.prettierrc*
+.stylelintrc*
+postcss.config.*
+tailwind.config.*
+vite.config.*
+tsconfig.*
+components.json
+
+# Hot reload files
+*.hot-update.js
+*.hot-update.json
