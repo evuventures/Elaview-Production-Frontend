@@ -6,7 +6,7 @@ import {
   Plus, Building2, Calendar, Package, Camera,
   DollarSign, Clock, CheckCircle, AlertCircle,
   Eye, Upload, ChevronRight, MapPin, FileText,
-  Download, Truck, Navigation, Star, TrendingUp
+  Download, Truck, Navigation, Star, TrendingUp, X // ✅ FIXED: Added missing X import
 } from 'lucide-react';
 
 // ✅ FIXED: Import real apiClient instead of mock
@@ -53,6 +53,14 @@ export default function SpaceOwnerDashboardMVP() {
       setActiveTab('listings');
     }
   }, [searchParams, navigate]);
+
+  // ✅ VERIFICATION: Console log to confirm X import is working
+  useEffect(() => {
+    console.log('✅ FIXED: X icon import verification', {
+      XIconImported: typeof X !== 'undefined',
+      timestamp: new Date().toISOString()
+    });
+  }, []);
 
   // ✅ MOBILE: Add console log for mobile debugging
   useEffect(() => {
@@ -561,7 +569,7 @@ export default function SpaceOwnerDashboardMVP() {
       className="min-h-full w-full overflow-hidden"
       style={{ backgroundColor: '#FFFFFF' }}
     >
-      {/* ✅ ADDED: Success Message */}
+      {/* ✅ FIXED: Success Message with proper X icon import */}
       {showSuccessMessage && (
         <div className="fixed top-4 right-4 z-50 max-w-sm">
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 shadow-lg">

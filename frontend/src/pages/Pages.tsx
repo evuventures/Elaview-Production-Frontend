@@ -24,6 +24,11 @@ import ProtectedRoute from "../components/auth/ProtectedRoute.jsx";
 import SignInPage from "./auth/SignIn.jsx";
 import SignUpPage from "./auth/SignUp.jsx";
 import LearnMore from "./learn-more/LearnMore.jsx"; // ✅ NEW: Learn More page
+
+// ✅ NEW: SSO Callback and Debug components
+import SSOCallback from "./auth/SSOCallback.jsx"; // ✅ NEW: Handle Google OAuth redirects
+import DebugSignUpPage from "./auth/DebugSignUp.jsx"; // ✅ NEW: Debug signup issues
+
 // ❌ TEMPORARILY DISABLED: import { ChatBotProvider } from "@/contexts/ChatBotContext";
 
 // ✅ ADMIN PAGE IMPORTS - Core Admin Pages
@@ -76,6 +81,9 @@ const PAGES = {
     PaymentTest: PaymentTest,
     // Search: Search,
     LearnMore: LearnMore, // ✅ NEW: Learn More page
+    // ✅ NEW: Auth & Debug pages
+    SSOCallback: SSOCallback,
+    DebugSignUp: DebugSignUpPage,
     // 🧪 TEMPORARY DEBUG PAGES
     ApiDebugTest: ApiDebugTest,
     MinimalTestMap: MinimalTestMap,
@@ -133,9 +141,15 @@ function PagesContent() {
                 </Layout>
             } />
             
+            {/* ✅ NEW: Debug signup route for troubleshooting Clerk issues */}
+            <Route path="/debug-signup" element={<DebugSignUpPage />} />
+            
             {/* ✅ AUTH ROUTES - NO LAYOUT (No navigation bars) */}
             <Route path="/sign-in/*" element={<SignInPage />} />
             <Route path="/sign-up/*" element={<SignUpPage />} />
+            
+            {/* ✅ NEW: SSO Callback Route - NO LAYOUT (Handles Google OAuth redirects) */}
+            <Route path="/sso-callback" element={<SSOCallback />} />
             
             {/* ✅ STANDALONE PAGES - NO LAYOUT (No navigation bars) */}
             <Route path="/learn-more" element={<LearnMore />} />

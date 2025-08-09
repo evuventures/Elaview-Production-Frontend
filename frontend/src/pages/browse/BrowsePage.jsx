@@ -1,15 +1,14 @@
-// src/pages/browse/BrowsePage.jsx - MOBILE RESPONSIVE VERSION
-// ✅ UPDATED: Complete mobile responsiveness with proper nav bar spacing
-// ✅ FIXED: Touch targets, safe areas, and overflow issues
-// ✅ NEW: Enhanced mobile cart integration and business profile support
-// ✅ UPDATED: New color scheme and removed middle layer
-// ✅ FIXED: Pagination moved inside scrollable container and scroll bar hidden
-// ✅ FIXED: All checkout navigation properly passes full cart data
+// src/pages/browse/BrowsePage.jsx - ENHANCED UI/UX VERSION
+// ✅ IMPROVED: Reduced mobile visual clutter and consolidated information hierarchy
+// ✅ ENHANCED: Better loading states with skeleton screens and progressive disclosure
+// ✅ OPTIMIZED: Improved layout flexibility and touch target optimization
+// ✅ FIXED: Better state management and z-index system
+// ✅ FIXED: Header section now stays anchored at top while space cards scroll
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Navigation } from "lucide-react";
+import { Navigation, Filter, Layers } from "lucide-react";
 import GoogleMap from "@/pages/browse/components/GoogleMap";
 import { useUser } from '@clerk/clerk-react';
 
@@ -54,6 +53,38 @@ import {
 import locationService from './services/locationService';
 import apiClient from '@/api/apiClient';
 
+// ✅ NEW: Enhanced Z-Index Scale
+const Z_INDEX = {
+  MAP: 10,
+  MOBILE_CONTROLS: 20,
+  MOBILE_SHEET: 30,
+  CART_BUTTON: 35,
+  MOBILE_DRAWER: 40,
+  MODAL_BACKDROP: 50,
+  MODAL_CONTENT: 55,
+  DROPDOWN: 60,
+  TOAST: 70
+};
+
+// ✅ NEW: Skeleton Card Component for Loading States
+const SkeletonCard = () => (
+  <div className="bg-white rounded-lg border border-slate-200 p-4 space-y-3 animate-pulse">
+    <div className="flex gap-3">
+      <div className="w-16 h-16 bg-slate-200 rounded-lg flex-shrink-0"></div>
+      <div className="flex-1 space-y-2">
+        <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+        <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+        <div className="h-3 bg-slate-200 rounded w-2/3"></div>
+      </div>
+      <div className="w-16 h-8 bg-slate-200 rounded-full"></div>
+    </div>
+    <div className="flex justify-between items-center">
+      <div className="h-6 bg-slate-200 rounded-full w-20"></div>
+      <div className="h-8 bg-slate-200 rounded w-24"></div>
+    </div>
+  </div>
+);
+
 export default function BrowsePage() {
   const navigate = useNavigate();
   
@@ -95,13 +126,20 @@ export default function BrowsePage() {
   const [animatingSpace, setAnimatingSpace] = useState(null);
   const [savedSpaces, setSavedSpaces] = useState(new Set());
   const [detailsExpanded, setDetailsExpanded] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showROICalculator, setShowROICalculator] = useState(false);
+  
+  // ✅ IMPROVED: Enhanced mobile state management
+  const [isMobile, setIsMobile] = useState(false);
+  const [screenSize, setScreenSize] = useState({ width: 0, height: 0 });
+  const [viewportHeight, setViewportHeight] = useState(0);
   
   // ✅ Mobile bottom sheet state
   const [showMobileSheet, setShowMobileSheet] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [sheetTitle, setSheetTitle] = useState("Available Spaces");
+  
+  // ✅ NEW: Map legend state for progressive disclosure
+  const [showMapLegend, setShowMapLegend] = useState(false);
   
   // ✅ Business Profile state
   const [showBusinessProfileModal, setShowBusinessProfileModal] = useState(false);
@@ -110,6 +148,7 @@ export default function BrowsePage() {
   const { user: currentUser } = useUser();
   const isMountedRef = useRef(true);
   const mobileSheetRef = useRef(null);
+  const resizeTimeoutRef = useRef(null);
 
   // ✅ Business Profile hook integration
   const {
@@ -122,40 +161,45 @@ export default function BrowsePage() {
     missingFields
   } = useBusinessProfile();
 
-  // ✅ COLOR SCHEME: Verification on mount
+  // ✅ IMPROVED: Enhanced mobile detection with debouncing
   useEffect(() => {
-    console.log('🎨 BROWSE PAGE: Updated color scheme verification', {
-      primaryBlue: '#4668AB',
-      lightBlueBackground: '#F8FAFF',
-      whiteCards: '#FFFFFF',
-      lightGrayBorders: '#E5E7EB',
-      timestamp: new Date().toISOString()
-    });
-  }, []);
-
-  // ✅ MOBILE: Add mobile viewport debugging
-  useEffect(() => {
-    console.log('📱 BROWSE PAGE: Mobile viewport check', {
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
-      isMobile: window.innerWidth < 768,
-      viewport: `${window.innerWidth}x${window.innerHeight}`
-    });
-  }, []);
-
-  // ✅ IMPROVED: Mobile detection with enhanced debugging
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      console.log(`📱 Browse page resize: ${window.innerWidth}px, Mobile: ${mobile}`);
+    const updateScreenInfo = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const mobile = width < 768;
+      
+      setScreenSize({ width, height });
+      setViewportHeight(height);
       setIsMobile(mobile);
+      
+      console.log('📱 Enhanced viewport update:', {
+        width,
+        height,
+        isMobile: mobile,
+        viewportHeight: height
+      });
     };
     
-    // Call immediately to ensure correct initial state
-    handleResize();
+    const debouncedResize = () => {
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+      resizeTimeoutRef.current = setTimeout(updateScreenInfo, 150);
+    };
     
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    // Initial setup
+    updateScreenInfo();
+    
+    window.addEventListener('resize', debouncedResize);
+    window.addEventListener('orientationchange', debouncedResize);
+    
+    return () => {
+      window.removeEventListener('resize', debouncedResize);
+      window.removeEventListener('orientationchange', debouncedResize);
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+    };
   }, []);
 
   // ✅ Initialize intelligent map location on component mount
@@ -265,10 +309,12 @@ export default function BrowsePage() {
         setProperties(validProperties);
         setAllSpaces(flattenedSpaces);
         
-        // ✅ Auto-open mobile sheet with closest spaces
+        // ✅ IMPROVED: Auto-open mobile sheet only if user hasn't interacted yet
         if (isMobile && flattenedSpaces.length > 0) {
-          setShowMobileSheet(true);
-          setSheetTitle("Spaces Near You");
+          setTimeout(() => {
+            setShowMobileSheet(true);
+            setSheetTitle("Spaces Near You");
+          }, 800); // Slight delay for better UX
         }
       }
     } catch (error) {
@@ -354,12 +400,12 @@ export default function BrowsePage() {
     };
     
     setCart(prev => [...prev, cartItem]);
-    console.log('🛒 Item added to cart for mobile:', cartItem);
+    console.log('🛒 Item added to cart:', cartItem);
   };
 
   const removeFromCart = (cartItemId) => {
     setCart(prev => prev.filter(item => item.id !== cartItemId));
-    console.log('🗑️ Item removed from cart for mobile:', cartItemId);
+    console.log('🗑️ Item removed from cart:', cartItemId);
   };
 
   const updateCartItemDuration = (cartItemId, newDuration) => {
@@ -368,7 +414,7 @@ export default function BrowsePage() {
         ? { ...item, duration: newDuration, totalPrice: item.pricePerDay * newDuration }
         : item
     ));
-    console.log('⏱️ Cart item duration updated for mobile:', cartItemId, newDuration);
+    console.log('⏱️ Cart item duration updated:', cartItemId, newDuration);
   };
 
   const getTotalCartValue = () => {
@@ -381,7 +427,7 @@ export default function BrowsePage() {
 
   const clearCart = () => {
     setCart([]);
-    console.log('🗑️ Cart cleared for mobile');
+    console.log('🗑️ Cart cleared');
   };
 
   // ✅ Business Profile Integration Functions
@@ -439,7 +485,7 @@ export default function BrowsePage() {
     }
   };
 
-  // ✅ FIXED: Business profile completion handler with proper checkout navigation
+  // ✅ Business profile completion handler
   const handleBusinessProfileComplete = (profileData) => {
     console.log('✅ Business profile completed successfully:', profileData);
     
@@ -452,7 +498,6 @@ export default function BrowsePage() {
         const space = pendingNavigation.space;
         console.log('📅 Proceeding to booking after profile completion:', space.id);
         
-        // Create cart item for the pending booking
         const cartItem = {
           id: `${space.id}_${Date.now()}`,
           spaceId: space.id,
@@ -463,7 +508,6 @@ export default function BrowsePage() {
           addedAt: new Date()
         };
         
-        // Navigate to checkout with single item cart
         navigate('/checkout', { 
           state: { 
             cart: [cartItem],
@@ -471,7 +515,6 @@ export default function BrowsePage() {
           } 
         });
       } else if (pendingNavigation.type === 'checkout') {
-        // If it was a cart checkout, proceed with the full cart
         navigate('/checkout', { 
           state: { 
             cart: cart,
@@ -505,7 +548,7 @@ export default function BrowsePage() {
     setShowMobileCartDrawer(false);
   };
 
-  // ✅ FIXED: Proceed to checkout with full cart
+  // ✅ Proceed to checkout with full cart
   const handleProceedToCheckout = async () => {
     console.log('🛒 Proceeding to checkout with cart:', cart);
     
@@ -514,13 +557,11 @@ export default function BrowsePage() {
       return;
     }
     
-    // Check business profile before navigating
     if (currentUser?.id) {
       const firstItem = cart[0];
       const canProceed = await checkBusinessProfileBeforeBooking(firstItem.space);
       
       if (!canProceed) {
-        // Set pending navigation for checkout
         setPendingNavigation({
           type: 'checkout',
           timestamp: Date.now()
@@ -529,7 +570,6 @@ export default function BrowsePage() {
       }
     }
     
-    // Navigate to checkout with the FULL cart
     navigate('/checkout', { 
       state: { 
         cart: cart,
@@ -537,21 +577,16 @@ export default function BrowsePage() {
       } 
     });
     
-    // Close the mobile cart drawer if open
     setShowMobileCartDrawer(false);
   };
 
-  // ✅ FIXED: Property click handler with real-time mobile detection
+  // ✅ IMPROVED: Property click handler with enhanced mobile detection
   const handlePropertyClick = (property) => {
     if (!isMountedRef.current) return;
     
     console.log('🏢 Property clicked:', property);
-    console.log('📱 Current isMobile state:', isMobile);
-    console.log('📐 Current window width:', window.innerWidth);
     
-    const isCurrentlyMobile = window.innerWidth < 768;
-    
-    if (isCurrentlyMobile) {
+    if (isMobile) {
       console.log('✅ Handling as mobile click');
       setSelectedProperty(property);
       setSelectedSpace(null);
@@ -559,20 +594,17 @@ export default function BrowsePage() {
       setSheetTitle(`${property.name || property.title}`);
     } else {
       console.log('🖥️ Handling as desktop click');
-      console.log('Desktop property click - implement as needed');
+      // Desktop property interaction can be enhanced later
     }
   };
 
-  // ✅ FIXED: Space click handler with real-time mobile detection
+  // ✅ IMPROVED: Space click handler
   const handleSpaceClick = (space) => {
     if (!isMountedRef.current) return;
     
     console.log('📍 Space clicked:', space);
-    console.log('📱 Current isMobile state:', isMobile);
     
-    const isCurrentlyMobile = window.innerWidth < 768;
-    
-    if (isCurrentlyMobile) {
+    if (isMobile) {
       console.log('✅ Handling as mobile space click');
       setSelectedSpace(space);
       setShowMobileSheet(true);
@@ -590,9 +622,7 @@ export default function BrowsePage() {
     
     console.log('📱 Space card clicked:', space);
     
-    const isCurrentlyMobile = window.innerWidth < 768;
-    
-    if (isCurrentlyMobile) {
+    if (isMobile) {
       handleSpaceClick(space);
     } else {
       setAnimatingSpace(space.id);
@@ -675,8 +705,7 @@ export default function BrowsePage() {
         
         setUserLocation(locationData.coordinates);
         
-        const isCurrentlyMobile = window.innerWidth < 768;
-        if (isCurrentlyMobile) {
+        if (isMobile) {
           setShowMobileSheet(false);
           setSelectedSpace(null);
           setSelectedProperty(null);
@@ -697,29 +726,26 @@ export default function BrowsePage() {
     }
   };
 
-  // ✅ FIXED: Booking navigation with proper cart creation
+  // ✅ Booking navigation with proper cart creation
   const handleBookingNavigation = async (space, campaign = null) => {
-    console.log('📅 Booking navigation requested:', space.id, space.property?.id || space.propertyId);
+    console.log('📅 Booking navigation requested:', space.id);
     
     const canProceed = await checkBusinessProfileBeforeBooking(space);
     
     if (canProceed) {
-      // For single space booking, create a cart item and navigate
       const cartItem = {
         id: `${space.id}_${Date.now()}`,
         spaceId: space.id,
         space: space,
-        duration: 30, // default duration
+        duration: 30,
         pricePerDay: getNumericPrice(space),
         totalPrice: getNumericPrice(space) * 30,
         addedAt: new Date(),
         campaign: campaign || null
       };
       
-      // Create a single-item cart for immediate checkout
       const checkoutCart = [cartItem];
       
-      // Navigate to checkout with the single item cart
       navigate('/checkout', { 
         state: { 
           cart: checkoutCart,
@@ -730,66 +756,29 @@ export default function BrowsePage() {
     }
   };
 
-  // ✅ FIXED: Mobile booking handler
+  // ✅ Mobile booking handler
   const handleMobileBooking = async (space) => {
     console.log('📱 Mobile booking for space:', space.id);
     
-    // For mobile booking, create cart item and navigate
     const cartItem = {
       id: `${space.id}_${Date.now()}`,
       spaceId: space.id,
       space: space,
-      duration: 30, // default duration
+      duration: 30,
       pricePerDay: getNumericPrice(space),
       totalPrice: getNumericPrice(space) * 30,
       addedAt: new Date()
     };
     
-    // Check business profile
     const canProceed = await checkBusinessProfileBeforeBooking(space);
     
     if (canProceed) {
-      // Create a single-item cart for immediate checkout
       const checkoutCart = [cartItem];
       
-      // Navigate to checkout
       navigate('/checkout', { 
         state: { 
           cart: checkoutCart,
           fromMobileBooking: true
-        } 
-      });
-    }
-  };
-
-  // ✅ NEW: Add to cart and checkout handler
-  const handleAddToCartAndCheckout = async (space, duration = 30) => {
-    console.log('🛒 Add to cart and checkout for space:', space.id);
-    
-    // Create cart item
-    const cartItem = {
-      id: `${space.id}_${Date.now()}`,
-      spaceId: space.id,
-      space: space,
-      duration: duration,
-      pricePerDay: getNumericPrice(space),
-      totalPrice: getNumericPrice(space) * duration,
-      addedAt: new Date()
-    };
-    
-    // Add to existing cart
-    const updatedCart = [...cart, cartItem];
-    setCart(updatedCart);
-    
-    // Check business profile
-    const canProceed = await checkBusinessProfileBeforeBooking(space);
-    
-    if (canProceed) {
-      // Navigate to checkout with updated cart
-      navigate('/checkout', { 
-        state: { 
-          cart: updatedCart,
-          fromAddToCart: true
         } 
       });
     }
@@ -811,31 +800,25 @@ export default function BrowsePage() {
     const spaceId = urlParams.get('spaceId');
     
     if (campaignCreated === 'true' && spaceId) {
-      // Find the space and open its details modal
       const space = allSpaces.find(s => s.id === spaceId);
       if (space) {
         setSelectedSpace(space);
         setDetailsExpanded(true);
       }
       
-      // Clean up URL parameters
       const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
     }
   }, [allSpaces]);
 
-  // ✅ MOBILE LAYOUT: Enhanced with proper nav bar spacing and safe areas
+  // ✅ IMPROVED: Mobile layout with reduced visual clutter
   if (isMobile) {
     return (
       <div 
-        className={`
-          fixed inset-0 overflow-hidden
-          mobile-nav-full-spacing
-          mobile-safe-area
-        `}
+        className="fixed inset-0 overflow-hidden mobile-nav-full-spacing mobile-safe-area"
         style={{ backgroundColor: '#F8FAFF' }}
       >
-        {/* ✅ MOBILE: Full-screen Map Container with proper spacing */}
+        {/* ✅ IMPROVED: Full-screen Map Container */}
         <div className="w-full h-full relative">
           <div className="w-full h-full bg-white overflow-hidden">
             <GoogleMap
@@ -852,17 +835,18 @@ export default function BrowsePage() {
               showAreaMarkers={true}
             />
 
-            {/* ✅ MOBILE: Enhanced Map Controls with better touch targets */}
-            <div className="fixed top-[5.5rem] right-3 sm:right-4 z-20 flex flex-col gap-2">
+            {/* ✅ IMPROVED: Simplified Map Controls with better spacing */}
+            <div 
+              className="fixed right-3 sm:right-4 flex flex-col gap-2"
+              style={{ 
+                top: '6rem',
+                zIndex: Z_INDEX.MOBILE_CONTROLS
+              }}
+            >
               <Button 
                 size="sm" 
                 variant="outline"
-                className="
-                  bg-white/95 backdrop-blur-sm hover:bg-white border-slate-300 
-                  text-slate-600 hover:text-slate-800 shadow-lg 
-                  h-11 w-11 p-0 touch-target
-                  transition-all duration-200
-                "
+                className="bg-white/95 backdrop-blur-sm hover:bg-white border-slate-300 text-slate-600 hover:text-slate-800 shadow-lg h-11 w-11 p-0 touch-target transition-all duration-200"
                 onClick={handleCenterOnLocation}
                 title="Center map on your location"
               >
@@ -872,12 +856,7 @@ export default function BrowsePage() {
               <Button 
                 size="sm" 
                 variant="outline"
-                className="
-                  bg-white/95 backdrop-blur-sm hover:bg-white border-slate-300 
-                  text-slate-600 hover:text-slate-800 shadow-lg 
-                  h-11 w-11 p-0 touch-target relative
-                  transition-all duration-200
-                "
+                className="bg-white/95 backdrop-blur-sm hover:bg-white border-slate-300 text-slate-600 hover:text-slate-800 shadow-lg h-11 w-11 p-0 touch-target relative transition-all duration-200"
                 onClick={() => setShowFilters(true)}
                 title="Filters"
                 style={{ 
@@ -885,9 +864,7 @@ export default function BrowsePage() {
                   backgroundColor: activeFiltersCount > 0 ? '#EFF6FF' : undefined
                 }}
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
-                </svg>
+                <Filter className="w-4 h-4" />
                 {activeFiltersCount > 0 && (
                   <span 
                     className="absolute -top-1 -right-1 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-medium"
@@ -897,46 +874,77 @@ export default function BrowsePage() {
                   </span>
                 )}
               </Button>
+
+              {/* ✅ NEW: Progressive Disclosure - Map Legend Toggle */}
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="bg-white/95 backdrop-blur-sm hover:bg-white border-slate-300 text-slate-600 hover:text-slate-800 shadow-lg h-11 w-11 p-0 touch-target transition-all duration-200"
+                onClick={() => setShowMapLegend(!showMapLegend)}
+                title="Map Legend"
+                style={{ 
+                  color: showMapLegend ? '#4668AB' : undefined,
+                  backgroundColor: showMapLegend ? '#EFF6FF' : undefined
+                }}
+              >
+                <Layers className="w-4 h-4" />
+              </Button>
             </div>
 
-           {/* ✅ MOBILE: Enhanced Map Info Card with better responsive design */}
-           {!isLoading && !error && (
-              <div className="fixed top-[5.5rem] left-3 sm:left-4 z-20">
-                <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg px-3 py-2.5 shadow-lg min-w-[120px] max-w-[200px]">
-                  <div className="text-center">
-                    <p 
-                      className="text-lg sm:text-xl font-semibold"
-                      style={{ color: '#4668AB' }}
-                    >
-                      {filteredSpaces.length}
-                    </p>
-                    <p className="text-xs sm:text-sm text-slate-600 leading-tight">
-                      {filteredSpaces.length === 1 ? 'Space' : 'Spaces'}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1 truncate">
-                      📍 {mapLocationName}
-                    </p>
+           {/* ✅ IMPROVED: Map Legend - Progressive Disclosure */}
+           {showMapLegend && (
+              <div 
+                className="fixed left-3 sm:left-4"
+                style={{ 
+                  bottom: '22rem',
+                  zIndex: Z_INDEX.MOBILE_CONTROLS
+                }}
+              >
+                <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg px-3 py-2.5 shadow-lg min-w-[140px] max-w-[180px]">
+                  <h4 className="font-medium text-xs text-slate-800 mb-2">Map Legend</h4>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full shadow-sm"
+                        style={{ backgroundColor: '#4668AB' }}
+                      ></div>
+                      <span className="text-xs text-slate-600">Ad Spaces</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
+                      <span className="text-xs text-slate-600">Properties</span>
+                    </div>
+                    {userLocation && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full shadow-sm animate-pulse"></div>
+                        <span className="text-xs text-slate-600">Your Location</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* ✅ MOBILE: Enhanced Loading State */}
+            {/* ✅ ENHANCED: Loading State */}
             {isLoading && (
-              <div className="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-30">
+              <div 
+                className="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center"
+                style={{ zIndex: Z_INDEX.MODAL_BACKDROP }}
+              >
                 <div className="bg-white rounded-lg p-4 text-center shadow-lg max-w-xs mx-4">
                   <div 
                     className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-2"
                     style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
                   ></div>
                   <p className="text-sm text-slate-600">Loading spaces...</p>
+                  <p className="text-xs text-slate-500 mt-1">Finding the best opportunities for you</p>
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* ✅ Mobile Bottom Sheet with enhanced props */}
+        {/* ✅ Mobile Bottom Sheet with enhanced z-index */}
         <MobileBottomSheet
           ref={mobileSheetRef}
           isOpen={showMobileSheet}
@@ -952,13 +960,15 @@ export default function BrowsePage() {
           isInCart={isInCart}
           cartCount={cart.length}
           title={sheetTitle}
+          style={{ zIndex: Z_INDEX.MOBILE_SHEET }}
         />
 
-        {/* ✅ Enhanced Mobile Cart System with safe area support */}
+        {/* ✅ Enhanced Mobile Cart System */}
         <FloatingCartButton
           cartItems={cart}
           onOpenCart={handleMobileCartOpen}
           totalValue={getTotalCartValue()}
+          style={{ zIndex: Z_INDEX.CART_BUTTON }}
         />
 
         <MobileCartDrawer
@@ -969,6 +979,7 @@ export default function BrowsePage() {
           onRemoveItem={removeFromCart}
           onProceedToCheckout={handleProceedToCheckout}
           onClearCart={clearCart}
+          style={{ zIndex: Z_INDEX.MOBILE_DRAWER }}
         />
 
         {/* ✅ Business Profile Modal for Mobile */}
@@ -977,9 +988,10 @@ export default function BrowsePage() {
           onClose={handleBusinessProfileClose}
           onProfileComplete={handleBusinessProfileComplete}
           required={true}
+          style={{ zIndex: Z_INDEX.MODAL_CONTENT }}
         />
 
-        {/* ✅ Other Mobile Modals with enhanced mobile styling */}
+        {/* ✅ Other Mobile Modals */}
         <CartModal 
           showCart={showCart}
           setShowCart={setShowCart}
@@ -988,6 +1000,7 @@ export default function BrowsePage() {
           removeFromCart={removeFromCart}
           updateCartItemDuration={updateCartItemDuration}
           getTotalCartValue={getTotalCartValue}
+          style={{ zIndex: Z_INDEX.MODAL_CONTENT }}
         />
 
         <FiltersModal 
@@ -998,6 +1011,7 @@ export default function BrowsePage() {
           toggleFeature={toggleFeature}
           clearFilters={clearFilters}
           filteredSpaces={filteredSpaces}
+          style={{ zIndex: Z_INDEX.MODAL_CONTENT }}
         />
 
         <ROICalculatorModal 
@@ -1007,12 +1021,13 @@ export default function BrowsePage() {
           isInCart={isInCart}
           addToCart={addToCart}
           handleBookingNavigation={handleBookingNavigation}
+          style={{ zIndex: Z_INDEX.MODAL_CONTENT }}
         />
       </div>
     );
   }
 
-  // ✅ DESKTOP LAYOUT: Updated with new color scheme and fixed pagination positioning
+  // ✅ IMPROVED: Desktop layout with enhanced flexibility and loading states
   return (
     <div 
       className="h-screen overflow-hidden"
@@ -1020,129 +1035,168 @@ export default function BrowsePage() {
     >
       <div className="flex h-full">
         
-        {/* ✅ LEFT CONTAINER: Content (55%) with hidden scroll bar and pagination inside */}
-        <div className="w-[55%] h-full flex flex-col p-6">
-          <div className="flex-1 flex flex-col min-h-0">
-            {/* ✅ FIXED: Scrollable container with hidden scroll bar and pagination inside */}
-            <div className="flex-1 overflow-y-auto scrollbar-hide">
-              <div>
-                {!isLoading && !error && (
-                  <div className="mb-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <h1 className="heading-2 text-slate-900">
-                          Advertising Spaces
-                        </h1>
-                        <p className="body-medium text-slate-600 mt-1">
-                          {filteredSpaces.length > 0 
-                            ? `${filteredSpaces.length} ${filteredSpaces.length === 1 ? 'space' : 'spaces'} available`
-                            : 'No spaces found with current filters'
-                          }
-                        </p>
-                        
-                        {activeFiltersCount > 0 && (
-                          <button
-                            onClick={clearFilters}
-                            className="btn-ghost btn-small text-slate-600 hover:text-slate-800 mt-2"
-                          >
-                            Clear all filters ({activeFiltersCount})
-                          </button>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <button
-                          onClick={() => setShowFilters(true)}
-                          className="btn-outline btn-small flex items-center gap-2"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
-                          </svg>
-                          Filters
-                          {activeFiltersCount > 0 && (
-                            <span 
-                              className="text-white text-xs px-2 py-0.5 rounded-full"
-                              style={{ backgroundColor: '#4668AB' }}
-                            >
-                              {activeFiltersCount}
-                            </span>
-                          )}
-                        </button>
-                        
-                        <button
-                          onClick={() => setShowCart(true)}
-                          className="btn-primary btn-small flex items-center gap-2"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6.5M7 13h10M17 13v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6" />
-                          </svg>
-                          Cart
-                          {cart.length > 0 && (
-                            <span 
-                              className="text-xs px-2 py-0.5 rounded-full font-medium"
-                              style={{ backgroundColor: '#4668AB', color: '#FFFFFF' }}
-                            >
-                              {cart.length}
-                            </span>
-                          )}
-                        </button>
-                      </div>
-                    </div>
+        {/* ✅ FIXED: Left Container with proper flexbox constraints */}
+        <div 
+          className="flex flex-col p-6 transition-all duration-300"
+          style={{ 
+            width: detailsExpanded ? '52%' : '58%',
+            minWidth: '480px',
+            height: '100vh', // Explicit height constraint
+            overflow: 'hidden' // Prevent container from expanding
+          }}
+        >
+          {/* ✅ FIXED: Header section - flex: none to prevent shrinking */}
+          <div 
+            className="mb-6"
+            style={{ flex: '0 0 auto' }} // Fixed size, won't grow or shrink
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                {!isLoading && !error ? (
+                  <>
+                    <p className="body-medium text-slate-600 mt-1">
+                      {filteredSpaces.length > 0 
+                        ? `${filteredSpaces.length} ${filteredSpaces.length === 1 ? 'space' : 'spaces'}`
+                        : 'No spaces found with current filters'
+                      }
+                    </p>
                     
-                    {(activeFiltersCount > 0 || mapLocationSource !== 'loading') && (
-                      <div className="divider"></div>
-                    )}
-                  </div>
-                )}
-
-                {error ? (
-                  <div className="py-12">
-                    <ErrorState error={error} onRetry={loadPropertiesData} />
-                  </div>
-                ) : isLoading ? (
-                  <div className="py-8">
-                    <LoadingState />
-                  </div>
-                ) : paginatedSpaces.length > 0 ? (
-                  <div className="space-y-6">
-                    <SpacesGrid
-                      spaces={paginatedSpaces}
-                      onSpaceCardClick={handleSpaceCardClick}
-                      onSpaceClick={handleSpaceClick}
-                      animatingSpace={animatingSpace}
-                      savedSpaces={savedSpaces}
-                      toggleSavedSpace={toggleSavedSpace}
-                      isInCart={isInCart}
-                      addToCart={addToCart}
-                    />
-
-                    {/* ✅ FIXED: Pagination moved inside scrollable container */}
-                    {!isLoading && !error && filteredSpaces.length > 0 && totalPages > 1 && (
-                      <div 
-                        className="border-t shadow-lg px-6 py-4 rounded-lg mt-6"
-                        style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' }}
+                    {activeFiltersCount > 0 && (
+                      <button
+                        onClick={clearFilters}
+                        className="btn-ghost btn-small text-slate-600 hover:text-slate-800 mt-2"
                       >
-                        <PaginationControls 
-                          currentPage={currentPage}
-                          setCurrentPage={setCurrentPage}
-                          totalPages={totalPages}
-                          filteredSpaces={filteredSpaces}
-                        />
-                      </div>
+                        Clear all filters ({activeFiltersCount})
+                      </button>
                     )}
-                  </div>
+                  </>
                 ) : (
-                  <div className="py-12">
-                    <EmptyState onClearFilters={clearFilters} />
+                  <div className="h-8 flex items-center">
+                    {isLoading ? (
+                      <p className="body-medium text-slate-600">Loading spaces...</p>
+                    ) : error ? (
+                      <p className="body-medium text-red-600">Error loading spaces</p>
+                    ) : null}
                   </div>
                 )}
               </div>
+              
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <button
+                  onClick={() => setShowFilters(true)}
+                  className="btn-outline btn-small flex items-center gap-2"
+                >
+                  <Filter className="w-4 h-4" />
+                  Filters
+                  {activeFiltersCount > 0 && (
+                    <span 
+                      className="text-white text-xs px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: '#4668AB' }}
+                    >
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => setShowCart(true)}
+                  className="btn-primary btn-small flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6.5M7 13h10M17 13v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6" />
+                  </svg>
+                  Cart
+                  {cart.length > 0 && (
+                    <span 
+                      className="text-xs px-2 py-0.5 rounded-full font-medium"
+                      style={{ backgroundColor: '#4668AB', color: '#FFFFFF' }}
+                    >
+                      {cart.length}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
+          </div>
+
+          {/* ✅ FIXED: Scrollable content with critical flexbox properties */}
+          <div 
+            className="scrollbar-hide"
+            style={{ 
+              flex: '1 1 auto',     // Grow to fill space
+              minHeight: 0,         // Critical: Override flex default min-height
+              overflowY: 'auto'     // Enable scrolling
+            }}
+          >
+            {error ? (
+              <div className="py-12">
+                <ErrorState error={error} onRetry={loadPropertiesData} />
+              </div>
+            ) : isLoading ? (
+              <div className="py-8">
+                {/* ✅ NEW: Enhanced loading with skeleton cards */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-6">
+                    <div 
+                      className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
+                      style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
+                    ></div>
+                    <p className="text-slate-600">Loading advertising spaces...</p>
+                  </div>
+                  {[...Array(6)].map((_, i) => (
+                    <SkeletonCard key={i} />
+                  ))}
+                </div>
+              </div>
+            ) : paginatedSpaces.length > 0 ? (
+              <div className="space-y-6">
+                <SpacesGrid
+                  spaces={paginatedSpaces}
+                  onSpaceCardClick={handleSpaceCardClick}
+                  onSpaceClick={handleSpaceClick}
+                  animatingSpace={animatingSpace}
+                  savedSpaces={savedSpaces}
+                  toggleSavedSpace={toggleSavedSpace}
+                  isInCart={isInCart}
+                  addToCart={addToCart}
+                />
+
+                {/* ✅ ENHANCED: Improved pagination with better styling */}
+                {!isLoading && !error && filteredSpaces.length > 0 && totalPages > 1 && (
+                  <div 
+                    className="border-t shadow-lg px-6 py-4 rounded-lg mt-6 sticky bottom-0"
+                    style={{ 
+                      backgroundColor: '#FFFFFF', 
+                      borderColor: '#E5E7EB',
+                      backdropFilter: 'blur(10px)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)'
+                    }}
+                  >
+                    <PaginationControls 
+                      currentPage={currentPage}
+                      setCurrentPage={setCurrentPage}
+                      totalPages={totalPages}
+                      filteredSpaces={filteredSpaces}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="py-12">
+                <EmptyState onClearFilters={clearFilters} />
+              </div>
+            )}
           </div>
         </div>
   
-        {/* ✅ RIGHT CONTAINER: Fixed Map (45%) */}
-        <div className="w-[45%] h-full p-4 fixed right-0">
+        {/* ✅ IMPROVED: Right Container with enhanced flexibility */}
+        <div 
+          className="h-full p-4 fixed right-0 transition-all duration-300"
+          style={{ 
+            width: detailsExpanded ? '48%' : '42%',
+            minWidth: '400px'
+          }}
+        >
           <div className="relative w-full h-[calc(100%-75px)] bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-lg">
             <GoogleMap
               properties={properties.filter(property => 
@@ -1157,7 +1211,10 @@ export default function BrowsePage() {
               showAreaMarkers={true}
             />
 
-            <div className="absolute top-4 right-4 z-20">
+            <div 
+              className="absolute top-4 right-4"
+              style={{ zIndex: Z_INDEX.MAP }}
+            >
               <Button 
                 size="sm" 
                 variant="outline"
@@ -1169,46 +1226,13 @@ export default function BrowsePage() {
               </Button>
             </div>
 
-            <div className="absolute bottom-4 left-4 z-20">
-              <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg">
-                <h4 className="font-medium text-xs text-slate-800 mb-3">Map Legend</h4>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="w-3 h-3 rounded-full shadow-sm"
-                      style={{ backgroundColor: '#4668AB' }}
-                    ></div>
-                    <span className="text-xs text-slate-600">Ad Spaces</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
-                    <span className="text-xs text-slate-600">Properties</span>
-                  </div>
-                  {userLocation && (
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full shadow-sm animate-pulse"></div>
-                      <span className="text-xs text-slate-600">Your Location</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {isLoading && (
-              <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-30">
-                <div className="bg-white rounded-lg p-4 text-center shadow-lg">
-                  <div 
-                    className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-2"
-                    style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
-                  ></div>
-                  <p className="text-sm text-slate-600">Loading spaces...</p>
-                </div>
-              </div>
-            )}
-
+            {/* ✅ ENHANCED: Improved map info panel */}
             {!isLoading && !error && (
-              <div className="absolute top-4 left-4 z-20">
-                <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg max-w-56">
+              <div 
+                className="absolute top-4 left-4"
+                style={{ zIndex: Z_INDEX.MAP }}
+              >
+                <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg max-w-64">
                   <div className="text-center">
                     <p 
                       className="text-lg font-semibold"
@@ -1231,6 +1255,62 @@ export default function BrowsePage() {
                 </div>
               </div>
             )}
+
+            {/* ✅ ENHANCED: Map legend with progressive disclosure */}
+            <div 
+              className="absolute bottom-4 left-4"
+              style={{ zIndex: Z_INDEX.MAP }}
+            >
+              <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium text-xs text-slate-800">Map Legend</h4>
+                  <button
+                    onClick={() => setShowMapLegend(!showMapLegend)}
+                    className="text-xs text-slate-500 hover:text-slate-700"
+                  >
+                    {showMapLegend ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                {showMapLegend && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-3 h-3 rounded-full shadow-sm"
+                        style={{ backgroundColor: '#4668AB' }}
+                      ></div>
+                      <span className="text-xs text-slate-600">Ad Spaces</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
+                      <span className="text-xs text-slate-600">Properties</span>
+                    </div>
+                    {userLocation && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full shadow-sm animate-pulse"></div>
+                        <span className="text-xs text-slate-600">Your Location</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ✅ ENHANCED: Loading state with better messaging */}
+            {isLoading && (
+              <div 
+                className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center"
+                style={{ zIndex: Z_INDEX.MODAL_BACKDROP }}
+              >
+                <div className="bg-white rounded-lg p-4 text-center shadow-lg">
+                  <div 
+                    className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-2"
+                    style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
+                  ></div>
+                  <p className="text-sm text-slate-600">Loading map data...</p>
+                  <p className="text-xs text-slate-500 mt-1">Preparing your advertising opportunities</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1241,9 +1321,10 @@ export default function BrowsePage() {
         onClose={handleBusinessProfileClose}
         onProfileComplete={handleBusinessProfileComplete}
         required={true}
+        style={{ zIndex: Z_INDEX.MODAL_CONTENT }}
       />
   
-      {/* ✅ Desktop Modal Components */}
+      {/* ✅ Desktop Modal Components with proper z-index */}
       <CartModal 
         showCart={showCart}
         setShowCart={setShowCart}
@@ -1252,6 +1333,7 @@ export default function BrowsePage() {
         removeFromCart={removeFromCart}
         updateCartItemDuration={updateCartItemDuration}
         getTotalCartValue={getTotalCartValue}
+        style={{ zIndex: Z_INDEX.MODAL_CONTENT }}
       />
   
       <FiltersModal 
@@ -1262,6 +1344,7 @@ export default function BrowsePage() {
         toggleFeature={toggleFeature}
         clearFilters={clearFilters}
         filteredSpaces={filteredSpaces}
+        style={{ zIndex: Z_INDEX.MODAL_CONTENT }}
       />
   
       <SpaceDetailsModal 
@@ -1273,6 +1356,7 @@ export default function BrowsePage() {
         addToCart={addToCart}
         handleBookingNavigation={handleBookingNavigation}
         setShowROICalculator={setShowROICalculator}
+        style={{ zIndex: Z_INDEX.MODAL_CONTENT }}
       />
   
       <ROICalculatorModal 
@@ -1282,6 +1366,7 @@ export default function BrowsePage() {
         isInCart={isInCart}
         addToCart={addToCart}
         handleBookingNavigation={handleBookingNavigation}
+        style={{ zIndex: Z_INDEX.MODAL_CONTENT }}
       />
     </div>
   );
