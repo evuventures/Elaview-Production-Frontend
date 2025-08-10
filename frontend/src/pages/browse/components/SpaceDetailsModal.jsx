@@ -311,14 +311,7 @@ export default function SpaceDetailsModal({
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
             
             <div className="absolute top-4 right-4 flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsSaved(!isSaved)}
-                className="bg-white/90 backdrop-blur-sm hover:bg-white"
-              >
-                <Heart className={`w-4 h-4 ${isSaved ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
-              </Button>
+              {/* Favorite button removed */}
               <Button
                 variant="ghost"
                 size="sm"

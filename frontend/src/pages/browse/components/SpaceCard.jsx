@@ -69,18 +69,7 @@ export default function SpaceCard({
             </div>
 
             <div className="absolute top-3 right-3 flex gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleSavedSpace(space.id);
-                }}
-                className="p-2 bg-white/90 hover:bg-white rounded-full transition-colors shadow-sm backdrop-blur-sm"
-                style={{ border: '1px solid #E5E7EB' }}
-              >
-                <Heart className={`w-4 h-4 ${
-                  savedSpaces.has(space.id) ? 'fill-red-500 text-red-500' : 'text-slate-600'
-                }`} />
-              </button>
+              {/* Favorite button removed  */}
               
               {/* Quick Add to Cart Button */}
               <button
