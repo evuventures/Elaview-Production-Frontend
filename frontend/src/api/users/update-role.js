@@ -26,7 +26,7 @@ export const updateUserRole = async (newRole, token) => {
     };
 
     const dbRole = roleMapping[newRole];
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
     // Make API request
     const response = await fetch(`${apiBaseUrl}/users/update-role`, {
