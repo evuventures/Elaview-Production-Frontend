@@ -114,6 +114,10 @@ export const SPACE_TYPE_CATEGORIES = {
 export const SPACE_TYPE_CATEGORIES_WALL_EXT = {
   wall: ['wall_graphic', 'building_wrap']
 };
+// Combined exterior + wall category for simplified UI selection
+export const SPACE_TYPE_CATEGORIES_COMBINED = {
+  exteriorwall: ['building_exterior', 'wall_graphic', 'building_wrap']
+};
 
 // ✅ PRESERVED: Price ranges for ILS currency (Kfar Kama pricing)
 export const PRICE_RANGE_OPTIONS = [

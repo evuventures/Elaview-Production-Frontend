@@ -184,9 +184,8 @@ export default function FiltersModal({
                 <div className="flex flex-wrap gap-3">
                   {[
                     { id: 'all', label: 'All Types', icon: Building2 },
-                    { id: 'retail', label: 'Window', icon: Building2 }, // storefront / window displays
-                    { id: 'outdoor', label: 'Exterior', icon: Eye }, // building exterior / outdoor
-                    { id: 'wall', label: 'Wall', icon: Monitor }, // wall graphics / wraps (custom category)
+                    { id: 'retail', label: 'Window', icon: Building2 },
+                    { id: 'exteriorwall', label: 'Exterior Wall', icon: Eye },
                     { id: 'digital', label: 'Digital', icon: Lightning }
                   ].map(type => (
                     <button

@@ -3,7 +3,7 @@
 
 import { getNumericPrice } from './areaHelpers';
 import { getBusinessInsights, getTrustIndicators } from './businessInsights';
-import { SPACE_TYPE_CATEGORIES, SPACE_TYPE_CATEGORIES_WALL_EXT } from './mapConstants';
+import { SPACE_TYPE_CATEGORIES, SPACE_TYPE_CATEGORIES_WALL_EXT, SPACE_TYPE_CATEGORIES_COMBINED } from './mapConstants';
 
 /**
  * Apply price range filter to spaces
@@ -44,7 +44,7 @@ export const applyPriceFilter = (spaces, priceRange) => {
 export const applySpaceTypeFilter = (spaces, spaceType) => {
   if (spaceType === 'all') return spaces;
   
-  const combined = { ...SPACE_TYPE_CATEGORIES, ...SPACE_TYPE_CATEGORIES_WALL_EXT };
+  const combined = { ...SPACE_TYPE_CATEGORIES, ...SPACE_TYPE_CATEGORIES_WALL_EXT, ...SPACE_TYPE_CATEGORIES_COMBINED };
   return spaces.filter(space => {
     const type = space.type?.toLowerCase() || '';
     const categoryTypes = combined[spaceType];
