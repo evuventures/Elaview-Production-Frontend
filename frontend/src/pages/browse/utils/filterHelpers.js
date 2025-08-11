@@ -3,7 +3,7 @@
 
 import { getNumericPrice } from './areaHelpers';
 import { getBusinessInsights, getTrustIndicators } from './businessInsights';
-import { SPACE_TYPE_CATEGORIES } from './mapConstants';
+import { SPACE_TYPE_CATEGORIES, SPACE_TYPE_CATEGORIES_WALL_EXT } from './mapConstants';
 
 /**
  * Apply price range filter to spaces
@@ -44,16 +44,13 @@ export const applyPriceFilter = (spaces, priceRange) => {
 export const applySpaceTypeFilter = (spaces, spaceType) => {
   if (spaceType === 'all') return spaces;
   
+  const combined = { ...SPACE_TYPE_CATEGORIES, ...SPACE_TYPE_CATEGORIES_WALL_EXT };
   return spaces.filter(space => {
     const type = space.type?.toLowerCase() || '';
-    
-    // Check if space type matches any of the category types
-    const categoryTypes = SPACE_TYPE_CATEGORIES[spaceType];
+    const categoryTypes = combined[spaceType];
     if (!categoryTypes) return false;
-    
-    return categoryTypes.some(categoryType => 
-      type.includes(categoryType.toLowerCase()) || 
-      type === categoryType.toLowerCase()
+    return categoryTypes.some(categoryType =>
+      type.includes(categoryType.toLowerCase()) || type === categoryType.toLowerCase()
     );
   });
 };

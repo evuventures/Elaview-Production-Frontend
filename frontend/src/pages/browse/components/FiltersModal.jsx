@@ -89,7 +89,7 @@ export default function FiltersModal({
                 <div className="flex flex-col gap-3">
                   {/* Interactive histogram similar to Airbnb price filter */}
                   {priceHistogram && priceHistogram.length > 0 && (
-                    <div className="w-full h-20 flex items-end gap-1 px-1">
+                    <div className="w-full h-24 flex items-end gap-1 px-1 bg-gradient-to-t from-slate-50 to-transparent rounded-sm">
                       {(() => {
                         const maxCount = Math.max(...priceHistogram.map(b => b.count || 0), 1);
                         return priceHistogram.map((bin, idx) => {
@@ -104,8 +104,8 @@ export default function FiltersModal({
                                 const newMax = bin.max === Infinity ? 2000 : bin.max;
                                 setPriceRange(newMin, newMax);
                               }}
-                              className={`flex-1 rounded-sm cursor-pointer transition-colors duration-150 ${active ? 'bg-blue-500/80 hover:bg-blue-500' : 'bg-slate-300 hover:bg-slate-400'}`}
-                              style={{ height: `${Math.max(8, heightPct)}%` }}
+                              className={`flex-1 rounded-[3px] cursor-pointer transition-colors duration-150 hover:shadow-sm ${active ? 'bg-blue-500/80 hover:bg-blue-500 outline outline-1 outline-blue-500/40' : 'bg-slate-300 hover:bg-slate-400'} `}
+                              style={{ height: `${Math.max(10, heightPct)}%`, minHeight: '10%' }}
                             />
                           );
                         });
@@ -184,11 +184,10 @@ export default function FiltersModal({
                 <div className="flex flex-wrap gap-3">
                   {[
                     { id: 'all', label: 'All Types', icon: Building2 },
-                    { id: 'digital', label: 'Digital', icon: Lightning },
-                    { id: 'outdoor', label: 'Outdoor', icon: Eye },
-                    { id: 'retail', label: 'Retail', icon: Building2 },
-                    { id: 'transit', label: 'Transit', icon: Navigation },
-                    { id: 'indoor', label: 'Indoor', icon: Monitor }
+                    { id: 'retail', label: 'Window', icon: Building2 }, // storefront / window displays
+                    { id: 'outdoor', label: 'Exterior', icon: Eye }, // building exterior / outdoor
+                    { id: 'wall', label: 'Wall', icon: Monitor }, // wall graphics / wraps (custom category)
+                    { id: 'digital', label: 'Digital', icon: Lightning }
                   ].map(type => (
                     <button
                       key={type.id}
