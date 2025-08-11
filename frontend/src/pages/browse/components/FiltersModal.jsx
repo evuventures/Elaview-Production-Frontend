@@ -220,11 +220,14 @@ export default function FiltersModal({
                 <span className="body-small text-slate-600">
                   {filteredSpaces.length} space{filteredSpaces.length !== 1 ? 's' : ''} found
                 </span>
-                <button 
+                <button
                   onClick={() => setShowFilters(false)}
-                  className="btn-primary"
+                  className="px-4 py-2.5 rounded-md text-[13px] font-semibold flex items-center gap-2 bg-blue-500 text-white shadow hover:shadow-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400/70 focus:ring-offset-1 transition"
                 >
-                  Show Results
+                  <span>Show Results</span>
+                  <span className="inline-flex items-center justify-center text-[9px] font-bold bg-white/20 px-1.5 py-0.5 rounded-full tracking-wide min-w-[24px]">
+                    {filteredSpaces.length}
+                  </span>
                 </button>
               </div>
             </div>
