@@ -205,32 +205,6 @@ export default function FiltersModal({
                   ))}
                 </div>
               </div>
-
-              {/* Target Audience */}
-              <div>
-                <h3 className="label text-slate-800 mb-4">Target Audience</h3>
-                <div className="flex flex-wrap gap-3">
-                  {[
-                    { id: 'all', label: 'Everyone', icon: Users },
-                    { id: 'families', label: 'Families', icon: Users },
-                    { id: 'professionals', label: 'Professionals', icon: Target },
-                    { id: 'commuters', label: 'Commuters', icon: Navigation }
-                  ].map(audience => (
-                    <button
-                      key={audience.id}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
-                        filters.audience === audience.id 
-                          ? 'bg-blue-500 text-white shadow-md hover:bg-blue-600' 
-                          : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 hover:border-slate-300'
-                      }`}
-                      onClick={() => toggleFilter('audience', audience.id)}
-                    >
-                      <audience.icon className="w-4 h-4" />
-                      {audience.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
 
             {/* Filter Actions */}
