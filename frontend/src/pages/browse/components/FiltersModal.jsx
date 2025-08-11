@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import * as Slider from '@radix-ui/react-slider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,41 @@ export default function FiltersModal({
   setPriceRange,
   priceHistogram, // distribution of all spaces
 }) {
+  // Local editable string state for price boxes (allows clearing input fully)
+  const [minInput, setMinInput] = useState(String(filters.priceMin ?? 0));
+  const [maxInput, setMaxInput] = useState(String(filters.priceMax ?? 2000));
+  const [editingMin, setEditingMin] = useState(false);
+  const [editingMax, setEditingMax] = useState(false);
+
+  // Sync with external changes (e.g., slider drag or histogram click)
+  useEffect(() => {
+    if (!editingMin) setMinInput(String(filters.priceMin ?? 0));
+    if (!editingMax) setMaxInput(String(filters.priceMax ?? 2000));
+  }, [filters.priceMin, filters.priceMax, editingMin, editingMax]);
+
+  const commitMin = () => {
+    setEditingMin(false);
+    if (minInput === '') return; // keep previous if empty
+    const parsed = parseInt(minInput, 10);
+    if (!isNaN(parsed)) {
+      const clamped = Math.max(0, Math.min(parsed, filters.priceMax ?? 2000));
+      setPriceRange(clamped, filters.priceMax ?? 2000);
+    } else {
+      setMinInput(String(filters.priceMin ?? 0));
+    }
+  };
+
+  const commitMax = () => {
+    setEditingMax(false);
+    if (maxInput === '') return; // keep previous if empty
+    const parsed = parseInt(maxInput, 10);
+    if (!isNaN(parsed)) {
+      const clamped = Math.min(2000, Math.max(parsed, filters.priceMin ?? 0));
+      setPriceRange(filters.priceMin ?? 0, clamped);
+    } else {
+      setMaxInput(String(filters.priceMax ?? 2000));
+    }
+  };
   return (
     <AnimatePresence>
       {showFilters && (
@@ -69,7 +104,7 @@ export default function FiltersModal({
                                 const newMax = bin.max === Infinity ? 2000 : bin.max;
                                 setPriceRange(newMin, newMax);
                               }}
-                              className={`flex-1 rounded-sm cursor-pointer transition-colors duration-150 ${active ? 'bg-teal-500/80 hover:bg-teal-500' : 'bg-slate-300 hover:bg-slate-400'}`}
+                              className={`flex-1 rounded-sm cursor-pointer transition-colors duration-150 ${active ? 'bg-blue-500/80 hover:bg-blue-500' : 'bg-slate-300 hover:bg-slate-400'}`}
                               style={{ height: `${Math.max(8, heightPct)}%` }}
                             />
                           );
@@ -90,42 +125,55 @@ export default function FiltersModal({
                     onValueChange={([min, max]) => setPriceRange(min, max)}
                   >
                     <Slider.Track className="bg-slate-200 relative grow rounded-full h-2" />
-                    <Slider.Range className="absolute bg-teal-500 rounded-full h-2" />
-                    <Slider.Thumb className="block w-5 h-5 bg-teal-500 rounded-full shadow" />
-                    <Slider.Thumb className="block w-5 h-5 bg-teal-500 rounded-full shadow" />
+                    <Slider.Range className="absolute bg-blue-500 rounded-full h-2" />
+                    <Slider.Thumb className="block w-5 h-5 bg-blue-500 rounded-full shadow" />
+                    <Slider.Thumb className="block w-5 h-5 bg-blue-500 rounded-full shadow" />
                   </Slider.Root>
                   <div className="flex justify-between text-xs text-slate-500 mt-1">
                     <span>$0</span>
                     <span>$2000+</span>
                   </div>
-                  <div className="flex items-center gap-4 mt-2">
-                    <input
-                      type="number"
-                      min={0}
-                      max={filters.priceMax ?? 2000}
-                      value={filters.priceMin ?? 0}
-                      onChange={e => {
-                        const raw = Number(e.target.value);
-                        const min = isNaN(raw) ? 0 : raw;
-                        setPriceRange(min, filters.priceMax ?? 2000);
-                      }}
-                      className="w-20 px-2 py-1 border rounded text-sm"
-                      placeholder="Min"
-                    />
-                    <span className="text-slate-400">to</span>
-                    <input
-                      type="number"
-                      min={filters.priceMin ?? 0}
-                      max={2000}
-                      value={filters.priceMax ?? 2000}
-                      onChange={e => {
-                        const raw = Number(e.target.value);
-                        const max = isNaN(raw) ? (filters.priceMax ?? 2000) : raw;
-                        setPriceRange(filters.priceMin ?? 0, max);
-                      }}
-                      className="w-20 px-2 py-1 border rounded text-sm"
-                      placeholder="Max"
-                    />
+                  <div className="mt-3 flex flex-col items-center gap-3">
+                    <div className="flex items-center gap-6">
+                      <div className="flex flex-col items-center">
+                        <label className="text-[11px] uppercase tracking-wide text-slate-500 mb-1">Min</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={minInput}
+                          onFocus={() => setEditingMin(true)}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, '');
+                            setMinInput(val);
+                          }}
+                          onBlur={commitMin}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { commitMin(); e.currentTarget.blur(); } }}
+                          placeholder="—"
+                          className="w-32 text-center px-3 py-2 rounded-lg border border-slate-300 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                          style={{ MozAppearance: 'textfield' }}
+                        />
+                      </div>
+                      <span className="text-slate-400 font-medium">—</span>
+                      <div className="flex flex-col items-center">
+                        <label className="text-[11px] uppercase tracking-wide text-slate-500 mb-1">Max</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={maxInput}
+                          onFocus={() => setEditingMax(true)}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, '');
+                            setMaxInput(val);
+                          }}
+                          onBlur={commitMax}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { commitMax(); e.currentTarget.blur(); } }}
+                          placeholder="—"
+                          className="w-32 text-center px-3 py-2 rounded-lg border border-slate-300 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                          style={{ MozAppearance: 'textfield' }}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500">Leave blank temporarily to retype a value.</p>
                   </div>
                 </div>
               </div>
@@ -146,7 +194,7 @@ export default function FiltersModal({
                       key={type.id}
                       className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
                         filters.spaceType === type.id 
-                          ? 'bg-teal-500 text-white shadow-md hover:bg-teal-600' 
+                          ? 'bg-blue-500 text-white shadow-md hover:bg-blue-600' 
                           : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 hover:border-slate-300'
                       }`}
                       onClick={() => toggleFilter('spaceType', type.id)}
@@ -172,7 +220,7 @@ export default function FiltersModal({
                       key={audience.id}
                       className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
                         filters.audience === audience.id 
-                          ? 'bg-teal-500 text-white shadow-md hover:bg-teal-600' 
+                          ? 'bg-blue-500 text-white shadow-md hover:bg-blue-600' 
                           : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 hover:border-slate-300'
                       }`}
                       onClick={() => toggleFilter('audience', audience.id)}
@@ -198,7 +246,7 @@ export default function FiltersModal({
                       key={feature.id}
                       className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
                         filters.features.includes(feature.id) 
-                          ? 'bg-teal-500 text-white shadow-md hover:bg-teal-600' 
+                          ? 'bg-blue-500 text-white shadow-md hover:bg-blue-600' 
                           : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 hover:border-slate-300'
                       }`}
                       onClick={() => toggleFeature(feature.id)}
