@@ -35,7 +35,7 @@ import { useBusinessProfile, checkBusinessProfileRequired } from '../checkout/ho
 // ✅ Import utility functions
 import { getDistanceInKm } from './utils/distance';
 import { getPropertyCoords, getPropertyAddress, getPropertyName } from './utils/propertyHelpers';
-import { getNumericPrice } from './utils/areaHelpers';
+import { getNumericPrice } from './utils/areaHelpers'; // single import (removed accidental duplicate)
 import { applyPriceFilter, applySpaceTypeFilter, applyAudienceFilter, applyFeaturesFilter } from './utils/filterHelpers';
 
 // ✅ Import constants
@@ -119,7 +119,10 @@ export default function BrowsePage() {
     spaceType: 'all',
     availability: 'all',
     audience: 'all',
-    features: [],
+  features: [],
+  // Numeric slider bounds
+  priceMin: 0,
+  priceMax: 2000,
   });
   
   // UI state
@@ -352,6 +355,13 @@ export default function BrowsePage() {
     let filtered = allSpaces;
 
     filtered = applyPriceFilter(filtered, filters.priceRange);
+    // Apply numeric slider bounds if user narrowed the range
+    if ((filters.priceMin !== 0) || (filters.priceMax !== 2000)) {
+      filtered = filtered.filter(space => {
+        const p = space.baseRate || getNumericPrice(space);
+        return p >= filters.priceMin && p <= filters.priceMax;
+      });
+    }
     filtered = applySpaceTypeFilter(filtered, filters.spaceType);
     filtered = applyAudienceFilter(filtered, filters.audience);
     filtered = applyFeaturesFilter(filtered, filters.features);
@@ -661,6 +671,15 @@ export default function BrowsePage() {
     }));
   };
 
+  // Atomic numeric price range setter for slider
+  const setPriceRange = (min, max) => {
+    setFilters(prev => ({
+      ...prev,
+      priceMin: Math.max(0, Math.min(min, max)),
+      priceMax: Math.max(Math.max(0, min), max)
+    }));
+  };
+
   const toggleFeature = (feature) => {
     setFilters(prev => ({
       ...prev,
@@ -676,7 +695,9 @@ export default function BrowsePage() {
       spaceType: 'all',
       availability: 'all',
       audience: 'all',
-      features: [],
+  features: [],
+  priceMin: 0,
+  priceMax: 2000,
     });
   };
 
@@ -1011,6 +1032,7 @@ export default function BrowsePage() {
           toggleFeature={toggleFeature}
           clearFilters={clearFilters}
           filteredSpaces={filteredSpaces}
+          setPriceRange={setPriceRange}
           style={{ zIndex: Z_INDEX.MODAL_CONTENT }}
         />
 
@@ -1344,6 +1366,7 @@ export default function BrowsePage() {
         toggleFeature={toggleFeature}
         clearFilters={clearFilters}
         filteredSpaces={filteredSpaces}
+  setPriceRange={setPriceRange}
         style={{ zIndex: Z_INDEX.MODAL_CONTENT }}
       />
   

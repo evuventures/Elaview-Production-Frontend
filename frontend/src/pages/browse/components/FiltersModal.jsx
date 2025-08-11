@@ -1,4 +1,5 @@
 import React from 'react';
+import * as Slider from '@radix-ui/react-slider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { 
@@ -13,7 +14,9 @@ export default function FiltersModal({
   toggleFilter,
   toggleFeature,
   clearFilters,
-  filteredSpaces 
+  filteredSpaces,
+  setPriceRange,
+  priceHistogram, // distribution of all spaces
 }) {
   return (
     <AnimatePresence>
@@ -47,25 +50,83 @@ export default function FiltersModal({
               {/* Price Range */}
               <div>
                 <h3 className="label text-slate-800 mb-4">Price Range</h3>
-                <div className="flex flex-wrap gap-3">
-                  {[
-                    { id: 'all', label: 'Any Budget' },
-                    { id: 'under500', label: 'Under $500/mo' },
-                    { id: 'under1000', label: 'Under $1K/mo' },
-                    { id: 'under2000', label: 'Under $2K/mo' }
-                  ].map(price => (
-                    <button
-                      key={price.id}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        filters.priceRange === price.id 
-                          ? 'bg-teal-500 text-white shadow-md hover:bg-teal-600' 
-                          : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 hover:border-slate-300'
-                      }`}
-                      onClick={() => toggleFilter('priceRange', price.id)}
-                    >
-                      {price.label}
-                    </button>
-                  ))}
+                {/* Histogram + range slider */}
+                <div className="flex flex-col gap-3">
+                  {/* Interactive histogram similar to Airbnb price filter */}
+                  {priceHistogram && priceHistogram.length > 0 && (
+                    <div className="w-full h-20 flex items-end gap-1 px-1">
+                      {(() => {
+                        const maxCount = Math.max(...priceHistogram.map(b => b.count || 0), 1);
+                        return priceHistogram.map((bin, idx) => {
+                          const active = (filters.priceMin ?? 0) <= bin.max && (filters.priceMax ?? 2000) >= bin.min;
+                          const heightPct = (bin.count / maxCount) * 100;
+                          return (
+                            <div
+                              key={idx}
+                              title={`${bin.min}-${bin.max === Infinity ? '+' : bin.max} (${bin.count})`}
+                              onClick={() => {
+                                const newMin = bin.min;
+                                const newMax = bin.max === Infinity ? 2000 : bin.max;
+                                setPriceRange(newMin, newMax);
+                              }}
+                              className={`flex-1 rounded-sm cursor-pointer transition-colors duration-150 ${active ? 'bg-teal-500/80 hover:bg-teal-500' : 'bg-slate-300 hover:bg-slate-400'}`}
+                              style={{ height: `${Math.max(8, heightPct)}%` }}
+                            />
+                          );
+                        });
+                      })()}
+                    </div>
+                  )}
+                  {/* Range slider and min/max inputs using global filter state */}
+                  <Slider.Root
+                    className="relative flex items-center select-none touch-none w-full h-8"
+                    min={0}
+                    max={2000}
+                    step={10}
+                    value={[
+                      filters.priceMin ?? 0,
+                      filters.priceMax ?? 2000
+                    ]}
+                    onValueChange={([min, max]) => setPriceRange(min, max)}
+                  >
+                    <Slider.Track className="bg-slate-200 relative grow rounded-full h-2" />
+                    <Slider.Range className="absolute bg-teal-500 rounded-full h-2" />
+                    <Slider.Thumb className="block w-5 h-5 bg-teal-500 rounded-full shadow" />
+                    <Slider.Thumb className="block w-5 h-5 bg-teal-500 rounded-full shadow" />
+                  </Slider.Root>
+                  <div className="flex justify-between text-xs text-slate-500 mt-1">
+                    <span>$0</span>
+                    <span>$2000+</span>
+                  </div>
+                  <div className="flex items-center gap-4 mt-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={filters.priceMax ?? 2000}
+                      value={filters.priceMin ?? 0}
+                      onChange={e => {
+                        const raw = Number(e.target.value);
+                        const min = isNaN(raw) ? 0 : raw;
+                        setPriceRange(min, filters.priceMax ?? 2000);
+                      }}
+                      className="w-20 px-2 py-1 border rounded text-sm"
+                      placeholder="Min"
+                    />
+                    <span className="text-slate-400">to</span>
+                    <input
+                      type="number"
+                      min={filters.priceMin ?? 0}
+                      max={2000}
+                      value={filters.priceMax ?? 2000}
+                      onChange={e => {
+                        const raw = Number(e.target.value);
+                        const max = isNaN(raw) ? (filters.priceMax ?? 2000) : raw;
+                        setPriceRange(filters.priceMin ?? 0, max);
+                      }}
+                      className="w-20 px-2 py-1 border rounded text-sm"
+                      placeholder="Max"
+                    />
+                  </div>
                 </div>
               </div>
 
