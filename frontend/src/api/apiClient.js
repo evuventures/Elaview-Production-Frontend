@@ -2,7 +2,7 @@
 // ✅ FIXED: Complete ApiClient with conversation methods properly integrated
 // ✅ RATE LIMITING FIXES: Request deduplication, caching, and exponential backoff
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 const API_TIMEOUT = 30000;
 const CACHE_DURATION = 60000; // 1 minute cache
 
