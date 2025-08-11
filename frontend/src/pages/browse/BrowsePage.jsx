@@ -132,24 +132,28 @@ export default function BrowsePage() {
     let base = allSpaces;
     base = applySpaceTypeFilter(base, filters.spaceType);
     base = applyAudienceFilter(base, filters.audience);
-    // (Features filter omitted intentionally since UI removed; add if reintroduced)
-
     if (!base.length) return [];
+
     const BIN_SIZE = 100;
     const MAX_PRICE = 2000;
+    const binCount = Math.ceil(MAX_PRICE / BIN_SIZE);
     const bins = [];
-    for (let start = 0; start < MAX_PRICE; start += BIN_SIZE) {
-      bins.push({ min: start, max: start + BIN_SIZE, count: 0 });
+    for (let i = 0; i < binCount; i++) {
+      const min = i * BIN_SIZE;
+      bins.push({ min, max: min + BIN_SIZE, count: 0 });
     }
-    bins.push({ min: MAX_PRICE, max: Infinity, count: 0 }); // overflow bin
+    bins.push({ min: MAX_PRICE, max: Infinity, count: 0 }); // overflow
 
     for (const space of base) {
-      const raw = space?.basePrice ?? space?.price ?? space?.listingPrice;
-      const price = typeof raw === 'number' ? raw : parseFloat(String(raw).replace(/[^0-9.]/g, ''));
-      if (isNaN(price)) continue;
-      const idx = price >= MAX_PRICE ? bins.length - 1 : Math.min(bins.length - 2, Math.floor(price / BIN_SIZE));
-      bins[idx].count++;
+      const price = getNumericPrice(space);
+      if (isNaN(price) || price < 0) continue;
+      const capped = Math.min(price, MAX_PRICE); // cap for binning; overflow handled separately
+      const idx = price >= MAX_PRICE ? bins.length - 1 : Math.min(bins.length - 2, Math.floor(capped / BIN_SIZE));
+      if (idx >= 0 && idx < bins.length) bins[idx].count++;
     }
+
+    // If all counts are zero, return empty to avoid misleading flat chart
+    if (bins.every(b => b.count === 0)) return [];
     return bins;
   }, [allSpaces, filters.spaceType, filters.audience]);
   
