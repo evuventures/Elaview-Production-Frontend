@@ -124,6 +124,34 @@ export default function BrowsePage() {
   priceMin: 0,
   priceMax: 2000,
   });
+
+  // Price histogram (Airbnb style) – reacts to non-price filters (spaceType, audience)
+  const priceHistogram = useMemo(() => {
+    if (!allSpaces || allSpaces.length === 0) return [];
+    // Apply non-price filters so distribution reflects current selection context
+    let base = allSpaces;
+    base = applySpaceTypeFilter(base, filters.spaceType);
+    base = applyAudienceFilter(base, filters.audience);
+    // (Features filter omitted intentionally since UI removed; add if reintroduced)
+
+    if (!base.length) return [];
+    const BIN_SIZE = 100;
+    const MAX_PRICE = 2000;
+    const bins = [];
+    for (let start = 0; start < MAX_PRICE; start += BIN_SIZE) {
+      bins.push({ min: start, max: start + BIN_SIZE, count: 0 });
+    }
+    bins.push({ min: MAX_PRICE, max: Infinity, count: 0 }); // overflow bin
+
+    for (const space of base) {
+      const raw = space?.basePrice ?? space?.price ?? space?.listingPrice;
+      const price = typeof raw === 'number' ? raw : parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+      if (isNaN(price)) continue;
+      const idx = price >= MAX_PRICE ? bins.length - 1 : Math.min(bins.length - 2, Math.floor(price / BIN_SIZE));
+      bins[idx].count++;
+    }
+    return bins;
+  }, [allSpaces, filters.spaceType, filters.audience]);
   
   // UI state
   const [animatingSpace, setAnimatingSpace] = useState(null);
@@ -1033,6 +1061,7 @@ export default function BrowsePage() {
           clearFilters={clearFilters}
           filteredSpaces={filteredSpaces}
           setPriceRange={setPriceRange}
+          priceHistogram={priceHistogram}
           style={{ zIndex: Z_INDEX.MODAL_CONTENT }}
         />
 
@@ -1367,6 +1396,7 @@ export default function BrowsePage() {
         clearFilters={clearFilters}
         filteredSpaces={filteredSpaces}
   setPriceRange={setPriceRange}
+  priceHistogram={priceHistogram}
         style={{ zIndex: Z_INDEX.MODAL_CONTENT }}
       />
   
