@@ -58,7 +58,7 @@ const DesktopTopNavV2 = ({
     if (mode === 'seller') {
       return [
         {
-          title: 'Manage Listings',
+          title: 'Dashboard',
           url: '/dashboard',
           icon: LayoutDashboard,
           badge: pendingInvoices || 0
@@ -79,13 +79,13 @@ const DesktopTopNavV2 = ({
     } else {
       return [
         {
-          title: 'Ad Manager',
+          title: 'Advertiser Hub',
           url: '/advertise',
           icon: CalendarIcon,
           badge: actionItemsCount || 0
         },
         {
-          title: 'Browse',
+          title: 'Find Spaces',
           url: '/browse',
           icon: MapPin,
           badge: 0
