@@ -231,32 +231,6 @@ export default function FiltersModal({
                   ))}
                 </div>
               </div>
-
-              {/* Features */}
-              <div>
-                <h3 className="label text-slate-800 mb-4">Features</h3>
-                <div className="flex flex-wrap gap-3">
-                  {[
-                    { id: 'verified', label: 'Verified Owner', icon: CheckCircle },
-                    { id: 'high_traffic', label: 'High Traffic', icon: TrendingUp },
-                    { id: 'premium', label: 'Premium Location', icon: Star },
-                    { id: 'digital', label: 'Digital Display', icon: Lightning }
-                  ].map(feature => (
-                    <button
-                      key={feature.id}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
-                        filters.features.includes(feature.id) 
-                          ? 'bg-blue-500 text-white shadow-md hover:bg-blue-600' 
-                          : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 hover:border-slate-300'
-                      }`}
-                      onClick={() => toggleFeature(feature.id)}
-                    >
-                      <feature.icon className="w-4 h-4" />
-                      {feature.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
 
             {/* Filter Actions */}
