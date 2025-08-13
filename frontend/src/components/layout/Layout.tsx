@@ -1,10 +1,11 @@
 // src/components/layout/Layout.tsx
-// ✅ FIXED: Proper height inheritance chain for map pages
-import React, { useState, useEffect, useRef } from 'react';
+// ✅ UPDATED: Now uses VideoLoader for main loading state
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, useUser, useClerk } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
 import apiClient from '@/api/apiClient';
+import VideoLoader from '@/components/ui/VideoLoader';
 
 // Import your navigation components
 import DesktopTopNavV2 from './nested/DesktopTopNavV2';
@@ -36,19 +37,44 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
   const isFullScreenMapPage = location.pathname === '/browse' || location.pathname === '/map';
   const isMessagesPage = location.pathname === '/messages';
 
-  // Enhanced view mode handling
-  const handleViewModeChange = (newMode: string) => {
-    console.log('🔄 View mode changing from', viewMode, 'to', newMode);
+  // ✅ CONSOLE LOG: Layout initialization
+  useEffect(() => {
+    console.log('🏗️ Layout: Component mounted for page:', currentPageName || 'Unknown');
+    console.log('🏗️ Layout: Full screen map page:', isFullScreenMapPage);
+    console.log('🏗️ Layout: Messages page:', isMessagesPage);
+  }, [currentPageName, isFullScreenMapPage, isMessagesPage]);
+
+  // ✅ FIXED: Enhanced view mode handling with proper state synchronization
+  const handleViewModeChange = useCallback((newMode: string) => {
+    console.log('🔄 Layout: View mode changing from', viewMode, 'to', newMode);
+    
+    // ✅ CRITICAL: Update state FIRST, then navigate
     setViewMode(newMode);
     
-    if (newMode === 'seller') {
-      navigate('/dashboard');
-    } else {
-      navigate('/browse');
-    }
-  };
+    // ✅ CRITICAL: Use setTimeout to ensure state update happens before navigation
+    // This prevents the "double click" issue
+    setTimeout(() => {
+      if (newMode === 'seller') {
+        navigate('/dashboard');
+      } else {
+        navigate('/browse');
+      }
+    }, 0);
+  }, [viewMode, navigate]);
 
-  // Enhanced data fetching with error handling
+  // ✅ FIXED: Determine view mode based on current route to keep it in sync
+  useEffect(() => {
+    if (location.pathname === '/dashboard' || location.pathname.startsWith('/dashboard')) {
+      setViewMode('seller');
+    } else if (location.pathname === '/browse' || location.pathname === '/advertise') {
+      // Only change to buyer if we're not already in the right mode to prevent loops
+      if (viewMode !== 'buyer') {
+        setViewMode('buyer');
+      }
+    }
+  }, [location.pathname, viewMode]);
+
+  // Enhanced data fetching with error handling - REMOVED viewMode dependency to prevent loops
   useEffect(() => {
     if (isLoaded && isSignedIn && user) {
       const fetchUserData = async () => {
@@ -56,32 +82,36 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
           setIsLoading(true);
           setError(null);
           
-          console.log('🔄 Fetching user data for:', user.id);
+          console.log('🔄 Layout: Fetching user data for:', user.id);
           
           const userResponse = await apiClient.getUserProfile();
           if (userResponse.success) {
             setCurrentUser(userResponse.data);
             setIsAdmin(userResponse.data?.publicMetadata?.role === 'admin');
+            console.log('✅ Layout: User data loaded successfully');
           }
           
           const notificationResponse = await apiClient.getNotificationCount();
           if (notificationResponse.success) {
             setUnreadCount(notificationResponse.count || 0);
+            console.log('✅ Layout: Notification count loaded:', notificationResponse.count || 0);
           }
           
           setPendingInvoices(0);
           setActionItemsCount(0);
           
         } catch (err) {
-          console.error('❌ Error fetching user data:', err);
+          console.error('❌ Layout: Error fetching user data:', err);
           setError('Failed to load user data');
         } finally {
           setIsLoading(false);
+          console.log('🏁 Layout: Loading complete');
         }
       };
       
       fetchUserData();
     } else if (isLoaded && !isSignedIn) {
+      console.log('🔄 Layout: User not signed in, clearing data');
       setCurrentUser(null);
       setUnreadCount(0);
       setPendingInvoices(0);
@@ -89,14 +119,15 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
       setIsAdmin(false);
       setIsLoading(false);
     }
-  }, [isLoaded, isSignedIn, user, viewMode]);
+  }, [isLoaded, isSignedIn, user]); // ✅ REMOVED viewMode dependency
 
   const handleSignOut = async () => {
     try {
+      console.log('🚪 Layout: User signing out');
       await signOut();
       navigate('/');
     } catch (error) {
-      console.error('❌ Error signing out:', error);
+      console.error('❌ Layout: Error signing out:', error);
     }
   };
 
@@ -112,25 +143,39 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     duration: 0.3
   };
 
+  // ✅ UPDATED: Main loading state now uses VideoLoader
   if (isLoading) {
+    console.log('⏳ Layout: Showing main loading state');
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4 border-teal-500"></div>
-          <p className="text-slate-600">Loading...</p>
+          <VideoLoader 
+            size="xl"
+            theme="brand"
+            message="Loading..."
+            showMessage={true}
+            centered={true}
+            containerClassName="mb-4"
+          />
         </div>
       </div>
     );
   }
 
+  // ✅ UPDATED: Error state with VideoLoader fallback styling
   if (error) {
+    console.log('❌ Layout: Showing error state:', error);
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 mb-4">{error}</p>
           <button 
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 rounded-lg text-white hover:opacity-90 transition-opacity bg-teal-500"
+            onClick={() => {
+              console.log('🔄 Layout: Retrying after error');
+              window.location.reload();
+            }}
+            className="px-4 py-2 rounded-lg text-white hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: '#4668AB' }}
           >
             Retry
           </button>
@@ -141,6 +186,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
 
   // ✅ CRITICAL FIX: Special handling for full-screen map pages
   if (isFullScreenMapPage) {
+    console.log('🗺️ Layout: Rendering full-screen map layout');
     return (
       <div className="fixed inset-0 overflow-hidden">
         {/* ✅ Desktop Navigation - Fixed at top */}
@@ -210,6 +256,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
   }
 
   // ✅ STANDARD LAYOUT: For all other pages (dashboard, profile, etc.)
+  console.log('📄 Layout: Rendering standard layout');
   return (
     <div className="min-h-screen bg-slate-50">
       {/* ✅ Enhanced Top Navigation with Elaview styling - DESKTOP ONLY */}

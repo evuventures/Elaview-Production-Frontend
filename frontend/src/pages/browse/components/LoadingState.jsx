@@ -1,5 +1,8 @@
+// src/pages/browse/components/LoadingState.jsx
+// ✅ UPDATED: Now uses VideoLoader component
 import React from 'react';
 import { motion } from 'framer-motion';
+import VideoLoader from '@/components/ui/VideoLoader';
 
 export default function LoadingState() {
   const loadingMessages = [
@@ -12,33 +15,39 @@ export default function LoadingState() {
   const [currentMessage, setCurrentMessage] = React.useState(0);
 
   React.useEffect(() => {
+    console.log('🔄 Browse LoadingState: Component mounted');
     const interval = setInterval(() => {
       setCurrentMessage((prev) => (prev + 1) % loadingMessages.length);
     }, 2000);
 
-    return () => clearInterval(interval);
+    return () => {
+      console.log('🔄 Browse LoadingState: Component unmounted');
+      clearInterval(interval);
+    };
   }, []);
 
   return (
     <div className="flex items-center justify-center min-h-64 py-12">
       <div className="text-center">
-        {/* Enhanced Loading Animation with updated colors */}
+        {/* ✅ REPLACED: Enhanced Loading Animation with VideoLoader */}
         <div className="relative mb-6">
-          <div 
-            className="loading-spinner w-8 h-8 mx-auto"
-            style={{ color: '#4668AB' }}
-          ></div>
+          <VideoLoader 
+            size="lg"
+            theme="brand"
+            centered={true}
+            className="mx-auto"
+          />
           
-          {/* Pulse rings around spinner with updated colors */}
+          {/* Pulse rings around loader with updated colors */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div 
-              className="w-12 h-12 rounded-full animate-ping opacity-20"
+              className="w-16 h-16 rounded-full animate-ping opacity-20"
               style={{ border: '1px solid #4668AB' }}
             ></div>
           </div>
           <div className="absolute inset-0 flex items-center justify-center">
             <div 
-              className="w-16 h-16 rounded-full animate-ping opacity-10"
+              className="w-20 h-20 rounded-full animate-ping opacity-10"
               style={{ 
                 border: '1px solid #4668AB',
                 animationDelay: '0.5s'

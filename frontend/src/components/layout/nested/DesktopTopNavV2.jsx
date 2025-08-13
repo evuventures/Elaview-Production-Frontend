@@ -1,14 +1,15 @@
-// Enhanced Navigation with Working Notifications - Updated Brand Colors
-// ✅ UPDATED: UI-only view switching and admin dashboard link with brand color scheme
-// ✅ FIXED: onClick handler to prevent stale state issues
-import React, { useState, useRef, useEffect } from 'react';
+// Enhanced Navigation - Deep Charcoal Version (#0F172A)
+// ✅ UPDATED: Sleek, professional design with deep charcoal background
+// ✅ FIXED: Proper navigation items for Space Owner view
+// ✅ OPTIMIZED: Premium feel with sophisticated color scheme
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import { 
   User, ChevronDown, Bell, Settings, LogOut,
   Building2, Calendar, MessageSquare, Map, LayoutDashboard,
   MapPin, Calendar as CalendarIcon, Mail, UserCircle, Shield,
-  Bookmark, HelpCircle, LogIn, Clock, Loader2, Check
+  Bookmark, HelpCircle, LogIn, Clock, Loader2, Check, Search
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,7 @@ import apiClient from '@/api/apiClient';
 import NotificationDropdown from '@/components/notifications/NotificationDropdown';
 import elaviewLogo from '../../../public/elaview-logo.png';
 
-const DesktopTopNavV2 = ({ 
+const DesktopTopNavV2_DeepCharcoal = React.memo(({ 
   unreadCount = 0, 
   pendingInvoices = 0, 
   actionItemsCount = 0, 
@@ -36,13 +37,13 @@ const DesktopTopNavV2 = ({
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
-  // ✅ COLOR SCHEME: Verification on mount
+  // ✅ COLOR SCHEME: Deep Charcoal Version
   useEffect(() => {
-    console.log('🎨 DESKTOP NAV: Updated color scheme verification', {
+    console.log('🎨 DESKTOP NAV (Deep Charcoal): Color scheme verification', {
+      navBackground: '#0F172A',
       primaryBlue: '#4668AB',
-      whiteBackground: '#FFFFFF',
-      offWhiteCards: '#F9FAFB',
-      lightGrayBorders: '#E5E7EB',
+      whiteText: '#FFFFFF',
+      premiumFeel: 'Sophisticated and modern',
       timestamp: new Date().toISOString()
     });
   }, []);
@@ -53,26 +54,26 @@ const DesktopTopNavV2 = ({
   const [lastFetchTime, setLastFetchTime] = useState(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
 
-  // View-mode-specific navigation items (not role-specific)
-  const getNavigationItems = (mode) => {
-    if (mode === 'seller') {
+  // ✅ UPDATED: Navigation items with proper Space Owner items
+  const navigationItems = useMemo(() => {
+    if (viewMode === 'seller') {
       return [
         {
-          title: 'Dashboard',
+          title: 'Property Hub',
           url: '/dashboard',
-          icon: LayoutDashboard,
+          icon: Building2,
           badge: pendingInvoices || 0
         },
         {
-          title: 'Browse Spaces',
+          title: 'Find Spaces',
           url: '/browse',
-          icon: MapPin,
+          icon: Search,
           badge: 0
         },
         {
           title: 'Messages',
           url: '/messages',
-          icon: Mail,
+          icon: MessageSquare,
           badge: unreadCount || 0
         }
       ];
@@ -87,26 +88,23 @@ const DesktopTopNavV2 = ({
         {
           title: 'Find Spaces',
           url: '/browse',
-          icon: MapPin,
+          icon: Search,
           badge: 0
         },
         {
           title: 'Messages',
           url: '/messages',
-          icon: Mail,
+          icon: MessageSquare,
           badge: unreadCount || 0
         }
       ];
     }
-  };
-
-  const navigationItems = getNavigationItems(viewMode);
+  }, [viewMode, pendingInvoices, unreadCount, actionItemsCount]);
 
   // ✅ OPTIMIZED: Fetch notification count with better throttling and rate limit handling
-  const fetchNotificationCount = async (force = false) => {
+  const fetchNotificationCount = useCallback(async (force = false) => {
     if (!isSignedIn || isRateLimited) return;
     
-    // ✅ OPTIMIZED: Avoid too frequent requests (max every 2 minutes unless forced)
     const now = Date.now();
     if (!force && lastFetchTime && (now - lastFetchTime) < 120000) {
       console.log('⏳ Notification fetch throttled (< 2 minutes since last fetch)');
@@ -119,28 +117,25 @@ const DesktopTopNavV2 = ({
       if (response.success) {
         setNotificationCount(response.count || 0);
         setLastFetchTime(now);
-        setIsRateLimited(false); // Reset rate limit flag on success
+        setIsRateLimited(false);
         console.log('✅ Notification count fetched:', response.count);
       }
     } catch (error) {
       console.error('❌ Failed to fetch notification count:', error);
       
-      // ✅ OPTIMIZED: Handle rate limiting specifically
       if (error.message.includes('429')) {
         console.warn('🚫 Rate limited - pausing notification fetching for 5 minutes');
         setIsRateLimited(true);
-        
-        // Reset rate limit flag after 5 minutes
         setTimeout(() => {
           setIsRateLimited(false);
           console.log('✅ Rate limit reset - resuming notification fetching');
-        }, 300000); // 5 minutes
+        }, 300000);
       }
     }
-  };
+  }, [isSignedIn, isRateLimited, lastFetchTime]);
 
   // ✅ OPTIMIZED: Fetch full notifications with rate limit protection
-  const fetchFullNotifications = async () => {
+  const fetchFullNotifications = useCallback(async () => {
     if (!isSignedIn || isRateLimited) {
       return { notifications: [], count: notificationCount };
     }
@@ -163,31 +158,28 @@ const DesktopTopNavV2 = ({
         setTimeout(() => setIsRateLimited(false), 300000);
       }
       
-      // Return cached data on error
       return { notifications, count: notificationCount };
     }
     
     return { notifications: [], count: 0 };
-  };
+  }, [isSignedIn, isRateLimited, notifications, notificationCount]);
 
   // ✅ OPTIMIZED: Handle notification actions with local state updates
-  const handleNotificationAction = (action) => {
+  const handleNotificationAction = useCallback((action) => {
     console.log('🔔 Notification action:', action);
     
-    // Update local state immediately for better UX
     if (action === 'approved' || action === 'declined' || action === 'messaged') {
       setNotificationCount(prev => Math.max(0, prev - 1));
-      setNotifications(prev => prev.slice(1)); // Remove first notification
+      setNotifications(prev => prev.slice(1));
     } else if (action === 'mark_all_read') {
       setNotificationCount(0);
       setNotifications([]);
     }
     
-    // Refresh from server after a delay (debounced)
     setTimeout(() => {
       fetchNotificationCount(true);
     }, 2000);
-  };
+  }, [fetchNotificationCount]);
 
   // Enhanced outside click detection
   useEffect(() => {
@@ -211,15 +203,13 @@ const DesktopTopNavV2 = ({
   // ✅ OPTIMIZED: Fetch notification count on auth change with 3-minute intervals
   useEffect(() => {
     if (isSignedIn) {
-      // Initial fetch
       fetchNotificationCount(true);
       
-      // ✅ OPTIMIZED: Set up periodic refresh every 3 minutes instead of 1 minute
       const interval = setInterval(() => {
         if (!isRateLimited) {
           fetchNotificationCount();
         }
-      }, 180000); // 3 minutes = 180,000ms
+      }, 180000);
       
       return () => clearInterval(interval);
     } else {
@@ -227,115 +217,109 @@ const DesktopTopNavV2 = ({
       setNotifications([]);
       setIsRateLimited(false);
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, fetchNotificationCount, isRateLimited]);
 
-  // ✅ FIXED: Direct view mode switch (removed blocking condition)
-  const handleViewSwitch = (newMode) => {
-    if (!onViewModeChange) return; // Only check if function exists
+  // ✅ FIXED: Simplified view switch handler
+  const handleViewSwitch = useCallback((newMode) => {
+    if (!onViewModeChange) return;
     
     console.log(`🔄 Desktop: Switching view from ${viewMode} to ${newMode}`);
     onViewModeChange(newMode);
-  };
+  }, [onViewModeChange, viewMode]);
 
-  // Handle sign out
-  const handleSignOut = async () => {
+  // ✅ OPTIMIZED: Memoize sign out handler
+  const handleSignOut = useCallback(async () => {
     try {
       console.log('🚪 Signing out user...');
-      closeUserMenu();
+      setUserMenuOpen(false);
       
-      // Sign out with Clerk and redirect to browse
       await signOut({
         redirectUrl: '/browse'
       });
     } catch (error) {
       console.error('❌ Error signing out:', error);
-      // Fallback redirect if signOut fails
       navigate('/browse');
     }
-  };
+  }, [signOut, navigate]);
 
-  // Handle sign in redirect
-  const handleSignIn = () => {
+  // ✅ OPTIMIZED: Memoize sign in handler
+  const handleSignIn = useCallback(() => {
     navigate('/sign-in');
-  };
+  }, [navigate]);
 
-  const formatBadgeCount = (count) => {
+  // ✅ OPTIMIZED: Memoize badge count formatter
+  const formatBadgeCount = useCallback((count) => {
     if (count > 99) return '99+';
     return count.toString();
-  };
+  }, []);
 
-  // Enhanced user menu toggle
-  const toggleUserMenu = (e) => {
+  // ✅ OPTIMIZED: Enhanced user menu toggle with useCallback
+  const toggleUserMenu = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     setUserMenuOpen(prev => !prev);
-    setNotificationMenuOpen(false); // Close notification menu
-  };
+    setNotificationMenuOpen(false);
+  }, []);
 
-  // ✅ OPTIMIZED: Notification menu toggle with on-demand fetching
-  const toggleNotificationMenu = async (e) => {
+  // ✅ OPTIMIZED: Notification menu toggle with on-demand fetching and useCallback
+  const toggleNotificationMenu = useCallback(async (e) => {
     e.preventDefault();
     e.stopPropagation();
     
     const wasOpen = notificationMenuOpen;
     setNotificationMenuOpen(prev => !prev);
-    setUserMenuOpen(false); // Close user menu
+    setUserMenuOpen(false);
     
-    // Only fetch full notifications when opening the dropdown
     if (!wasOpen && !isRateLimited) {
       await fetchFullNotifications();
     }
-  };
+  }, [notificationMenuOpen, isRateLimited, fetchFullNotifications]);
 
-  // Close user menu
-  const closeUserMenu = () => {
+  // ✅ OPTIMIZED: Memoize close functions
+  const closeUserMenu = useCallback(() => {
     setUserMenuOpen(false);
-  };
+  }, []);
 
-  // Close notification menu
-  const closeNotificationMenu = () => {
+  const closeNotificationMenu = useCallback(() => {
     setNotificationMenuOpen(false);
-  };
+  }, []);
 
-  // Profile image with fallback
-  const getProfileImage = () => {
+  // ✅ OPTIMIZED: Memoize profile image component
+  const profileImage = useMemo(() => {
     if (currentUser?.imageUrl) {
       return (
         <img 
           src={currentUser.imageUrl} 
           alt="Profile"
-          className="w-8 h-8 rounded-full object-cover ring-2 ring-white group-hover:ring-blue-200 transition-all duration-200"
+          className="w-7 h-7 rounded-full object-cover ring-2 ring-white/10 group-hover:ring-white/20 transition-all duration-200"
         />
       );
     }
     
     return (
-      <div 
-        className="w-8 h-8 rounded-full flex items-center justify-center ring-2 ring-white group-hover:ring-blue-200 transition-all duration-200"
-        style={{ background: 'linear-gradient(to right, #4668AB, #5B7BC7)' }}
-      >
-        <UserCircle className="w-5 h-5 text-white" />
+      <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center ring-2 ring-white/10 group-hover:ring-white/20 transition-all duration-200">
+        <UserCircle className="w-4 h-4 text-white" />
       </div>
     );
-  };
+  }, [currentUser?.imageUrl]);
 
   return (
     <>
-      {/* Navigation Header - Updated with light blue background */}
+      {/* Navigation Header - Deep Charcoal Version */}
       <header 
-        className="fixed top-0 left-0 right-0 h-16 shadow-sm backdrop-blur-sm"
-        style={{ backgroundColor: '#F8FAFF' }}
+        className="fixed top-0 left-0 right-0 h-14 shadow-xl backdrop-blur-sm z-50 border-b border-white/5"
+        style={{ backgroundColor: '#0F172A' }}
       >
         <div className="flex items-center justify-between h-full px-4 lg:px-6">
           
           {/* Left Section: Logo + Navigation */}
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-6">
             {/* Logo */}
-            <Link to={viewMode === 'seller' ? '/dashboard' : '/browse'} className="flex items-center gap-2 group">
+            <Link to={viewMode === 'seller' ? '/dashboard' : '/browse'} className="flex items-center group">
               <img 
                 src={elaviewLogo}
                 alt="Elaview Logo" 
-                className="w-20 h-20 object-contain"
+                className="w-16 h-16 object-contain brightness-0 invert opacity-95 group-hover:opacity-100 transition-opacity duration-200"
               />
             </Link>
 
@@ -348,17 +332,16 @@ const DesktopTopNavV2 = ({
                     <Link
                       key={item.title}
                       to={item.url}
-                      className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                         isActive
-                          ? 'text-white shadow-sm'
-                          : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
+                          ? 'text-white bg-white/10 shadow-lg backdrop-blur-sm'
+                          : 'text-white/70 hover:text-white hover:bg-white/5'
                       }`}
-                      style={isActive ? { backgroundColor: '#4668AB' } : {}}
                     >
                       <item.icon className="w-4 h-4" />
                       <span className="hidden xl:inline">{item.title}</span>
                       {item.badge > 0 && (
-                        <Badge className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[16px] h-4 flex items-center justify-center">
+                        <Badge className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[16px] h-4 flex items-center justify-center shadow-sm">
                           {formatBadgeCount(item.badge)}
                         </Badge>
                       )}
@@ -366,8 +349,7 @@ const DesktopTopNavV2 = ({
                       {isActive && (
                         <motion.div
                           layoutId="activeIndicator"
-                          className="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full"
-                          style={{ backgroundColor: '#FFFFFF' }}
+                          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-white rounded-full shadow-sm"
                           transition={{ type: "spring", stiffness: 400, damping: 30 }}
                         />
                       )}
@@ -375,23 +357,22 @@ const DesktopTopNavV2 = ({
                   );
                 })}
                 
-                {/* ✅ NEW: Admin Dashboard Link */}
+                {/* Admin Dashboard Link */}
                 {isAdmin && (
                   <Link
                     to="/admin"
-                    className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       location.pathname.startsWith('/admin')
-                        ? 'text-white bg-purple-600 shadow-sm'
-                        : 'text-purple-600 hover:text-purple-700 hover:bg-purple-50'
+                        ? 'text-white bg-purple-500/20 shadow-lg backdrop-blur-sm'
+                        : 'text-purple-300 hover:text-purple-200 hover:bg-purple-500/10'
                     }`}
                   >
                     <Shield className="w-4 h-4" />
                     <span className="hidden xl:inline">Admin</span>
-                    {/* Active indicator for admin */}
                     {location.pathname.startsWith('/admin') && (
                       <motion.div
                         layoutId="activeIndicator"
-                        className="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-white rounded-full"
+                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-white rounded-full shadow-sm"
                         transition={{ type: "spring", stiffness: 400, damping: 30 }}
                       />
                     )}
@@ -402,40 +383,27 @@ const DesktopTopNavV2 = ({
           </div>
 
           {/* Right Section: View Mode Toggle + Actions + User */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             
-            {/* ✅ FIXED: View Mode Toggle Button with corrected onClick */}
+            {/* ✅ UPDATED: View Mode Toggle - Premium Deep Charcoal Style */}
             {isSignedIn && canSwitchModes && (
-              <div className="hidden md:block relative">
+              <div className="hidden md:block">
                 <button
                   onClick={() => {
-                    // ✅ FIXED: State-independent toggle logic
                     const newMode = viewMode === 'seller' ? 'buyer' : 'seller';
                     handleViewSwitch(newMode);
                   }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 border shadow-sm hover:shadow-md ${
-                    viewMode === 'seller' 
-                      ? 'text-emerald-600 hover:text-emerald-700 bg-emerald-50 border-emerald-200 hover:border-emerald-300' 
-                      : 'text-blue-600 hover:text-blue-700 bg-blue-50 border-blue-200 hover:border-blue-300'
-                  }`}
-                  style={{ backgroundColor: viewMode === 'seller' ? '#ECFDF5' : '#EFF6FF' }}
+                  className="px-3 py-1.5 text-sm font-medium text-white/80 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-all duration-200 border border-white/10 hover:border-white/20 backdrop-blur-sm"
                 >
-                  {viewMode === 'seller' ? (
-                    <Building2 className="w-4 h-4" />
-                  ) : (
-                    <MapPin className="w-4 h-4" />
-                  )}
-                  <span>
-                    {viewMode === 'seller' 
-                      ? 'Viewing as: Space Owner' 
-                      : 'Viewing as: Advertiser'
-                    }
-                  </span>
+                  {viewMode === 'seller' 
+                    ? 'Viewing as: Space Owner' 
+                    : 'Viewing as: Advertiser'
+                  }
                 </button>
               </div>
             )}
 
-            {/* ✅ OPTIMIZED: Notification Bell Button with rate limit indicator */}
+            {/* Notification Bell Button */}
             {isSignedIn && (
               <div className="relative">
                 <Button
@@ -443,26 +411,21 @@ const DesktopTopNavV2 = ({
                   variant="ghost"
                   onClick={toggleNotificationMenu}
                   disabled={isRateLimited}
-                  className={`relative w-10 h-10 p-0 rounded-lg text-slate-500 hover:bg-slate-50 transition-all duration-200 ${
+                  className={`relative w-9 h-9 p-0 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 backdrop-blur-sm ${
                     isRateLimited ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                  style={{ 
-                    color: notificationMenuOpen ? '#4668AB' : undefined,
-                    backgroundColor: notificationMenuOpen ? '#F9FAFB' : undefined
-                  }}
+                  } ${notificationMenuOpen ? 'bg-white/15 text-white shadow-lg' : ''}`}
                 >
                   <Bell className="w-4 h-4" />
                   {notificationCount > 0 && (
-                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium shadow-lg ring-2 ring-red-500/20">
                       {notificationCount > 9 ? '9+' : notificationCount}
                     </div>
                   )}
                   {isRateLimited && (
-                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-orange-500 rounded-full"></div>
+                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-orange-500 rounded-full shadow-sm"></div>
                   )}
                 </Button>
 
-                {/* ✅ OPTIMIZED: Pass notifications as props to avoid additional API calls */}
                 <NotificationDropdown 
                   isOpen={notificationMenuOpen}
                   onClose={closeNotificationMenu}
@@ -481,34 +444,25 @@ const DesktopTopNavV2 = ({
                 <button
                   type="button"
                   onClick={toggleUserMenu}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2"
-                  style={{ 
-                    backgroundColor: userMenuOpen ? '#F9FAFB' : undefined,
-                    focusRingColor: '#4668AB'
-                  }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-white/10 backdrop-blur-sm"
                 >
-                  {getProfileImage()}
+                  {profileImage}
                   <div className="hidden sm:block text-left">
-                    <p className="font-medium text-sm text-slate-800 truncate max-w-28 group-hover:text-slate-600 transition-colors">
+                    <p className="font-medium text-sm text-white truncate max-w-20 group-hover:text-white/90 transition-colors">
                       {currentUser.firstName}
                     </p>
-                    <p className="text-xs text-slate-500 capitalize">
-                      {viewMode === 'seller' ? 'Space Owner View' : 'Advertiser View'}
-                      {isAdmin && ' • Admin'}
+                    <p className="text-xs text-white/50">
+                      {isAdmin && 'Admin'}
                     </p>
                   </div>
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-all duration-200 ${userMenuOpen ? 'rotate-180 text-slate-600' : 'group-hover:text-slate-600'}`} />
+                  <ChevronDown className={`w-4 h-4 text-white/40 transition-all duration-200 ${userMenuOpen ? 'rotate-180 text-white/70' : 'group-hover:text-white/60'}`} />
                 </button>
 
                 {/* Enhanced User Dropdown */}
                 <AnimatePresence mode="wait">
                   {userMenuOpen && (
                     <>
-                      {/* Invisible backdrop to catch clicks */}
-                      <div 
-                        className="fixed inset-0 z-[999998]" 
-                        onClick={closeUserMenu}
-                      />
+                      <div className="fixed inset-0 z-[999998]" onClick={closeUserMenu} />
                       <motion.div
                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -519,129 +473,133 @@ const DesktopTopNavV2 = ({
                           damping: 30,
                           duration: 0.2 
                         }}
-                        className="fixed top-16 right-4 w-72 bg-white border rounded-xl shadow-2xl overflow-hidden z-[999999]"
+                        className="fixed top-14 right-4 w-72 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden z-[999999] backdrop-blur-sm"
                         style={{ 
-                          transformOrigin: 'top right',
-                          borderColor: '#E5E7EB'
+                          transformOrigin: 'top right'
                         }}
                       >
-                      {/* User Info Header */}
-                      <div 
-                        className="px-4 py-4 border-b"
-                        style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}
-                      >
-                        <div className="flex items-center gap-3">
-                          {getProfileImage()}
-                          <div className="flex-1">
-                            <p className="font-semibold text-sm text-slate-800">
-                              {currentUser.firstName} {currentUser.lastName}
-                            </p>
-                            <p className="text-xs text-slate-600 truncate">
-                              {currentUser.emailAddresses?.[0]?.emailAddress}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="mt-3 flex gap-2">
-                          <Badge className={`text-xs px-2 py-1 border ${
-                            viewMode === 'seller' 
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                              : 'text-white border-blue-200'
-                          }`}
-                          style={viewMode === 'buyer' ? { backgroundColor: '#4668AB' } : {}}>
-                            {viewMode === 'seller' ? 'Space Owner View' : 'Advertiser View'}
-                          </Badge>
-                          {isAdmin && (
-                            <Badge className="text-xs px-2 py-1 bg-purple-50 text-purple-700 border border-purple-200">
-                              Admin
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Menu Items */}
-                      <div className="p-2">
-                        {/* ✅ Admin Dashboard Link in Menu */}
-                        {isAdmin && (
-                          <>
-                            <Link
-                              to="/admin"
-                              onClick={closeUserMenu}
-                              className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-purple-600 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200 group"
-                            >
-                              <Shield className="w-4 h-4 group-hover:text-purple-600 transition-colors" />
-                              <div className="flex-1">
-                                <div className="font-medium">Admin Dashboard</div>
-                                <div className="text-xs text-purple-500">Manage platform</div>
+                        {/* User Info Header */}
+                        <div className="px-4 py-4 bg-gray-50 border-b border-gray-200">
+                          <div className="flex items-center gap-3">
+                            {currentUser?.imageUrl ? (
+                              <img 
+                                src={currentUser.imageUrl} 
+                                alt="Profile"
+                                className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-200"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center ring-2 ring-blue-200">
+                                <UserCircle className="w-6 h-6 text-blue-600" />
                               </div>
-                            </Link>
-                            <div className="border-t my-2" style={{ borderColor: '#E5E7EB' }} />
-                          </>
-                        )}
-                        
-                        <Link
-                          to="/profile"
-                          onClick={closeUserMenu}
-                          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
-                        >
-                          <UserCircle className="w-4 h-4 transition-colors" style={{ color: userMenuOpen ? '#4668AB' : undefined }} />
-                          <div className="flex-1">
-                            <div className="font-medium">Profile Settings</div>
-                            <div className="text-xs text-slate-500">Manage your account</div>
+                            )}
+                            <div className="flex-1">
+                              <p className="font-semibold text-sm text-slate-800">
+                                {currentUser.firstName} {currentUser.lastName}
+                              </p>
+                              <p className="text-xs text-slate-600 truncate">
+                                {currentUser.emailAddresses?.[0]?.emailAddress}
+                              </p>
+                            </div>
                           </div>
-                        </Link>
-                        
-                        <Link
-                          to="/settings"
-                          onClick={closeUserMenu}
-                          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
-                        >
-                          <Settings className="w-4 h-4 transition-colors" style={{ color: userMenuOpen ? '#4668AB' : undefined }} />
-                          <div className="flex-1">
-                            <div className="font-medium">Preferences</div>
-                            <div className="text-xs text-slate-500">Notifications & privacy</div>
+                          <div className="mt-3 flex gap-2">
+                            <Badge className={`text-xs px-2 py-1 ${
+                              viewMode === 'seller' 
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                                : 'bg-blue-50 text-blue-700 border border-blue-200'
+                            }`}>
+                              {viewMode === 'seller' ? 'Space Owner View' : 'Advertiser View'}
+                            </Badge>
+                            {isAdmin && (
+                              <Badge className="text-xs px-2 py-1 bg-purple-50 text-purple-700 border border-purple-200">
+                                Admin
+                              </Badge>
+                            )}
                           </div>
-                        </Link>
+                        </div>
 
-                        <Link
-                          to="/saved"
-                          onClick={closeUserMenu}
-                          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
-                        >
-                          <Bookmark className="w-4 h-4 transition-colors" style={{ color: userMenuOpen ? '#4668AB' : undefined }} />
-                          <div className="flex-1">
-                            <div className="font-medium">Saved Spaces</div>
-                            <div className="text-xs text-slate-500">Your bookmarked listings</div>
-                          </div>
-                        </Link>
+                        {/* Menu Items */}
+                        <div className="p-2">
+                          {isAdmin && (
+                            <>
+                              <Link
+                                to="/admin"
+                                onClick={closeUserMenu}
+                                className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-purple-600 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200 group"
+                              >
+                                <Shield className="w-4 h-4" />
+                                <div className="flex-1">
+                                  <div className="font-medium">Admin Dashboard</div>
+                                  <div className="text-xs text-purple-500">Manage platform</div>
+                                </div>
+                              </Link>
+                              <div className="border-t my-2 border-gray-200" />
+                            </>
+                          )}
+                          
+                          <Link
+                            to="/profile"
+                            onClick={closeUserMenu}
+                            className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200"
+                          >
+                            <UserCircle className="w-4 h-4 text-blue-500" />
+                            <div className="flex-1">
+                              <div className="font-medium">Profile Settings</div>
+                              <div className="text-xs text-slate-500">Manage your account</div>
+                            </div>
+                          </Link>
+                          
+                          <Link
+                            to="/settings"
+                            onClick={closeUserMenu}
+                            className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200"
+                          >
+                            <Settings className="w-4 h-4 text-blue-500" />
+                            <div className="flex-1">
+                              <div className="font-medium">Preferences</div>
+                              <div className="text-xs text-slate-500">Notifications & privacy</div>
+                            </div>
+                          </Link>
 
-                        <Link
-                          to="/help"
-                          onClick={closeUserMenu}
-                          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200 group"
-                        >
-                          <HelpCircle className="w-4 h-4 transition-colors" style={{ color: userMenuOpen ? '#4668AB' : undefined }} />
-                          <div className="flex-1">
-                            <div className="font-medium">Help & Support</div>
-                            <div className="text-xs text-slate-500">Get assistance</div>
-                          </div>
-                        </Link>
+                          <Link
+                            to="/saved"
+                            onClick={closeUserMenu}
+                            className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200"
+                          >
+                            <Bookmark className="w-4 h-4 text-blue-500" />
+                            <div className="flex-1">
+                              <div className="font-medium">Saved Spaces</div>
+                              <div className="text-xs text-slate-500">Your bookmarked listings</div>
+                            </div>
+                          </Link>
 
-                        <div className="border-t my-2" style={{ borderColor: '#E5E7EB' }} />
-                        
-                        <button 
-                          type="button"
-                          onClick={handleSignOut}
-                          className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 group"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          <div className="flex-1 text-left">
-                            <div className="font-medium">Sign Out</div>
-                            <div className="text-xs text-red-500">End your session</div>
-                          </div>
-                        </button>
-                      </div>
-                    </motion.div>
-                  </>
+                          <Link
+                            to="/help"
+                            onClick={closeUserMenu}
+                            className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200"
+                          >
+                            <HelpCircle className="w-4 h-4 text-blue-500" />
+                            <div className="flex-1">
+                              <div className="font-medium">Help & Support</div>
+                              <div className="text-xs text-slate-500">Get assistance</div>
+                            </div>
+                          </Link>
+
+                          <div className="border-t my-2 border-gray-200" />
+                          
+                          <button 
+                            type="button"
+                            onClick={handleSignOut}
+                            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <div className="flex-1 text-left">
+                              <div className="font-medium">Sign Out</div>
+                              <div className="text-xs text-red-500">End your session</div>
+                            </div>
+                          </button>
+                        </div>
+                      </motion.div>
+                    </>
                   )}
                 </AnimatePresence>
               </div>
@@ -649,8 +607,7 @@ const DesktopTopNavV2 = ({
               /* Sign In Button for Unauthenticated Users */
               <Button
                 onClick={handleSignIn}
-                className="flex items-center gap-2 px-4 py-2 text-white font-medium rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:opacity-90"
-                style={{ backgroundColor: '#4668AB' }}
+                className="flex items-center gap-2 px-4 py-2 text-slate-800 font-medium bg-white hover:bg-gray-50 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl backdrop-blur-sm"
               >
                 <LogIn className="w-4 h-4" />
                 <span>Sign In</span>
@@ -661,9 +618,11 @@ const DesktopTopNavV2 = ({
       </header>
 
       {/* Content Spacer */}
-      <div className="h-16" />
+      <div className="h-14" />
     </>
   );
-};
+});
 
-export default DesktopTopNavV2;
+DesktopTopNavV2_DeepCharcoal.displayName = 'DesktopTopNavV2_DeepCharcoal';
+
+export default DesktopTopNavV2_DeepCharcoal;
