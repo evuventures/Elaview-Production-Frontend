@@ -35,7 +35,7 @@ import { useBusinessProfile, checkBusinessProfileRequired } from '../checkout/ho
 // ✅ Import utility functions
 import { getDistanceInKm } from './utils/distance';
 import { getPropertyCoords, getPropertyAddress, getPropertyName } from './utils/propertyHelpers';
-import { getNumericPrice } from './utils/areaHelpers';
+import { getNumericPrice } from './utils/areaHelpers'; // single import (removed accidental duplicate)
 import { applyPriceFilter, applySpaceTypeFilter, applyAudienceFilter, applyFeaturesFilter } from './utils/filterHelpers';
 
 // ✅ Import constants
@@ -119,8 +119,43 @@ export default function BrowsePage() {
     spaceType: 'all',
     availability: 'all',
     audience: 'all',
-    features: [],
+  features: [],
+  // Numeric slider bounds
+  priceMin: 0,
+  priceMax: 2000,
   });
+
+  // Price histogram (Airbnb style) – reacts to non-price filters (spaceType, audience)
+  const priceHistogram = useMemo(() => {
+    if (!allSpaces || allSpaces.length === 0) return [];
+    // Apply non-price filters so distribution reflects current selection context
+    let base = allSpaces;
+    base = applySpaceTypeFilter(base, filters.spaceType);
+    base = applyAudienceFilter(base, filters.audience);
+    if (!base.length) return [];
+
+    const BIN_SIZE = 100;
+    const MAX_PRICE = 2000;
+    const binCount = Math.ceil(MAX_PRICE / BIN_SIZE);
+    const bins = [];
+    for (let i = 0; i < binCount; i++) {
+      const min = i * BIN_SIZE;
+      bins.push({ min, max: min + BIN_SIZE, count: 0 });
+    }
+    bins.push({ min: MAX_PRICE, max: Infinity, count: 0 }); // overflow
+
+    for (const space of base) {
+      const price = getNumericPrice(space);
+      if (isNaN(price) || price < 0) continue;
+      const capped = Math.min(price, MAX_PRICE); // cap for binning; overflow handled separately
+      const idx = price >= MAX_PRICE ? bins.length - 1 : Math.min(bins.length - 2, Math.floor(capped / BIN_SIZE));
+      if (idx >= 0 && idx < bins.length) bins[idx].count++;
+    }
+
+    // If all counts are zero, return empty to avoid misleading flat chart
+    if (bins.every(b => b.count === 0)) return [];
+    return bins;
+  }, [allSpaces, filters.spaceType, filters.audience]);
   
   // UI state
   const [animatingSpace, setAnimatingSpace] = useState(null);
@@ -352,6 +387,13 @@ export default function BrowsePage() {
     let filtered = allSpaces;
 
     filtered = applyPriceFilter(filtered, filters.priceRange);
+    // Apply numeric slider bounds if user narrowed the range
+    if ((filters.priceMin !== 0) || (filters.priceMax !== 2000)) {
+      filtered = filtered.filter(space => {
+        const p = space.baseRate || getNumericPrice(space);
+        return p >= filters.priceMin && p <= filters.priceMax;
+      });
+    }
     filtered = applySpaceTypeFilter(filtered, filters.spaceType);
     filtered = applyAudienceFilter(filtered, filters.audience);
     filtered = applyFeaturesFilter(filtered, filters.features);
@@ -661,6 +703,15 @@ export default function BrowsePage() {
     }));
   };
 
+  // Atomic numeric price range setter for slider
+  const setPriceRange = (min, max) => {
+    setFilters(prev => ({
+      ...prev,
+      priceMin: Math.max(0, Math.min(min, max)),
+      priceMax: Math.max(Math.max(0, min), max)
+    }));
+  };
+
   const toggleFeature = (feature) => {
     setFilters(prev => ({
       ...prev,
@@ -676,7 +727,9 @@ export default function BrowsePage() {
       spaceType: 'all',
       availability: 'all',
       audience: 'all',
-      features: [],
+  features: [],
+  priceMin: 0,
+  priceMax: 2000,
     });
   };
 
@@ -1011,6 +1064,8 @@ export default function BrowsePage() {
           toggleFeature={toggleFeature}
           clearFilters={clearFilters}
           filteredSpaces={filteredSpaces}
+          setPriceRange={setPriceRange}
+          priceHistogram={priceHistogram}
           style={{ zIndex: Z_INDEX.MODAL_CONTENT }}
         />
 
@@ -1344,6 +1399,8 @@ export default function BrowsePage() {
         toggleFeature={toggleFeature}
         clearFilters={clearFilters}
         filteredSpaces={filteredSpaces}
+  setPriceRange={setPriceRange}
+  priceHistogram={priceHistogram}
         style={{ zIndex: Z_INDEX.MODAL_CONTENT }}
       />
   

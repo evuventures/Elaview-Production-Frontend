@@ -110,6 +110,14 @@ export const SPACE_TYPE_CATEGORIES = {
   transit: ['bus_shelter', 'platform_display', 'transit_station', 'parking_totem'],
   indoor: ['wall_graphic', 'floor_graphic', 'lobby_display', 'elevator_display', 'other']
 };
+// Minimal custom subset category for wall-specific filtering (requested UI subset)
+export const SPACE_TYPE_CATEGORIES_WALL_EXT = {
+  wall: ['wall_graphic', 'building_wrap']
+};
+// Combined exterior + wall category for simplified UI selection
+export const SPACE_TYPE_CATEGORIES_COMBINED = {
+  exteriorwall: ['building_exterior', 'wall_graphic', 'building_wrap']
+};
 
 // ✅ PRESERVED: Price ranges for ILS currency (Kfar Kama pricing)
 export const PRICE_RANGE_OPTIONS = [

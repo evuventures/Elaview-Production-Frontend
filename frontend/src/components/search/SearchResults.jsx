@@ -325,16 +325,7 @@ const ResultCard = ({
         </div>
 
         {/* Favorite Button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onToggleFavorite(item.id)}
-          className={`absolute top-4 right-4 h-8 w-8 p-0 backdrop-blur-sm rounded-full ${
-            isFavorite ? 'text-red-500 bg-white/90' : 'text-gray-500 bg-white/70 hover:bg-white/90'
-          }`}
-        >
-          <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
-        </Button>
+        {/* Favorite button removed */}
 
         {/* Price Tag */}
         <div className="absolute bottom-4 right-4">
@@ -461,15 +452,6 @@ const ResultListItem = ({
                     </div>
                   )}
                 </div>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onToggleFavorite(item.id)}
-                  className={`h-8 w-8 p-0 ${isFavorite ? 'text-red-500' : 'text-gray-500'}`}
-                >
-                  <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
-                </Button>
               </div>
             </div>
 
