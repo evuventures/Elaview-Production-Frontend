@@ -1,6 +1,7 @@
 // src/pages/browse/components/SpaceDetailsModal.jsx
 // ✅ REDESIGNED: More condensed and UX-friendly with left image layout
 // ✅ NEW: Book Now redirects to CampaignSelection flow
+// ✅ ADJUSTED: Accounts for 56px navbar height (h-14 Tailwind class = 3.5rem = 56px)
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,6 +16,10 @@ import {
 } from "lucide-react";
 import { getAreaName, getNumericPrice } from '../utils/areaHelpers';
 import apiClient from '@/api/apiClient';
+
+// Navbar height constant - matches the h-14 Tailwind class used in your navigation
+// h-14 = 3.5rem = 56px
+const NAVBAR_HEIGHT = '56px';
 
 export default function SpaceDetailsModal({ 
   selectedSpace, 
@@ -231,6 +236,7 @@ export default function SpaceDetailsModal({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        style={{ top: NAVBAR_HEIGHT }} // Account for navbar height
         onClick={() => {
           setDetailsExpanded(false);
           setSelectedSpace(null);
@@ -240,13 +246,14 @@ export default function SpaceDetailsModal({
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
-          className="w-full max-w-6xl max-h-[85vh] bg-white rounded-xl shadow-2xl overflow-hidden flex"
+          className="w-full max-w-6xl bg-white rounded-xl shadow-2xl overflow-hidden flex"
+          style={{ maxHeight: `calc(100vh - ${NAVBAR_HEIGHT} - 2rem)` }} // Viewport height minus navbar and padding
           onClick={(e) => e.stopPropagation()}
         >
           {/* Left Side - Image Gallery (50% width) */}
-          <div className="w-1/2 bg-slate-900 relative flex flex-col">
+          <div className="w-1/2 bg-slate-900 relative flex flex-col" style={{ maxHeight: `calc(100vh - ${NAVBAR_HEIGHT} - 2rem)` }}>
             {/* Main Image */}
-            <div className="flex-1 relative">
+            <div className="flex-1 relative overflow-hidden">
               {spaceImages.length > 0 ? (
                 <>
                   <img 
@@ -336,7 +343,7 @@ export default function SpaceDetailsModal({
           </div>
 
           {/* Right Side - Details (50% width) */}
-          <div className="w-1/2 flex flex-col">
+          <div className="w-1/2 flex flex-col" style={{ maxHeight: `calc(100vh - ${NAVBAR_HEIGHT} - 2rem)` }}>
             {/* Header */}
             <div className="p-6 border-b border-slate-200">
               <div className="flex justify-between items-start mb-3">
@@ -683,6 +690,7 @@ export default function SpaceDetailsModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-60 flex items-center justify-center p-4"
+            style={{ top: NAVBAR_HEIGHT }} // Account for navbar height
             onClick={() => setShowMessageModal(false)}
           >
             <motion.div

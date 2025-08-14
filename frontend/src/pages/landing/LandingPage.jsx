@@ -124,8 +124,8 @@ export default function Landing() {
                   }}
                   className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 group"
                 >
-                  Start Browsing
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  Find Your Space
+                  
                 </Button>
                 
                 <Button 
@@ -135,9 +135,9 @@ export default function Landing() {
                     console.log('Navigating to /sign-in');
                     navigate('/sign-in');
                   }}
-                  className="border-2 border-slate-300 hover:border-blue-300 hover:bg-blue-50 text-slate-700 hover:text-blue-700 px-8 py-4 text-lg font-semibold transition-all duration-300"
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 group"
                 >
-                  Login
+                  List your Property
                 </Button>
               </div>
 

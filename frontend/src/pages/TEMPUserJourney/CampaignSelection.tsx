@@ -1,6 +1,7 @@
 // src/pages/TEMPUserJourney/CampaignSelection.tsx
 // Campaign selection flow for booking advertising spaces
 // Handles both existing campaigns and new campaign creation
+// ✅ ADJUSTED: Accounts for 56px navbar height (h-14 Tailwind class = 3.5rem = 56px)
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +16,10 @@ import {
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import apiClient from '@/api/apiClient';
+
+// Navbar height constant - matches the h-14 Tailwind class used in your navigation
+// h-14 = 3.5rem = 56px
+const NAVBAR_HEIGHT = '56px';
 
 interface Campaign {
   id: string;
@@ -296,7 +301,10 @@ const CampaignSelection: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div 
+        className="min-h-screen flex items-center justify-center bg-gray-50"
+        style={{ paddingTop: NAVBAR_HEIGHT }} // Account for navbar
+      >
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" style={{ color: '#4668AB' }} />
           <p className="text-gray-600">Loading campaigns...</p>
@@ -306,7 +314,10 @@ const CampaignSelection: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+    <div 
+      className="min-h-screen bg-gray-50 p-4 sm:p-6"
+      style={{ paddingTop: `calc(${NAVBAR_HEIGHT} + 1rem)` }} // Account for navbar + spacing
+    >
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">

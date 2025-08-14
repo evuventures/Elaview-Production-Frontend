@@ -1,24 +1,80 @@
 // src/pages/dashboard/owner/components/create-listing/CreateListingWizard.jsx
-// ✅ FIXED: Google Places zipCode extraction + centralized Google Maps loading
+// ✅ UPDATED: Removed product selection, added space photo upload
+// ✅ SIMPLIFIED: Space creation with photo, name, type, dimensions, and rate period selector
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import { 
   ArrowLeft, ArrowRight, Plus, X, Upload, MapPin, 
-  Building2, Camera, Check, AlertCircle 
+  Building2, Camera, Check, AlertCircle, Loader2,
+  Info, DollarSign, Maximize2, ChevronLeft,
+  Edit2, Save, Trash2, Calendar, Clock
 } from 'lucide-react';
 
 import apiClient from '../../../../../api/apiClient.js';
-import googleMapsLoader from '../../../../../services/googleMapsLoader.js'; // ✅ NEW: Use centralized loader
+import googleMapsLoader from '../../../../../services/googleMapsLoader.js';
+
+// Custom styles for Google Autocomplete - more compact
+const GOOGLE_AUTOCOMPLETE_STYLES = `
+  .pac-container {
+    z-index: 10000 !important;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    border-radius: 6px;
+    margin-top: 2px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #E5E7EB;
+  }
+  
+  .pac-item {
+    padding: 10px 12px !important;
+    font-size: 13px;
+    line-height: 1.4;
+    cursor: pointer;
+    border-bottom: 1px solid #F3F4F6;
+  }
+  
+  .pac-item:last-child {
+    border-bottom: none;
+  }
+  
+  .pac-item:hover {
+    background-color: #F9FAFB;
+  }
+  
+  .pac-item-selected {
+    background-color: #EFF6FF !important;
+  }
+  
+  .pac-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 10px;
+    margin-top: 2px;
+    background-size: contain;
+  }
+  
+  .pac-item-query {
+    font-weight: 500;
+    color: #111827;
+  }
+  
+  .pac-matched {
+    font-weight: 600;
+    color: #4668AB;
+  }
+`;
 
 export default function CreateListingWizard() {
   const navigate = useNavigate();
   const { user } = useUser();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadingSpaceImage, setUploadingSpaceImage] = useState({});
   const [error, setError] = useState('');
-  const [mapsLoaded, setMapsLoaded] = useState(false); // ✅ NEW: Track maps loading state
+  const [mapsLoaded, setMapsLoaded] = useState(false);
+  const [mapsError, setMapsError] = useState('');
+  const [isLoadingMaps, setIsLoadingMaps] = useState(true);
 
   // Property data
   const [propertyData, setPropertyData] = useState({
@@ -32,89 +88,141 @@ export default function CreateListingWizard() {
     longitude: null,
     propertyType: 'COMMERCIAL',
     primary_image: null,
-    description: 'High-visibility advertising space in prime location. Perfect for brand awareness campaigns.'
+    description: 'High-visibility advertising space in prime location.'
   });
 
-  // Spaces data - can add multiple spaces
+  // Spaces data - updated structure without products, with image and ratePeriod
   const [spacesData, setSpacesData] = useState([{
     id: 'space-1',
     name: '',
     type: 'storefront_window',
     baseRate: '',
+    ratePeriod: 'DAILY', // DAILY, WEEKLY, MONTHLY
     currency: 'USD',
-    dimensions: { width: '', height: '', unit: 'meters' }
+    dimensions: { width: '', height: '', unit: 'meters' },
+    image: null,
+    isEditing: true
   }]);
 
   // Google Places refs
   const addressInputRef = useRef(null);
   const autocompleteRef = useRef(null);
+  const stylesInjectedRef = useRef(false);
 
-  // ✅ FIXED: Initialize Google Places Autocomplete with centralized loader
+  // Step configuration
+  const steps = [
+    { id: 1, label: 'Property', icon: Building2 },
+    { id: 2, label: 'Spaces', icon: Maximize2 },
+    { id: 3, label: 'Review', icon: Check }
+  ];
+
+  // Inject custom styles
+  useEffect(() => {
+    if (!stylesInjectedRef.current) {
+      const styleElement = document.createElement('style');
+      styleElement.innerHTML = GOOGLE_AUTOCOMPLETE_STYLES;
+      document.head.appendChild(styleElement);
+      stylesInjectedRef.current = true;
+      
+      return () => {
+        if (styleElement.parentNode) {
+          styleElement.parentNode.removeChild(styleElement);
+        }
+      };
+    }
+  }, []);
+
+  // Initialize Google Places Autocomplete
   useEffect(() => {
     let mounted = true;
+    let retryCount = 0;
+    const maxRetries = 3;
 
     const initAutocomplete = async () => {
       try {
-        console.log('🗺️ Initializing Google Places Autocomplete...');
+        setIsLoadingMaps(true);
+        setMapsError('');
         
-        // Wait for Google Maps to be loaded
-        await googleMapsLoader.waitForLoad();
+        const maps = await googleMapsLoader.waitForLoad();
+        
+        if (!mounted) return;
+
+        if (!window.google?.maps?.places) {
+          throw new Error('Google Places library not loaded');
+        }
+        
+        setMapsLoaded(true);
+        setIsLoadingMaps(false);
+        
+        if (addressInputRef.current && !autocompleteRef.current) {
+          initializeAutocompleteInstance();
+        }
+
+      } catch (error) {
+        console.error('❌ Error loading Google Maps:', error);
         
         if (!mounted) return;
         
-        // Check if the input element exists
-        if (!addressInputRef.current) {
-          console.log('⏳ Address input not ready yet');
-          return;
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(() => initAutocomplete(), 2000);
+        } else {
+          setMapsError('Failed to load address autocomplete. Please refresh the page.');
+          setIsLoadingMaps(false);
         }
+      }
+    };
 
-        // Check if autocomplete is already initialized
-        if (autocompleteRef.current) {
-          console.log('✅ Autocomplete already initialized');
-          return;
-        }
+    const initializeAutocompleteInstance = () => {
+      if (!addressInputRef.current || autocompleteRef.current) {
+        return;
+      }
 
-        console.log('🎯 Creating Autocomplete instance...');
-        
-        // Create the autocomplete instance
+      try {
         autocompleteRef.current = new window.google.maps.places.Autocomplete(
           addressInputRef.current,
           {
             types: ['address'],
-            fields: ['formatted_address', 'address_components', 'geometry', 'name', 'place_id']
+            fields: ['formatted_address', 'address_components', 'geometry', 'name', 'place_id', 'types']
           }
         );
 
-        // Add the place changed listener
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition((position) => {
+            const circle = new window.google.maps.Circle({
+              center: {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+              },
+              radius: 50000
+            });
+            autocompleteRef.current.setBounds(circle.getBounds());
+          });
+        }
+
         autocompleteRef.current.addListener('place_changed', handlePlaceSelect);
-        
-        console.log('✅ Google Places Autocomplete initialized successfully');
-        setMapsLoaded(true);
 
       } catch (error) {
-        console.error('❌ Error initializing autocomplete:', error);
-        setError('Failed to initialize address autocomplete. Please refresh and try again.');
+        console.error('❌ Error creating autocomplete:', error);
+        setMapsError('Failed to initialize address search');
       }
     };
 
-    // Initialize when component mounts
     initAutocomplete();
 
-    // Cleanup function
     return () => {
       mounted = false;
       if (autocompleteRef.current && window.google?.maps?.event) {
         window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        autocompleteRef.current = null;
       }
     };
-  }, []); // Run once on mount
+  }, []);
 
-  // ✅ Re-initialize if the input ref changes (e.g., after re-render)
+  // Re-initialize autocomplete when input becomes available
   useEffect(() => {
     if (mapsLoaded && addressInputRef.current && !autocompleteRef.current) {
-      console.log('🔄 Re-initializing autocomplete after input change');
-      
-      if (window.google?.maps?.places) {
+      try {
         autocompleteRef.current = new window.google.maps.places.Autocomplete(
           addressInputRef.current,
           {
@@ -123,48 +231,33 @@ export default function CreateListingWizard() {
           }
         );
         autocompleteRef.current.addListener('place_changed', handlePlaceSelect);
+      } catch (error) {
+        console.error('❌ Error re-initializing:', error);
       }
     }
-  }, [mapsLoaded, currentStep]); // Re-check when step changes
+  }, [mapsLoaded, currentStep]);
 
-  // ✅ Simple currency detection based on country
+  // Currency detection
   const detectCurrency = (countryCode) => {
     const currencyMap = {
-      'US': 'USD',
-      'IL': 'ILS', 
-      'GB': 'GBP',
-      'DE': 'EUR',
-      'FR': 'EUR',
-      'ES': 'EUR',
-      'IT': 'EUR',
-      'NL': 'EUR',
-      'CA': 'CAD',
-      'AU': 'AUD',
-      'JP': 'JPY',
-      'CN': 'CNY',
-      'IN': 'INR',
-      'BR': 'BRL',
-      'MX': 'MXN'
+      'US': 'USD', 'IL': 'ILS', 'GB': 'GBP', 'CA': 'CAD',
+      'AU': 'AUD', 'JP': 'JPY', 'CN': 'CNY', 'IN': 'INR',
+      'BR': 'BRL', 'MX': 'MXN', 'KR': 'KRW', 'SG': 'SGD',
+      'DE': 'EUR', 'FR': 'EUR', 'ES': 'EUR', 'IT': 'EUR', 'NL': 'EUR'
     };
     return currencyMap[countryCode] || 'USD';
   };
 
-  // ✅ ENHANCED: Handle Google Places selection with better extraction
+  // Handle place selection
   const handlePlaceSelect = () => {
-    if (!autocompleteRef.current) {
-      console.log('❌ Autocomplete not initialized');
-      return;
-    }
+    if (!autocompleteRef.current) return;
 
     const place = autocompleteRef.current.getPlace();
     
     if (!place || !place.geometry) {
-      console.log('❌ No place selected or no geometry');
       setError('Please select a valid address from the dropdown suggestions');
       return;
     }
-
-    console.log('📍 Place selected:', place);
 
     const addressComponents = place.address_components || [];
     let streetNumber = '';
@@ -172,99 +265,64 @@ export default function CreateListingWizard() {
     let city = '';
     let state = '';
     let country = '';
+    let countryCode = '';
     let zipCode = '';
 
-    console.log('🗺️ Parsing address components:', addressComponents);
-
-    // Parse each component
     addressComponents.forEach(component => {
       const types = component.types;
       
-      // Street number
       if (types.includes('street_number')) {
         streetNumber = component.long_name;
-      }
-      // Street name
-      else if (types.includes('route')) {
+      } else if (types.includes('route')) {
         route = component.long_name;
-      }
-      // City
-      else if (types.includes('locality')) {
+      } else if (types.includes('locality')) {
         city = component.long_name;
-      }
-      // Backup city detection
-      else if (!city && types.includes('sublocality_level_1')) {
+      } else if (!city && types.includes('sublocality_level_1')) {
         city = component.long_name;
-      }
-      else if (!city && types.includes('administrative_area_level_2')) {
+      } else if (!city && types.includes('administrative_area_level_2')) {
         city = component.long_name;
-      }
-      // State/Province
-      else if (types.includes('administrative_area_level_1')) {
+      } else if (!city && types.includes('postal_town')) {
+        city = component.long_name;
+      } else if (types.includes('administrative_area_level_1')) {
         state = component.short_name || component.long_name;
-      }
-      // Country
-      else if (types.includes('country')) {
-        country = component.short_name;
-      }
-      // Postal code
-      else if (types.includes('postal_code')) {
+      } else if (types.includes('country')) {
+        country = component.long_name;
+        countryCode = component.short_name;
+      } else if (types.includes('postal_code')) {
         zipCode = component.long_name;
       }
     });
 
-    // Build the street address
     const streetAddress = streetNumber && route 
       ? `${streetNumber} ${route}`
       : route || place.name || '';
 
-    // Use formatted address if we don't have a street address
     const finalAddress = streetAddress || place.formatted_address || '';
+    const currency = detectCurrency(countryCode);
 
-    // Auto-detect currency based on country
-    const currency = detectCurrency(country);
-
-    console.log('✅ Extracted location data:', { 
-      address: finalAddress,
-      city, 
-      state, 
-      country, 
-      zipCode, 
-      currency,
-      coordinates: {
-        lat: place.geometry.location.lat(),
-        lng: place.geometry.location.lng()
-      }
-    });
-
-    // Update property data
     setPropertyData(prev => ({
       ...prev,
       address: finalAddress,
       city: city || prev.city,
       state: state || prev.state,
-      country: country || prev.country,
+      country: countryCode || prev.country,
       zipCode: zipCode || prev.zipCode,
       latitude: place.geometry.location.lat(),
       longitude: place.geometry.location.lng()
     }));
 
-    // Update all spaces with detected currency
     setSpacesData(prev => prev.map(space => ({
       ...space,
       currency: currency
     })));
 
-    // Clear any previous errors
     setError('');
   };
 
-  // ✅ Handle manual address input changes
+  // Handle manual address changes
   const handleAddressChange = (e) => {
     setPropertyData(prev => ({ ...prev, address: e.target.value }));
     
-    // Clear location data if user is typing manually
-    // This ensures they select from dropdown for proper geocoding
     if (!e.target.value) {
       setPropertyData(prev => ({
         ...prev,
@@ -278,18 +336,17 @@ export default function CreateListingWizard() {
     }
   };
 
-  // ✅ Handle image upload with REAL API
+  // Handle image upload
   const handleImageUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Validate file
     if (!file.type.startsWith('image/')) {
       setError('Please upload an image file');
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+    if (file.size > 5 * 1024 * 1024) {
       setError('Image must be less than 5MB');
       return;
     }
@@ -298,47 +355,84 @@ export default function CreateListingWizard() {
     setError('');
 
     try {
-      console.log('🖼️ Uploading image:', file.name, file.size);
       const uploadResult = await apiClient.uploadFile(file, 'property_image');
       
       if (uploadResult.success) {
-        console.log('✅ Image uploaded successfully:', uploadResult.data.url);
         setPropertyData(prev => ({
           ...prev,
           primary_image: uploadResult.data.url
         }));
       } else {
-        console.error('❌ Upload failed:', uploadResult.error);
-        setError('Failed to upload image: ' + (uploadResult.error || 'Unknown error'));
+        throw new Error(uploadResult.error || 'Upload failed');
       }
     } catch (error) {
-      console.error('❌ Upload error:', error);
       setError('Failed to upload image: ' + error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ✅ Add new space
+  // Handle space image upload
+  const handleSpaceImageUpload = async (event, spaceId) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image must be less than 5MB');
+      return;
+    }
+
+    setUploadingSpaceImage(prev => ({ ...prev, [spaceId]: true }));
+    setError('');
+
+    try {
+      const uploadResult = await apiClient.uploadFile(file, 'space_image');
+      
+      if (uploadResult.success) {
+        setSpacesData(prev => prev.map(space => 
+          space.id === spaceId 
+            ? { ...space, image: uploadResult.data.url }
+            : space
+        ));
+      } else {
+        throw new Error(uploadResult.error || 'Upload failed');
+      }
+    } catch (error) {
+      setError('Failed to upload image: ' + error.message);
+    } finally {
+      setUploadingSpaceImage(prev => ({ ...prev, [spaceId]: false }));
+    }
+  };
+
+  // Space management
   const addSpace = () => {
     const newSpace = {
       id: `space-${Date.now()}`,
       name: '',
       type: 'storefront_window',
       baseRate: '',
+      ratePeriod: 'DAILY',
       currency: spacesData[0]?.currency || 'USD',
-      dimensions: { width: '', height: '', unit: 'meters' }
+      dimensions: { width: '', height: '', unit: 'meters' },
+      image: null,
+      isEditing: true
     };
     setSpacesData(prev => [...prev, newSpace]);
   };
 
-  // ✅ Remove space
   const removeSpace = (spaceId) => {
-    if (spacesData.length <= 1) return; // Keep at least one space
+    if (spacesData.length <= 1) {
+      setError('You must have at least one space');
+      return;
+    }
     setSpacesData(prev => prev.filter(space => space.id !== spaceId));
   };
 
-  // ✅ Update space data
   const updateSpaceData = (spaceId, field, value) => {
     setSpacesData(prev => prev.map(space => 
       space.id === spaceId 
@@ -349,12 +443,40 @@ export default function CreateListingWizard() {
     ));
   };
 
-  // ✅ Step navigation with validation
+  const validateSpace = (space) => {
+    if (!space.name.trim()) return 'Space name is required';
+    if (!space.baseRate || parseFloat(space.baseRate) <= 0) return 'Valid rate is required';
+    if (!space.dimensions.width || !space.dimensions.height) return 'Dimensions are required';
+    if (!space.image) return 'Space photo is required';
+    return null;
+  };
+
+  const saveSpace = (spaceId) => {
+    const space = spacesData.find(s => s.id === spaceId);
+    const validationError = validateSpace(space);
+    
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    
+    setSpacesData(prev => prev.map(s => 
+      s.id === spaceId ? { ...s, isEditing: false } : s
+    ));
+    setError('');
+  };
+
+  const editSpace = (spaceId) => {
+    setSpacesData(prev => prev.map(s => 
+      s.id === spaceId ? { ...s, isEditing: true } : s
+    ));
+  };
+
+  // Navigation
   const nextStep = () => {
     setError('');
     
     if (currentStep === 1) {
-      // Validate property data
       if (!propertyData.title.trim()) {
         setError('Property title is required');
         return;
@@ -364,14 +486,9 @@ export default function CreateListingWizard() {
         return;
       }
       if (!propertyData.latitude || !propertyData.longitude) {
-        setError('Please select a valid address from the dropdown suggestions to get location coordinates');
+        setError('Please select a valid address from the dropdown');
         return;
       }
-      if (!propertyData.city.trim()) {
-        setError('City is required - please select from address suggestions');
-        return;
-      }
-      // ZIP code is optional for some countries
       if (!propertyData.primary_image) {
         setError('Property image is required');
         return;
@@ -379,13 +496,20 @@ export default function CreateListingWizard() {
     }
     
     if (currentStep === 2) {
-      // Validate spaces data
-      const invalidSpace = spacesData.find(space => 
-        !space.name.trim() || !space.baseRate || parseFloat(space.baseRate) <= 0
-      );
-      if (invalidSpace) {
-        setError('All spaces must have a name and valid price');
+      // Check if all spaces are saved
+      const unsavedSpace = spacesData.find(space => space.isEditing);
+      if (unsavedSpace) {
+        setError('Please save all spaces before proceeding');
         return;
+      }
+      
+      // Validate all spaces
+      for (const space of spacesData) {
+        const validationError = validateSpace(space);
+        if (validationError) {
+          setError(`${space.name || 'Unnamed space'}: ${validationError}`);
+          return;
+        }
       }
     }
     
@@ -396,35 +520,32 @@ export default function CreateListingWizard() {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  // ✅ ENHANCED: Submit listing with better error handling and logging
+  // Submit listing
   const submitListing = async () => {
     setIsLoading(true);
     setError('');
 
     try {
-      console.log('🚀 Creating property and spaces...');
-      
-      // ✅ ENHANCED: Better payload construction with validation
       const propertyPayload = {
         title: propertyData.title,
         address: propertyData.address,
         city: propertyData.city,
         state: propertyData.state || '',
         country: propertyData.country,
-        zipCode: propertyData.zipCode || '', // Optional
+        zipCode: propertyData.zipCode || '',
         latitude: propertyData.latitude,
         longitude: propertyData.longitude,
         propertyType: propertyData.propertyType,
         primary_image: propertyData.primary_image,
         description: propertyData.description,
         currency: spacesData[0]?.currency || 'USD',
-        // Transform spaces for the backend
         spaces: spacesData.map(space => ({
           name: space.name,
           type: space.type,
           baseRate: parseFloat(space.baseRate),
           currency: space.currency,
-          rateType: 'DAILY',
+          rateType: space.ratePeriod,
+          image: space.image,
           dimensions: {
             width: parseFloat(space.dimensions.width) || 4,
             height: parseFloat(space.dimensions.height) || 2.5,
@@ -433,11 +554,9 @@ export default function CreateListingWizard() {
           },
           status: 'active',
           isActive: true,
-          // Default material sourcing fields
-          surfaceType: 'STOREFRONT_WINDOW',
+          surfaceType: space.type.toUpperCase(),
           accessDifficulty: 1,
-          materialCompatibility: ['VINYL_GRAPHICS', 'PERFORATED_VINYL'],
-          estimatedMaterialCost: parseFloat(space.baseRate) * 0.3, // 30% of daily rate
+          estimatedMaterialCost: parseFloat(space.baseRate) * 0.3,
           surfaceCondition: 'GOOD',
           weatherExposure: 'MODERATE',
           permitsRequired: false,
@@ -445,80 +564,48 @@ export default function CreateListingWizard() {
           lightingConditions: 'MODERATE'
         }))
       };
-
-      console.log('📋 Property payload to send:', JSON.stringify(propertyPayload, null, 2));
       
-      // ✅ ENHANCED: Validate payload before sending
-      const requiredFields = ['title', 'address', 'city'];
-      const missingFields = requiredFields.filter(field => !propertyPayload[field]);
-      
-      if (missingFields.length > 0) {
-        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
-      }
-
-      if (!propertyPayload.latitude || !propertyPayload.longitude) {
-        throw new Error('Missing coordinates - please select an address from the suggestions');
-      }
-
-      if (!propertyPayload.spaces || propertyPayload.spaces.length === 0) {
-        throw new Error('At least one space is required');
-      }
-
       const result = await apiClient.createProperty(propertyPayload);
       
       if (!result.success) {
-        console.error('❌ Backend validation failed:', result);
-        // ✅ ENHANCED: Show specific validation errors
-        if (result.errors) {
-          const errorMessages = Object.entries(result.errors)
-            .map(([field, message]) => `${field}: ${message}`)
-            .join('\n');
-          throw new Error(`Validation failed:\n${errorMessages}`);
-        }
         throw new Error(result.error || result.message || 'Failed to create property');
       }
 
-      console.log('✅ Property and spaces created successfully:', result.data);
-      
-      // Success! Navigate to dashboard with success message
       navigate('/dashboard?tab=listings&created=true');
 
     } catch (error) {
-      console.error('❌ Submit error:', error);
-      
-      // ✅ ENHANCED: Better error message handling
-      let errorMessage = error.message;
-      
-      if (error.message.includes('422')) {
-        errorMessage = 'Validation failed. Please check all required fields are filled correctly.';
-      } else if (error.message.includes('401')) {
-        errorMessage = 'Authentication error. Please try signing out and back in.';
-      } else if (error.message.includes('500')) {
-        errorMessage = 'Server error. Please try again in a moment.';
-      }
-      
-      setError(errorMessage);
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ✅ Helper functions
+  // Helpers
   const getCurrencySymbol = (currency) => {
     const symbols = { 
-      USD: '$', 
-      ILS: '₪', 
-      EUR: '€', 
-      GBP: '£',
-      CAD: 'C$',
-      AUD: 'A$',
-      JPY: '¥',
-      CNY: '¥',
-      INR: '₹',
-      BRL: 'R$',
-      MXN: '$'
+      USD: '$', ILS: '₪', EUR: '€', GBP: '£',
+      CAD: 'C$', AUD: 'A$', JPY: '¥', CNY: '¥',
+      INR: '₹', BRL: 'R$', MXN: '$'
     };
     return symbols[currency] || '$';
+  };
+
+  const getRatePeriodLabel = (period) => {
+    const labels = {
+      DAILY: 'per day',
+      WEEKLY: 'per week',
+      MONTHLY: 'per month'
+    };
+    return labels[period] || 'per day';
+  };
+
+  const getRatePeriodShortLabel = (period) => {
+    const labels = {
+      DAILY: '/day',
+      WEEKLY: '/week',
+      MONTHLY: '/month'
+    };
+    return labels[period] || '/day';
   };
 
   const spaceTypeOptions = [
@@ -535,447 +622,637 @@ export default function CreateListingWizard() {
     { value: 'OTHER', label: 'Other' }
   ];
 
+  const ratePeriodOptions = [
+    { value: 'DAILY', label: 'Day', icon: Calendar },
+    { value: 'WEEKLY', label: 'Week', icon: Calendar },
+    { value: 'MONTHLY', label: 'Month', icon: Clock }
+  ];
+
   return (
-    <div 
-      className="min-h-screen p-4 sm:p-6"
-      style={{ backgroundColor: '#FFFFFF' }}
-    >
-      <div className="max-w-3xl mx-auto">
-        {/* ✅ Header */}
-        <div className="mb-8">
+    <div className="min-h-screen" style={{ backgroundColor: '#F8FAFF' }}>
+      {/* Compact Header */}
+      <div className="bg-white border-b border-slate-200">
+        <div className="max-w-5xl mx-auto px-4 py-4">
           <button
             onClick={() => navigate('/dashboard')}
-            className="inline-flex items-center text-slate-600 hover:text-slate-900 transition-colors mb-4"
+            className="inline-flex items-center text-slate-600 hover:text-slate-900 transition-colors mb-3 text-sm"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ChevronLeft className="w-4 h-4 mr-1" />
             Back to Dashboard
           </button>
           
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">
-            List Your Advertising Space
-          </h1>
-          <p className="text-slate-600">
-            Create a property listing and add your available advertising spaces
-          </p>
-        </div>
-
-        {/* ✅ Progress Steps */}
-        <div className="flex items-center justify-between mb-8">
-          {[1, 2, 3].map(step => (
-            <div key={step} className="flex items-center">
-              <div 
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                  step <= currentStep 
-                    ? 'text-white' 
-                    : 'bg-slate-200 text-slate-500'
-                }`}
-                style={step <= currentStep ? { backgroundColor: '#4668AB' } : {}}
-              >
-                {step < currentStep ? <Check className="w-4 h-4" /> : step}
-              </div>
-              {step < 3 && (
-                <div 
-                  className={`h-0.5 w-16 sm:w-24 mx-2 transition-colors ${
-                    step < currentStep ? 'bg-blue-500' : 'bg-slate-200'
-                  }`}
-                  style={step < currentStep ? { backgroundColor: '#4668AB' } : {}}
-                />
-              )}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-semibold text-slate-900">
+                List Your Space
+              </h1>
+              <p className="text-sm text-slate-600 mt-1">
+                Add your property and available advertising spaces
+              </p>
             </div>
-          ))}
-        </div>
-
-        {/* ✅ Error Display */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
-            <AlertCircle className="w-5 h-5 text-red-600 mr-3 flex-shrink-0 mt-0.5" />
-            <div className="text-red-700 text-sm">
-              <div className="font-medium mb-1">Error:</div>
-              <div className="whitespace-pre-line">{error}</div>
+            
+            {/* Desktop Step Counter */}
+            <div className="hidden sm:flex items-center text-sm text-slate-600">
+              Step {currentStep} of {steps.length}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="bg-white border-b border-slate-100">
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="flex items-center justify-between py-3">
+            {steps.map((step, index) => {
+              const Icon = step.icon;
+              const isActive = step.id === currentStep;
+              const isCompleted = step.id < currentStep;
+              
+              return (
+                <div key={step.id} className="flex items-center flex-1">
+                  <div className="flex items-center">
+                    <div 
+                      className={`
+                        w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all
+                        ${isActive ? 'bg-[#4668AB] text-white shadow-sm' : 
+                          isCompleted ? 'bg-[#4668AB] text-white' : 
+                          'bg-slate-100 text-slate-400'}
+                      `}
+                    >
+                      {isCompleted ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <Icon className="w-4 h-4" />
+                      )}
+                    </div>
+                    <span className={`ml-2 text-sm font-medium hidden sm:block ${
+                      isActive ? 'text-[#4668AB]' : 
+                      isCompleted ? 'text-slate-700' : 
+                      'text-slate-400'
+                    }`}>
+                      {step.label}
+                    </span>
+                  </div>
+                  
+                  {index < steps.length - 1 && (
+                    <div className="flex-1 mx-3">
+                      <div className="h-0.5 bg-slate-200 rounded">
+                        <div 
+                          className="h-full bg-[#4668AB] rounded transition-all duration-300"
+                          style={{ width: isCompleted ? '100%' : '0%' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        {/* Error Display */}
+        {(error || mapsError) && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start text-sm">
+            <AlertCircle className="w-4 h-4 text-red-600 mr-2 flex-shrink-0 mt-0.5" />
+            <div className="text-red-700">{error || mapsError}</div>
           </div>
         )}
 
-        {/* ✅ Step Content */}
-        <div 
-          className="border rounded-xl p-6 sm:p-8 shadow-sm mb-8"
-          style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}
-        >
-          {/* STEP 1: Property Information */}
-          {currentStep === 1 && (
-            <div>
-              <div className="flex items-center mb-6">
-                <Building2 className="w-6 h-6 mr-3" style={{ color: '#4668AB' }} />
-                <h2 className="text-xl font-semibold text-slate-900">Property Information</h2>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left Column */}
-                <div className="space-y-4">
-                  {/* Property Title */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Property Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={propertyData.title}
-                      onChange={(e) => setPropertyData(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder="e.g. Downtown Plaza, Main Street Building"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Address with Google Places */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Address *
-                    </label>
-                    <div className="relative">
+        {/* Form Card */}
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
+          <div className="p-6">
+            {/* STEP 1: Property Information */}
+            {currentStep === 1 && (
+              <div className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* Left Column */}
+                  <div className="space-y-4">
+                    {/* Property Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Property Name <span className="text-red-500">*</span>
+                      </label>
                       <input
-                        ref={addressInputRef}
                         type="text"
-                        value={propertyData.address}
-                        onChange={handleAddressChange}
-                        placeholder="Start typing address..."
-                        className="w-full px-3 py-2 pl-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        value={propertyData.title}
+                        onChange={(e) => setPropertyData(prev => ({ ...prev, title: e.target.value }))}
+                        placeholder="e.g., Downtown Plaza"
+                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:ring-2 focus:ring-[#4668AB] focus:border-transparent transition-all"
                       />
-                      <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                     </div>
-                    {!mapsLoaded && (
-                      <p className="text-xs text-amber-600 mt-1">
-                        Loading address autocomplete...
-                      </p>
-                    )}
-                    {mapsLoaded && (
-                      <p className="text-xs text-slate-500 mt-1">
-                        Start typing and select from suggestions for complete address
-                      </p>
-                    )}
-                    {/* ✅ ENHANCED: Show extracted location data */}
-                    {(propertyData.city || propertyData.zipCode) && (
-                      <div className="text-xs text-green-600 mt-1 flex items-center gap-2">
-                        <Check className="w-3 h-3" />
-                        <span>
-                          {propertyData.city && `City: ${propertyData.city}`}
-                          {propertyData.city && propertyData.state && ` • State: ${propertyData.state}`}
-                          {propertyData.zipCode && ` • ZIP: ${propertyData.zipCode}`}
-                        </span>
-                      </div>
-                    )}
-                    {/* Show coordinates for debugging */}
-                    {propertyData.latitude && propertyData.longitude && (
-                      <div className="text-xs text-slate-400 mt-1">
-                        📍 Coordinates: {propertyData.latitude.toFixed(6)}, {propertyData.longitude.toFixed(6)}
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Property Type */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Property Type
-                    </label>
-                    <select
-                      value={propertyData.propertyType}
-                      onChange={(e) => setPropertyData(prev => ({ ...prev, propertyType: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {propertyTypeOptions.map(option => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Right Column - Image Upload */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Property Photo *
-                  </label>
-                  <div 
-                    className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
-                    onClick={() => document.getElementById('image-upload').click()}
-                  >
-                    {propertyData.primary_image ? (
+                    {/* Address */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Street Address <span className="text-red-500">*</span>
+                      </label>
                       <div className="relative">
-                        <img 
-                          src={propertyData.primary_image} 
-                          alt="Property" 
-                          className="w-full h-32 object-cover rounded-lg"
+                        <input
+                          ref={addressInputRef}
+                          type="text"
+                          value={propertyData.address}
+                          onChange={handleAddressChange}
+                          placeholder="Start typing to search..."
+                          disabled={isLoadingMaps}
+                          className="w-full px-3 py-2 pl-9 text-sm border border-slate-300 rounded-md focus:ring-2 focus:ring-[#4668AB] focus:border-transparent transition-all disabled:bg-slate-50"
                         />
-                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg opacity-0 hover:opacity-100 transition-opacity">
-                          <Camera className="w-6 h-6 text-white" />
-                        </div>
+                        <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        {isLoadingMaps && (
+                          <Loader2 className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 animate-spin" />
+                        )}
                       </div>
-                    ) : (
-                      <div>
-                        <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                        <p className="text-sm text-slate-600">
-                          Click to upload property photo
-                        </p>
-                        <p className="text-xs text-slate-500 mt-1">
-                          PNG, JPG up to 5MB
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <input
-                    id="image-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 2: Space Details */}
-          {currentStep === 2 && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center">
-                  <MapPin className="w-6 h-6 mr-3" style={{ color: '#4668AB' }} />
-                  <h2 className="text-xl font-semibold text-slate-900">Advertising Spaces</h2>
-                </div>
-                <button
-                  onClick={addSpace}
-                  className="inline-flex items-center px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-opacity"
-                  style={{ backgroundColor: '#4668AB' }}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Space
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {spacesData.map((space, index) => (
-                  <div 
-                    key={space.id}
-                    className="border rounded-lg p-4"
-                    style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' }}
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-medium text-slate-900">
-                        Space {index + 1}
-                      </h3>
-                      {spacesData.length > 1 && (
-                        <button
-                          onClick={() => removeSpace(space.id)}
-                          className="p-1 text-slate-400 hover:text-red-600 transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                      {isLoadingMaps ? (
+                        <p className="text-xs text-amber-600 mt-1">Loading autocomplete...</p>
+                      ) : mapsLoaded && !mapsError && (
+                        <p className="text-xs text-slate-500 mt-1">Select from dropdown for accurate location</p>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Space Name */}
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                          Space Name *
-                        </label>
-                        <input
-                          type="text"
-                          value={space.name}
-                          onChange={(e) => updateSpaceData(space.id, 'name', e.target.value)}
-                          placeholder="e.g. Front Window, Billboard"
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-
-                      {/* Space Type */}
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                          Space Type
-                        </label>
-                        <select
-                          value={space.type}
-                          onChange={(e) => updateSpaceData(space.id, 'type', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          {spaceTypeOptions.map(option => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Daily Rate */}
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                          Daily Rate *
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            value={space.baseRate}
-                            onChange={(e) => updateSpaceData(space.id, 'baseRate', e.target.value)}
-                            placeholder="0"
-                            min="0"
-                            step="1"
-                            className="w-full px-3 py-2 pl-8 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                          <span className="absolute left-3 top-2 text-slate-500">
-                            {getCurrencySymbol(space.currency)}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-1">
-                          Currency auto-detected: {space.currency}
-                        </p>
-                      </div>
-
-                      {/* Dimensions */}
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                          Dimensions (optional)
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="number"
-                            value={space.dimensions.width}
-                            onChange={(e) => updateSpaceData(space.id, 'dimensions.width', e.target.value)}
-                            placeholder="Width"
-                            min="0"
-                            step="0.1"
-                            className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                          <span className="px-2 py-2 text-slate-500">×</span>
-                          <input
-                            type="number"
-                            value={space.dimensions.height}
-                            onChange={(e) => updateSpaceData(space.id, 'dimensions.height', e.target.value)}
-                            placeholder="Height"
-                            min="0"
-                            step="0.1"
-                            className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                          <span className="px-2 py-2 text-slate-500 text-sm">m</span>
-                        </div>
-                      </div>
+                    {/* Property Type */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Property Type
+                      </label>
+                      <select
+                        value={propertyData.propertyType}
+                        onChange={(e) => setPropertyData(prev => ({ ...prev, propertyType: e.target.value }))}
+                        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:ring-2 focus:ring-[#4668AB] focus:border-transparent transition-all"
+                      >
+                        {propertyTypeOptions.map(option => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {/* STEP 3: Preview & Submit */}
-          {currentStep === 3 && (
-            <div>
-              <div className="flex items-center mb-6">
-                <Check className="w-6 h-6 mr-3" style={{ color: '#4668AB' }} />
-                <h2 className="text-xl font-semibold text-slate-900">Review & Submit</h2>
-              </div>
-
-              {/* Property Preview */}
-              <div className="border rounded-lg p-4 mb-6" style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' }}>
-                <h3 className="font-semibold text-slate-900 mb-3">Property Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Right Column - Image */}
                   <div>
-                    <p className="text-sm text-slate-600">Name</p>
-                    <p className="font-medium">{propertyData.title}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-600">Type</p>
-                    <p className="font-medium">{propertyTypeOptions.find(t => t.value === propertyData.propertyType)?.label}</p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <p className="text-sm text-slate-600">Address</p>
-                    <p className="font-medium">{propertyData.address}</p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      {propertyData.city}
-                      {propertyData.state && `, ${propertyData.state}`}
-                      {propertyData.zipCode && ` ${propertyData.zipCode}`}
-                      {propertyData.country && `, ${propertyData.country}`}
-                    </p>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Property Photo <span className="text-red-500">*</span>
+                    </label>
+                    <div 
+                      className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-[#4668AB] transition-colors cursor-pointer group"
+                      onClick={() => !isLoading && document.getElementById('image-upload').click()}
+                    >
+                      {propertyData.primary_image ? (
+                        <div className="relative">
+                          <img 
+                            src={propertyData.primary_image} 
+                            alt="Property" 
+                            className="w-full h-40 object-cover rounded-md"
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="text-white text-sm font-medium">
+                              Click to change
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="py-4">
+                          {isLoading ? (
+                            <Loader2 className="w-8 h-8 text-slate-400 mx-auto mb-2 animate-spin" />
+                          ) : (
+                            <>
+                              <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2 group-hover:text-[#4668AB] transition-colors" />
+                              <p className="text-sm text-slate-600">
+                                Drop image here or click to browse
+                              </p>
+                              <p className="text-xs text-slate-500 mt-1">
+                                PNG, JPG up to 5MB
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      id="image-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* Spaces Preview */}
-              <div className="border rounded-lg p-4 mb-6" style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' }}>
-                <h3 className="font-semibold text-slate-900 mb-3">
-                  Advertising Spaces ({spacesData.length})
-                </h3>
-                <div className="space-y-3">
+            {/* STEP 2: Space Details */}
+            {currentStep === 2 && (
+              <div className="space-y-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-gradient-to-br from-[#4668AB] to-[#39558C] rounded-xl flex items-center justify-center text-white mr-3 shadow-lg">
+                      <Maximize2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-semibold text-slate-800">
+                        Advertising Spaces
+                      </h3>
+                      <p className="text-xs text-slate-600">
+                        {spacesData.filter(s => !s.isEditing).length} saved, {spacesData.filter(s => s.isEditing).length} editing
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={addSpace}
+                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-[#4668AB] to-[#39558C] rounded-lg hover:from-[#39558C] hover:to-[#2c4470] transition-all shadow-md hover:shadow-lg transform hover:scale-105"
+                  >
+                    <Plus className="w-4 h-4 mr-1.5" />
+                    Add Space
+                  </button>
+                </div>
+
+                <div className="space-y-4">
                   {spacesData.map((space, index) => (
-                    <div key={space.id} className="flex justify-between items-center py-2 border-b border-slate-100 last:border-b-0">
-                      <div>
-                        <p className="font-medium">{space.name}</p>
-                        <p className="text-sm text-slate-600">
-                          {spaceTypeOptions.find(t => t.value === space.type)?.label}
-                          {space.dimensions.width && space.dimensions.height && 
-                            ` • ${space.dimensions.width}×${space.dimensions.height}m`
-                          }
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold" style={{ color: '#4668AB' }}>
-                          {getCurrencySymbol(space.currency)}{space.baseRate}/day
-                        </p>
-                      </div>
+                    <div 
+                      key={space.id}
+                      className={`border rounded-xl transition-all duration-200 ${
+                        space.isEditing 
+                          ? 'border-[#4668AB] shadow-xl bg-white' 
+                          : 'border-slate-200 bg-gradient-to-br from-slate-50 to-white shadow-md hover:shadow-lg'
+                      }`}
+                      style={{
+                        boxShadow: space.isEditing 
+                          ? '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                          : ''
+                      }}
+                    >
+                      {space.isEditing ? (
+                        /* Editing Mode */
+                        <div className="p-5">
+                          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                            <div className="flex items-center">
+                              <div className="w-8 h-8 bg-gradient-to-br from-[#4668AB] to-[#39558C] rounded-lg flex items-center justify-center text-white font-semibold text-sm mr-3 shadow-md">
+                                {index + 1}
+                              </div>
+                              <span className="text-sm font-semibold text-slate-800">
+                                Space {index + 1} - Editing
+                              </span>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => saveSpace(space.id)}
+                                className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-green-600 to-green-500 rounded-lg hover:from-green-700 hover:to-green-600 transition-all shadow-md hover:shadow-lg"
+                              >
+                                <Save className="w-3.5 h-3.5 mr-1" />
+                                Save
+                              </button>
+                              {spacesData.length > 1 && (
+                                <button
+                                  onClick={() => removeSpace(space.id)}
+                                  className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-red-600 to-red-500 rounded-lg hover:from-red-700 hover:to-red-600 transition-all shadow-md hover:shadow-lg"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 mr-1" />
+                                  Delete
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Space Form Fields */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Left Column */}
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                  Space Name <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  value={space.name}
+                                  onChange={(e) => updateSpaceData(space.id, 'name', e.target.value)}
+                                  placeholder="e.g., Front Window"
+                                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4668AB] focus:border-transparent transition-all shadow-sm"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                  Space Type
+                                </label>
+                                <select
+                                  value={space.type}
+                                  onChange={(e) => updateSpaceData(space.id, 'type', e.target.value)}
+                                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4668AB] focus:border-transparent transition-all shadow-sm"
+                                >
+                                  {spaceTypeOptions.map(option => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                  Dimensions <span className="text-red-500">*</span>
+                                </label>
+                                <div className="flex gap-2">
+                                  <div className="relative flex-1">
+                                    <input
+                                      type="number"
+                                      value={space.dimensions.width}
+                                      onChange={(e) => updateSpaceData(space.id, 'dimensions.width', e.target.value)}
+                                      placeholder="Width"
+                                      min="0"
+                                      step="0.1"
+                                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4668AB] focus:border-transparent transition-all shadow-sm"
+                                    />
+                                  </div>
+                                  <span className="text-slate-400 text-lg font-light self-center">×</span>
+                                  <div className="relative flex-1">
+                                    <input
+                                      type="number"
+                                      value={space.dimensions.height}
+                                      onChange={(e) => updateSpaceData(space.id, 'dimensions.height', e.target.value)}
+                                      placeholder="Height"
+                                      min="0"
+                                      step="0.1"
+                                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4668AB] focus:border-transparent transition-all shadow-sm"
+                                    />
+                                  </div>
+                                  <span className="text-slate-500 text-sm font-medium self-center">m</span>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                  Desired Rate <span className="text-red-500">*</span>
+                                </label>
+                                <div className="flex gap-2">
+                                  <div className="relative flex-1">
+                                    <input
+                                      type="number"
+                                      value={space.baseRate}
+                                      onChange={(e) => updateSpaceData(space.id, 'baseRate', e.target.value)}
+                                      placeholder="0"
+                                      min="0"
+                                      step="1"
+                                      className="w-full px-3 py-2 pl-8 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4668AB] focus:border-transparent transition-all shadow-sm"
+                                    />
+                                    <span className="absolute left-3 top-2 text-sm font-semibold text-slate-500">
+                                      {getCurrencySymbol(space.currency)}
+                                    </span>
+                                  </div>
+                                  <div className="flex rounded-lg border border-slate-300 overflow-hidden">
+                                    {ratePeriodOptions.map((option) => (
+                                      <button
+                                        key={option.value}
+                                        type="button"
+                                        onClick={() => updateSpaceData(space.id, 'ratePeriod', option.value)}
+                                        className={`px-3 py-2 text-xs font-medium transition-all ${
+                                          space.ratePeriod === option.value
+                                            ? 'bg-[#4668AB] text-white'
+                                            : 'bg-white text-slate-600 hover:bg-slate-50'
+                                        }`}
+                                      >
+                                        {option.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right Column - Space Image */}
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                                Space Photo <span className="text-red-500">*</span>
+                              </label>
+                              <div 
+                                className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-[#4668AB] transition-colors cursor-pointer group h-[calc(100%-24px)]"
+                                onClick={() => !uploadingSpaceImage[space.id] && document.getElementById(`space-image-${space.id}`).click()}
+                              >
+                                {space.image ? (
+                                  <div className="relative h-full">
+                                    <img 
+                                      src={space.image} 
+                                      alt="Space" 
+                                      className="w-full h-full object-cover rounded-md"
+                                    />
+                                    <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <div className="text-white text-sm font-medium">
+                                        Click to change
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="py-8">
+                                    {uploadingSpaceImage[space.id] ? (
+                                      <Loader2 className="w-8 h-8 text-slate-400 mx-auto mb-2 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <Camera className="w-8 h-8 text-slate-400 mx-auto mb-2 group-hover:text-[#4668AB] transition-colors" />
+                                        <p className="text-sm text-slate-600">
+                                          Drop image here or click to browse
+                                        </p>
+                                        <p className="text-xs text-slate-500 mt-1">
+                                          PNG, JPG up to 5MB
+                                        </p>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <input
+                                id={`space-image-${space.id}`}
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleSpaceImageUpload(e, space.id)}
+                                className="hidden"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Saved/View Mode */
+                        <div className="p-5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center flex-1">
+                              <div className="w-8 h-8 bg-gradient-to-br from-slate-400 to-slate-500 rounded-lg flex items-center justify-center text-white font-semibold text-sm mr-3 shadow-md">
+                                {index + 1}
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm font-semibold text-slate-900">
+                                  {space.name}
+                                </p>
+                                <p className="text-xs text-slate-600">
+                                  {spaceTypeOptions.find(t => t.value === space.type)?.label}
+                                  {space.dimensions.width && space.dimensions.height && 
+                                    ` • ${space.dimensions.width}×${space.dimensions.height}m`
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {space.image && (
+                                <img 
+                                  src={space.image} 
+                                  alt={space.name}
+                                  className="w-12 h-12 object-cover rounded-lg border border-slate-200"
+                                />
+                              )}
+                              <div className="text-right">
+                                <p className="text-xs text-slate-500">{getRatePeriodLabel(space.ratePeriod)}</p>
+                                <p className="text-lg font-bold text-[#4668AB]">
+                                  {getCurrencySymbol(space.currency)}{space.baseRate}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => editSpace(space.id)}
+                                className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all shadow-sm hover:shadow-md"
+                              >
+                                <Edit2 className="w-3.5 h-3.5 mr-1" />
+                                Edit
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
+            )}
 
-              {/* Submission Note */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800">
-                  <strong>Note:</strong> Your listing will be live immediately and available for bookings. 
-                  You can manage and edit your listings from the dashboard.
-                </p>
+            {/* STEP 3: Review */}
+            {currentStep === 3 && (
+              <div className="space-y-4">
+                {/* Property Summary */}
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3">Property Details</h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-slate-600">Name:</span>
+                      <p className="font-medium text-slate-900">{propertyData.title}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-600">Type:</span>
+                      <p className="font-medium text-slate-900">
+                        {propertyTypeOptions.find(t => t.value === propertyData.propertyType)?.label}
+                      </p>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-slate-600">Address:</span>
+                      <p className="font-medium text-slate-900">{propertyData.address}</p>
+                      {propertyData.city && (
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {propertyData.city}
+                          {propertyData.state && `, ${propertyData.state}`}
+                          {propertyData.zipCode && ` ${propertyData.zipCode}`}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {propertyData.primary_image && (
+                    <img 
+                      src={propertyData.primary_image} 
+                      alt="Property"
+                      className="w-full h-32 object-cover rounded-lg mt-3"
+                    />
+                  )}
+                </div>
+
+                {/* Spaces Summary */}
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3">
+                    {spacesData.length} Space{spacesData.length !== 1 ? 's' : ''}
+                  </h3>
+                  <div className="space-y-3">
+                    {spacesData.map((space) => (
+                      <div key={space.id} className="flex items-start gap-3 py-2 border-b border-slate-200 last:border-0">
+                        {space.image && (
+                          <img 
+                            src={space.image} 
+                            alt={space.name}
+                            className="w-16 h-16 object-cover rounded-lg border border-slate-200"
+                          />
+                        )}
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-slate-900">{space.name}</p>
+                          <p className="text-xs text-slate-600">
+                            {spaceTypeOptions.find(t => t.value === space.type)?.label}
+                            {space.dimensions.width && space.dimensions.height && 
+                              ` • ${space.dimensions.width}×${space.dimensions.height}m`
+                            }
+                          </p>
+                        </div>
+                        <p className="text-sm font-semibold text-[#4668AB] ml-4">
+                          {getCurrencySymbol(space.currency)}{space.baseRate}
+                          {getRatePeriodShortLabel(space.ratePeriod)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Notice */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex">
+                    <Info className="w-4 h-4 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
+                    <p className="text-xs text-blue-800">
+                      Your listing will be live immediately after submission and available for bookings.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer Actions */}
+          <div className="border-t border-slate-200 px-6 py-4 bg-slate-50 rounded-b-lg">
+            <div className="flex justify-between items-center">
+              <button
+                onClick={prevStep}
+                disabled={currentStep === 1}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
+                Previous
+              </button>
+
+              <div className="flex items-center gap-3">
+                {/* Mobile Step Indicator */}
+                <span className="text-xs text-slate-500 sm:hidden">
+                  Step {currentStep}/{steps.length}
+                </span>
+
+                {currentStep < 3 ? (
+                  <button
+                    onClick={nextStep}
+                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[#4668AB] rounded-md hover:bg-[#39558C] transition-colors"
+                  >
+                    Next
+                    <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={submitListing}
+                    disabled={isLoading}
+                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[#4668AB] rounded-md hover:bg-[#39558C] transition-colors disabled:opacity-50"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-3.5 h-3.5 mr-1.5" />
+                        Submit Listing
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
-          )}
-        </div>
-
-        {/* ✅ Navigation Buttons */}
-        <div className="flex justify-between">
-          <button
-            onClick={prevStep}
-            disabled={currentStep === 1}
-            className="inline-flex items-center px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous
-          </button>
-
-          {currentStep < 3 ? (
-            <button
-              onClick={nextStep}
-              className="inline-flex items-center px-6 py-2 text-white rounded-lg hover:opacity-90 transition-opacity"
-              style={{ backgroundColor: '#4668AB' }}
-            >
-              Next
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </button>
-          ) : (
-            <button
-              onClick={submitListing}
-              disabled={isLoading}
-              className="inline-flex items-center px-6 py-2 text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-              style={{ backgroundColor: '#4668AB' }}
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  Submit Listing
-                  <Check className="w-4 h-4 ml-2" />
-                </>
-              )}
-            </button>
-          )}
+          </div>
         </div>
       </div>
     </div>
