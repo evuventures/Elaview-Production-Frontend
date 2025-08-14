@@ -1,7 +1,6 @@
 // src/pages/browse/components/SpaceDetailsModal.jsx
-// ✅ FIXED: JSX structure error resolved
-// ✅ FIXED: Proper handling of dimensions object to prevent React render error
-// ✅ NEW: Added "Message Owner" functionality with conversation creation
+// ✅ REDESIGNED: More condensed and UX-friendly with left image layout
+// ✅ NEW: Book Now redirects to CampaignSelection flow
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { 
   X, ShoppingCart, Plus, CheckCircle, Star, MapPin, Users, TrendingUp, Eye,
   Calendar, Heart, Calculator, ChevronRight, Package, Clock, DollarSign,
-  Building2, Info, AlertCircle, MessageSquare, Send
+  Building2, Info, AlertCircle, MessageSquare, Send, ChevronLeft, ChevronDown,
+  Maximize2, FileText, BarChart3, Verified, Timer, Shield
 } from "lucide-react";
 import { getAreaName, getNumericPrice } from '../utils/areaHelpers';
 import apiClient from '@/api/apiClient';
@@ -28,76 +28,64 @@ export default function SpaceDetailsModal({
 }) {
   const navigate = useNavigate();
   const { user: currentUser } = useUser();
-  const [activeTab, setActiveTab] = useState('overview');
-  const [isSaved, setIsSaved] = useState(false);
-  const [duration, setDuration] = useState(30);
-  const [showPricingDetails, setShowPricingDetails] = useState(false);
   
-  // ✅ NEW: Message Owner state
+  // State Management
+  const [duration, setDuration] = useState(30);
+  const [selectedDates, setSelectedDates] = useState({
+    start: new Date().toISOString().split('T')[0],
+    end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  });
+  const [expandedSection, setExpandedSection] = useState(''); // 'analytics' or 'pricing'
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  // Message Owner state
   const [isMessageLoading, setIsMessageLoading] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageContent, setMessageContent] = useState('');
 
-  // Helper function to format dimensions object
-  const formatDimensions = (dimensions) => {
-    console.log('🔍 Dimensions data:', dimensions, typeof dimensions);
-    
-    if (!dimensions) {
-      return 'Standard Size';
+  // Mock multiple images (in production, these would come from selectedSpace)
+  const spaceImages = [
+    selectedSpace?.images,
+    selectedSpace?.images, // Duplicate for demo - replace with actual multiple images
+    selectedSpace?.images
+  ].filter(Boolean);
+
+  // Calculate duration from dates
+  useEffect(() => {
+    if (selectedDates.start && selectedDates.end) {
+      const start = new Date(selectedDates.start);
+      const end = new Date(selectedDates.end);
+      const diffTime = Math.abs(end - start);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      setDuration(Math.max(7, diffDays)); // Minimum 7 days
     }
-    
-    // If it's already a string, return as-is
-    if (typeof dimensions === 'string') {
-      return dimensions;
-    }
-    
-    // If it's an object, format it properly
-    if (typeof dimensions === 'object') {
-      const { width, height, area, unit } = dimensions;
-      
-      if (width && height && unit) {
-        return `${width} x ${height} ${unit}`;
-      } else if (area && unit) {
-        return `${area} ${unit}`;
-      } else if (area) {
-        return `${area} sq ft`;
-      } else {
-        // Fallback - convert object to readable string
-        return Object.entries(dimensions)
-          .map(([key, value]) => `${key}: ${value}`)
-          .join(', ');
-      }
-    }
-    
-    return 'Standard Size';
-  };
+  }, [selectedDates]);
 
   // Reset state when modal opens
   useEffect(() => {
     if (detailsExpanded && selectedSpace) {
-      setActiveTab('overview');
       setDuration(30);
-      setShowPricingDetails(false);
+      setExpandedSection('');
+      setCurrentImageIndex(0);
       setShowMessageModal(false);
       setMessageContent('');
       
-      // Debug log the selectedSpace to help identify data structure
-      console.log('🏢 Selected Space Data:', {
-        id: selectedSpace.id,
-        dimensions: selectedSpace.dimensions,
-        dimensionsType: typeof selectedSpace.dimensions,
-        property: selectedSpace.property,
-        ownerId: selectedSpace.property?.ownerId || selectedSpace.ownerId,
-        fullSpace: selectedSpace
+      // Set default dates
+      const today = new Date();
+      const endDate = new Date(today);
+      endDate.setDate(endDate.getDate() + 30);
+      
+      setSelectedDates({
+        start: today.toISOString().split('T')[0],
+        end: endDate.toISOString().split('T')[0]
       });
     }
   }, [detailsExpanded, selectedSpace]);
 
-  // ✅ NEW: Get property owner information
+  // Get property owner information
   const getPropertyOwner = () => {
     if (!selectedSpace) return null;
     
-    // The owner ID should be the database ID, not Clerk ID
     const ownerId = selectedSpace.property?.ownerId || 
                    selectedSpace.ownerId || 
                    selectedSpace.property?.users?.id;
@@ -107,14 +95,13 @@ export default function SpaceDetailsModal({
       name: selectedSpace.property?.users?.firstName ? 
             `${selectedSpace.property.users.firstName} ${selectedSpace.property.users.lastName}`.trim() :
             selectedSpace.property?.users?.full_name ||
-            'Property Owner'
+            'Property Owner',
+      responseTime: '2 hours' // Mock data - replace with actual
     };
   };
 
-  // ✅ SIMPLIFIED: Handle message owner functionality
+  // Handle message owner functionality
   const handleMessageOwner = async () => {
-    console.log('💬 Message Owner clicked for space:', selectedSpace.id);
-    
     if (!currentUser?.id) {
       alert('Please sign in to message the property owner');
       return;
@@ -127,11 +114,10 @@ export default function SpaceDetailsModal({
       return;
     }
 
-    // Show message modal for composing message
     setShowMessageModal(true);
   };
 
-  // ✅ SIMPLIFIED: Send message and create conversation
+  // Send message and create conversation
   const handleSendMessage = async () => {
     if (!messageContent.trim()) {
       alert('Please enter a message');
@@ -143,15 +129,8 @@ export default function SpaceDetailsModal({
     try {
       const owner = getPropertyOwner();
       
-      console.log('💬 Creating conversation between users:');
-      console.log('👤 Current user (Clerk ID):', currentUser.id);
-      console.log('👤 Property owner (DB ID):', owner.id);
-      console.log('💬 Message content:', messageContent);
-
-      // ✅ SIMPLIFIED: Let the backend middleware handle user ID mapping
-      // Just pass the Clerk ID - the backend will map it to database ID
       const conversationResponse = await apiClient.post('/conversations/create', {
-        participantIds: [currentUser.id, owner.id], // Backend will handle ID mapping
+        participantIds: [currentUser.id, owner.id],
         initialMessage: messageContent,
         type: 'DIRECT',
         propertyId: selectedSpace.property?.id || selectedSpace.propertyId,
@@ -167,14 +146,10 @@ export default function SpaceDetailsModal({
       });
 
       if (conversationResponse.success) {
-        console.log('✅ Conversation created successfully:', conversationResponse.data);
-        
-        // Close modals
         setShowMessageModal(false);
         setDetailsExpanded(false);
         setSelectedSpace(null);
         
-        // Navigate to messages page with the conversation
         navigate('/messages', { 
           state: { 
             conversationId: conversationResponse.data.id,
@@ -182,7 +157,6 @@ export default function SpaceDetailsModal({
           } 
         });
         
-        // Success feedback
         alert('Message sent successfully! Redirecting to your conversations.');
       } else {
         throw new Error(conversationResponse.error || 'Failed to send message');
@@ -196,71 +170,32 @@ export default function SpaceDetailsModal({
     }
   };
 
-  // Handle booking - Navigate to checkout with single item
+  // ✅ UPDATED: Navigate to CampaignSelection instead of checkout
   const handleBookNow = () => {
     if (!selectedSpace) return;
     
-    console.log('📅 Book Now clicked from SpaceDetailsModal:', selectedSpace.id);
+    console.log('📅 Book Now clicked - navigating to Campaign Selection:', selectedSpace.id);
     
-    // Create cart item for immediate checkout
-    const cartItem = {
-      id: `${selectedSpace.id}_${Date.now()}`,
-      spaceId: selectedSpace.id,
-      space: selectedSpace,
+    // Store space data in session for the campaign flow
+    sessionStorage.setItem('selectedSpace', JSON.stringify({
+      id: selectedSpace.id,
+      name: getAreaName(selectedSpace),
+      price: getNumericPrice(selectedSpace),
       duration: duration,
-      pricePerDay: getNumericPrice(selectedSpace),
+      dates: selectedDates,
       totalPrice: getNumericPrice(selectedSpace) * duration,
-      addedAt: new Date()
-    };
+      propertyId: selectedSpace.property?.id || selectedSpace.propertyId
+    }));
     
-    // Navigate to checkout with single item cart
-    navigate('/checkout', { 
-      state: { 
-        cart: [cartItem],
-        fromSpaceDetails: true
-      } 
-    });
+    // Navigate to campaign selection
+    navigate('/TEMPUserJourney/CampaignSelection');
     
     // Close the modal
     setDetailsExpanded(false);
     setSelectedSpace(null);
   };
 
-  // Handle add to cart and checkout
-  const handleAddToCartAndCheckout = () => {
-    if (!selectedSpace) return;
-    
-    console.log('🛒 Add to Cart & Checkout clicked from SpaceDetailsModal:', selectedSpace.id);
-    
-    // Add to cart first
-    addToCart(selectedSpace, duration);
-    
-    // Create cart item for checkout
-    const cartItem = {
-      id: `${selectedSpace.id}_${Date.now()}`,
-      spaceId: selectedSpace.id,
-      space: selectedSpace,
-      duration: duration,
-      pricePerDay: getNumericPrice(selectedSpace),
-      totalPrice: getNumericPrice(selectedSpace) * duration,
-      addedAt: new Date()
-    };
-    
-    // Navigate to checkout
-    navigate('/checkout', { 
-      state: { 
-        cart: [cartItem],
-        fromSpaceDetails: true,
-        addedToCart: true
-      } 
-    });
-    
-    // Close the modal
-    setDetailsExpanded(false);
-    setSelectedSpace(null);
-  };
-
-  // Handle add to cart only
+  // Handle add to cart
   const handleAddToCart = () => {
     if (!selectedSpace) return;
     
@@ -275,6 +210,19 @@ export default function SpaceDetailsModal({
   const platformFee = totalPrice * 0.1;
   const grandTotal = totalPrice + platformFee;
   const owner = getPropertyOwner();
+
+  // Format dimensions helper
+  const formatDimensions = (dimensions) => {
+    if (!dimensions) return 'Standard Size';
+    if (typeof dimensions === 'string') return dimensions;
+    if (typeof dimensions === 'object') {
+      const { width, height, area, unit } = dimensions;
+      if (width && height && unit) return `${width} x ${height} ${unit}`;
+      if (area && unit) return `${area} ${unit}`;
+      if (area) return `${area} sq ft`;
+    }
+    return 'Standard Size';
+  };
 
   return (
     <AnimatePresence>
@@ -292,354 +240,396 @@ export default function SpaceDetailsModal({
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
-          className="w-full max-w-4xl max-h-[90vh] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col"
+          className="w-full max-w-6xl max-h-[85vh] bg-white rounded-xl shadow-2xl overflow-hidden flex"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="relative h-48 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
-            {selectedSpace.images && (
-              <img 
-                src={selectedSpace.images} 
-                alt={getAreaName(selectedSpace)}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                }}
-              />
-            )}
-            
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
-            
-            <div className="absolute top-4 right-4 flex gap-2">
-              {/* Favorite button removed */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setDetailsExpanded(false);
-                  setSelectedSpace(null);
-                }}
-                className="bg-white/90 backdrop-blur-sm hover:bg-white"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            
-            <div className="absolute bottom-4 left-6 right-6">
-              <h2 className="text-2xl font-bold text-white mb-2">
-                {getAreaName(selectedSpace)}
-              </h2>
-              <div className="flex items-center gap-4 text-white/90 text-sm">
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  {selectedSpace.propertyAddress || 'Location'}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Building2 className="w-3 h-3" />
-                  {selectedSpace.propertyName || 'Property'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex border-b border-slate-200">
-            {['overview', 'analytics', 'pricing'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-3 px-4 text-sm font-medium capitalize transition-colors ${
-                  activeTab === tab
-                    ? 'text-white border-b-2'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-                style={activeTab === tab ? {
-                  color: '#4668AB',
-                  borderBottomColor: '#4668AB'
-                } : {}}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
-            {activeTab === 'overview' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Space Details</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500 mb-1">Space Type</p>
-                      <p className="font-medium text-slate-900">
-                        {selectedSpace.space_type || 'Advertisement Space'}
-                      </p>
-                    </div>
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500 mb-1">Dimensions</p>
-                      <p className="font-medium text-slate-900">
-                        {formatDimensions(selectedSpace.dimensions)}
-                      </p>
-                    </div>
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500 mb-1">Availability</p>
-                      <p className="font-medium text-green-600">Available Now</p>
-                    </div>
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500 mb-1">Min. Duration</p>
-                      <p className="font-medium text-slate-900">7 days</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Description</h3>
-                  <p className="text-slate-600 leading-relaxed">
-                    {selectedSpace.description || 'Prime advertising space in a high-traffic area. Perfect for brand visibility and customer engagement.'}
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Key Features</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      'High visibility location',
-                      '24/7 display time',
-                      'Weather-resistant materials',
-                      'Professional installation'
-                    ].map((feature, index) => (
-                      <div key={index} className="flex items-start gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-slate-600">{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* ✅ NEW: Property Owner Information */}
-                {owner && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Building2 className="w-5 h-5 text-blue-600 mt-0.5" />
-                      <div className="flex-1">
-                        <h4 className="font-medium text-slate-900 mb-1">Property Owner</h4>
-                        <p className="text-sm text-slate-600 mb-2">
-                          Managed by {owner.name}
-                        </p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleMessageOwner}
-                          className="text-blue-600 border-blue-300 hover:bg-blue-50 flex items-center gap-2"
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                          Message Owner
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'analytics' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Performance Metrics</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-slate-50 rounded-lg p-4 text-center">
-                      <Users className="w-8 h-8 mx-auto mb-2" style={{ color: '#4668AB' }} />
-                      <p className="text-2xl font-bold text-slate-900">
-                        {selectedSpace.daily_impressions?.toLocaleString() || '5,000'}
-                      </p>
-                      <p className="text-xs text-slate-500">Daily Impressions</p>
-                    </div>
-                    <div className="bg-slate-50 rounded-lg p-4 text-center">
-                      <Eye className="w-8 h-8 mx-auto mb-2" style={{ color: '#4668AB' }} />
-                      <p className="text-2xl font-bold text-slate-900">
-                        {selectedSpace.weekly_impressions?.toLocaleString() || '35,000'}
-                      </p>
-                      <p className="text-xs text-slate-500">Weekly Views</p>
-                    </div>
-                    <div className="bg-slate-50 rounded-lg p-4 text-center">
-                      <TrendingUp className="w-8 h-8 mx-auto mb-2" style={{ color: '#4668AB' }} />
-                      <p className="text-2xl font-bold text-slate-900">92%</p>
-                      <p className="text-xs text-slate-500">Engagement Rate</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Audience Demographics</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-slate-600">Age 25-34</span>
-                        <span className="font-medium">35%</span>
-                      </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2">
-                        <div className="h-2 rounded-full" style={{ width: '35%', backgroundColor: '#4668AB' }} />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-slate-600">Age 35-44</span>
-                        <span className="font-medium">28%</span>
-                      </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2">
-                        <div className="h-2 rounded-full" style={{ width: '28%', backgroundColor: '#4668AB' }} />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-slate-600">Age 18-24</span>
-                        <span className="font-medium">22%</span>
-                      </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2">
-                        <div className="h-2 rounded-full" style={{ width: '22%', backgroundColor: '#4668AB' }} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <Calculator className="w-5 h-5 text-blue-600 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-slate-900 mb-1">Calculate Your ROI</h4>
-                      <p className="text-sm text-slate-600 mb-2">
-                        Estimate your return on investment based on your campaign goals.
-                      </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowROICalculator(true)}
-                        className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                      >
-                        Open ROI Calculator
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'pricing' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Pricing Calculator</h3>
+          {/* Left Side - Image Gallery (50% width) */}
+          <div className="w-1/2 bg-slate-900 relative flex flex-col">
+            {/* Main Image */}
+            <div className="flex-1 relative">
+              {spaceImages.length > 0 ? (
+                <>
+                  <img 
+                    src={spaceImages[currentImageIndex]} 
+                    alt={getAreaName(selectedSpace)}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = 'https://via.placeholder.com/800x600/4668AB/ffffff?text=Advertisement+Space';
+                    }}
+                  />
                   
-                  <div className="bg-slate-50 rounded-lg p-4 mb-4">
-                    <label className="text-sm font-medium text-slate-700 mb-2 block">
-                      Campaign Duration
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="range"
-                        min="7"
-                        max="90"
-                        value={duration}
-                        onChange={(e) => setDuration(Number(e.target.value))}
-                        className="flex-1"
-                        style={{ accentColor: '#4668AB' }}
-                      />
-                      <div className="bg-white rounded-lg px-3 py-2 border border-slate-200 min-w-[80px] text-center">
-                        <span className="font-semibold">{duration}</span> days
-                      </div>
+                  {/* Image Navigation */}
+                  {spaceImages.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => setCurrentImageIndex((prev) => (prev - 1 + spaceImages.length) % spaceImages.length)}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 hover:bg-white transition-colors"
+                      >
+                        <ChevronLeft className="w-5 h-5 text-slate-700" />
+                      </button>
+                      <button
+                        onClick={() => setCurrentImageIndex((prev) => (prev + 1) % spaceImages.length)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 hover:bg-white transition-colors"
+                      >
+                        <ChevronRight className="w-5 h-5 text-slate-700" />
+                      </button>
+                    </>
+                  )}
+                  
+                  {/* Image Indicators */}
+                  {spaceImages.length > 1 && (
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                      {spaceImages.map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setCurrentImageIndex(index)}
+                          className={`w-2 h-2 rounded-full transition-all ${
+                            index === currentImageIndex 
+                              ? 'w-8 bg-white' 
+                              : 'bg-white/50 hover:bg-white/70'
+                          }`}
+                        />
+                      ))}
                     </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-slate-600">Daily Rate</span>
-                      <span className="font-medium text-slate-900">
-                        ${dailyPrice.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-slate-600">Duration</span>
-                      <span className="font-medium text-slate-900">
-                        {duration} days
-                      </span>
-                    </div>
-                    <div className="border-t pt-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-600">Subtotal</span>
-                        <span className="font-medium text-slate-900">
-                          ${totalPrice.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-slate-600">Platform Fee (10%)</span>
-                      <span className="font-medium text-slate-900">
-                        ${platformFee.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="border-t pt-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-semibold text-slate-900">Total</span>
-                        <span className="text-xl font-bold" style={{ color: '#4668AB' }}>
-                          ${grandTotal.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
+                  <div className="text-center">
+                    <Maximize2 className="w-16 h-16 text-slate-400 mx-auto mb-3" />
+                    <p className="text-slate-600">No image available</p>
                   </div>
                 </div>
-
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-slate-900 mb-1">Volume Discounts Available</h4>
-                      <p className="text-sm text-slate-600">
-                        Book multiple spaces or longer durations to unlock special pricing.
-                        Contact our sales team for custom quotes.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Footer Actions */}
-          <div className="border-t border-slate-200 bg-slate-50 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Total for {duration} days</p>
-                <p className="text-2xl font-bold" style={{ color: '#4668AB' }}>
-                  ${grandTotal.toFixed(2)}
+              )}
+              
+              {/* Property Badge */}
+              <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2">
+                <p className="text-xs text-slate-500">Property</p>
+                <p className="font-medium text-slate-900">
+                  {selectedSpace.propertyName || 'Prime Location'}
                 </p>
               </div>
-              
-              <div className="flex items-center gap-3">
-                {/* ✅ NEW: Message Owner Button */}
-                <Button
-                  variant="outline"
-                  onClick={handleMessageOwner}
-                  className="flex items-center gap-2"
-                  style={{ 
-                    borderColor: '#4668AB',
-                    color: '#4668AB'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = '#EFF6FF';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = 'transparent';
-                  }}
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  Message Owner
-                </Button>
+            </div>
 
+            {/* Thumbnail Strip (if multiple images) */}
+            {spaceImages.length > 1 && (
+              <div className="h-20 bg-slate-800 flex gap-2 p-2 overflow-x-auto">
+                {spaceImages.map((img, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`flex-shrink-0 w-24 h-full rounded overflow-hidden border-2 transition-all ${
+                      index === currentImageIndex 
+                        ? 'border-white' 
+                        : 'border-transparent opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    <img 
+                      src={img} 
+                      alt={`View ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right Side - Details (50% width) */}
+          <div className="w-1/2 flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-slate-900 mb-1">
+                    {getAreaName(selectedSpace)}
+                  </h2>
+                  <div className="flex items-center gap-3 text-sm text-slate-600">
+                    <span className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      {selectedSpace.propertyAddress || 'High Traffic Location'}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Shield className="w-3 h-3 text-green-500" />
+                      Verified
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setDetailsExpanded(false);
+                    setSelectedSpace(null);
+                  }}
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              </div>
+
+              {/* Quick Stats Bar */}
+              <div className="flex gap-4 pt-3">
+                <div className="flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-slate-400" />
+                  <div>
+                    <p className="text-xs text-slate-500">Daily Views</p>
+                    <p className="font-semibold text-slate-900">
+                      {selectedSpace.daily_impressions?.toLocaleString() || '5,000'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-slate-400" />
+                  <div>
+                    <p className="text-xs text-slate-500">Engagement</p>
+                    <p className="font-semibold text-slate-900">92%</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Star className="w-4 h-4 text-slate-400" />
+                  <div>
+                    <p className="text-xs text-slate-500">Rating</p>
+                    <p className="font-semibold text-slate-900">4.8</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Calendar Selector */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" style={{ color: '#4668AB' }} />
+                  Select Campaign Dates
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-slate-500 mb-1 block">Start Date</label>
+                    <input
+                      type="date"
+                      value={selectedDates.start}
+                      onChange={(e) => setSelectedDates({...selectedDates, start: e.target.value})}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 mb-1 block">End Date</label>
+                    <input
+                      type="date"
+                      value={selectedDates.end}
+                      onChange={(e) => setSelectedDates({...selectedDates, end: e.target.value})}
+                      min={selectedDates.start || new Date().toISOString().split('T')[0]}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  Campaign Duration: <span className="font-medium text-slate-700">{duration} days</span> (Minimum: 7 days)
+                </p>
+              </div>
+
+              {/* Key Features */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-slate-900 mb-3">Key Features</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { icon: Building2, text: formatDimensions(selectedSpace.dimensions) },
+                    { icon: Clock, text: '24/7 Display Time' },
+                    { icon: Shield, text: 'Weather Resistant' },
+                    { icon: CheckCircle, text: 'Professional Installation' }
+                  ].map((feature, index) => (
+                    <div key={index} className="flex items-center gap-2 text-sm">
+                      <feature.icon className="w-4 h-4 text-green-500 flex-shrink-0" />
+                      <span className="text-slate-600">{feature.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Property Owner Card */}
+              {owner && (
+                <div className="mb-6 bg-slate-50 rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Building2 className="w-5 h-5" style={{ color: '#4668AB' }} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900">{owner.name}</p>
+                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                          <Timer className="w-3 h-3" />
+                          Typically responds in {owner.responseTime}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleMessageOwner}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Contact
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Collapsible Sections */}
+              <div className="space-y-3">
+                {/* Analytics Link */}
+                <button
+                  onClick={() => setExpandedSection(expandedSection === 'analytics' ? '' : 'analytics')}
+                  className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4" style={{ color: '#4668AB' }} />
+                    <span className="text-sm font-medium text-slate-700">View Analytics & Demographics</span>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${
+                    expandedSection === 'analytics' ? 'rotate-180' : ''
+                  }`} />
+                </button>
+                
+                {/* Analytics Content */}
+                <AnimatePresence>
+                  {expandedSection === 'analytics' && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-4 bg-white border border-slate-200 rounded-lg">
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-3 gap-3 text-center">
+                            <div className="bg-slate-50 rounded-lg p-3">
+                              <p className="text-lg font-bold text-slate-900">35K</p>
+                              <p className="text-xs text-slate-500">Weekly Views</p>
+                            </div>
+                            <div className="bg-slate-50 rounded-lg p-3">
+                              <p className="text-lg font-bold text-slate-900">2.3%</p>
+                              <p className="text-xs text-slate-500">CTR</p>
+                            </div>
+                            <div className="bg-slate-50 rounded-lg p-3">
+                              <p className="text-lg font-bold text-slate-900">A+</p>
+                              <p className="text-xs text-slate-500">Location Score</p>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <p className="text-xs font-medium text-slate-700 mb-2">Top Audience Demographics</p>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-slate-600">Age 25-34</span>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-24 bg-slate-200 rounded-full h-1.5">
+                                    <div className="h-1.5 rounded-full" style={{ width: '35%', backgroundColor: '#4668AB' }} />
+                                  </div>
+                                  <span className="font-medium">35%</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-slate-600">Age 35-44</span>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-24 bg-slate-200 rounded-full h-1.5">
+                                    <div className="h-1.5 rounded-full" style={{ width: '28%', backgroundColor: '#4668AB' }} />
+                                  </div>
+                                  <span className="font-medium">28%</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Pricing Details Link */}
+                <button
+                  onClick={() => setExpandedSection(expandedSection === 'pricing' ? '' : 'pricing')}
+                  className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Calculator className="w-4 h-4" style={{ color: '#4668AB' }} />
+                    <span className="text-sm font-medium text-slate-700">View Pricing Breakdown</span>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${
+                    expandedSection === 'pricing' ? 'rotate-180' : ''
+                  }`} />
+                </button>
+                
+                {/* Pricing Content */}
+                <AnimatePresence>
+                  {expandedSection === 'pricing' && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-4 bg-white border border-slate-200 rounded-lg">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                            <span className="text-sm text-slate-600">Daily Rate</span>
+                            <span className="text-sm font-medium text-slate-900">${dailyPrice.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                            <span className="text-sm text-slate-600">Duration</span>
+                            <span className="text-sm font-medium text-slate-900">{duration} days</span>
+                          </div>
+                          <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                            <span className="text-sm text-slate-600">Subtotal</span>
+                            <span className="text-sm font-medium text-slate-900">${totalPrice.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between items-center py-2">
+                            <span className="text-sm text-slate-600">Platform Fee (10%)</span>
+                            <span className="text-sm font-medium text-slate-900">${platformFee.toFixed(2)}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          <p className="text-xs text-amber-800">
+                            💡 <span className="font-medium">Pro tip:</span> Book 60+ days for a 15% discount
+                          </p>
+                        </div>
+                        
+                        <button
+                          onClick={() => setShowROICalculator(true)}
+                          className="w-full mt-3 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          Calculate ROI for this space →
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+
+            {/* Footer Actions - Sticky */}
+            <div className="border-t border-slate-200 bg-slate-50 p-6">
+              {/* Price Display */}
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-xs text-slate-500">Total Price</p>
+                  <p className="text-2xl font-bold" style={{ color: '#4668AB' }}>
+                    ${grandTotal.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-slate-500">{duration} days campaign</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-green-600 font-medium">✓ Available Now</p>
+                  <p className="text-xs text-slate-500 mt-1">Instant Booking</p>
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex gap-3">
                 {isInCart && isInCart(selectedSpace.id) ? (
                   <Button
                     variant="outline"
                     disabled
-                    className="flex items-center gap-2"
+                    className="flex-1 flex items-center justify-center gap-2"
                   >
                     <CheckCircle className="w-4 h-4 text-green-500" />
                     In Cart
@@ -648,7 +638,7 @@ export default function SpaceDetailsModal({
                   <Button
                     variant="outline"
                     onClick={handleAddToCart}
-                    className="flex items-center gap-2"
+                    className="flex-1 flex items-center justify-center gap-2 hover:bg-slate-50"
                   >
                     <ShoppingCart className="w-4 h-4" />
                     Add to Cart
@@ -656,16 +646,28 @@ export default function SpaceDetailsModal({
                 )}
                 
                 <Button
+                  variant="outline"
+                  onClick={handleMessageOwner}
+                  className="flex-1 flex items-center justify-center gap-2"
+                  style={{ 
+                    borderColor: '#4668AB',
+                    color: '#4668AB'
+                  }}
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Message Owner
+                </Button>
+                
+                <Button
                   onClick={handleBookNow}
-                  className="flex items-center gap-2 px-6"
+                  className="flex-1 flex items-center justify-center gap-2"
                   style={{ 
                     backgroundColor: '#4668AB',
-                    borderColor: '#4668AB'
+                    color: 'white'
                   }}
                   onMouseEnter={(e) => e.target.style.backgroundColor = '#39558C'}
                   onMouseLeave={(e) => e.target.style.backgroundColor = '#4668AB'}
                 >
-                  <Calendar className="w-4 h-4" />
                   Book Now
                   <ChevronRight className="w-4 h-4" />
                 </Button>
@@ -674,7 +676,7 @@ export default function SpaceDetailsModal({
           </div>
         </motion.div>
 
-        {/* ✅ NEW: Message Composition Modal */}
+        {/* Message Composition Modal */}
         {showMessageModal && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -733,7 +735,8 @@ export default function SpaceDetailsModal({
                   className="flex items-center gap-2"
                   style={{ 
                     backgroundColor: '#4668AB',
-                    borderColor: '#4668AB'
+                    borderColor: '#4668AB',
+                    color: 'white'
                   }}
                 >
                   {isMessageLoading ? (

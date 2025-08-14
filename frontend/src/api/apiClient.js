@@ -1,8 +1,9 @@
 // src/api/apiClient.js
+// ✅ UPDATED: Added user resolution methods for Clerk ID vs UUID mapping
 // ✅ FIXED: Complete ApiClient with conversation methods properly integrated
 // ✅ RATE LIMITING FIXES: Request deduplication, caching, and exponential backoff
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const API_TIMEOUT = 30000;
 const CACHE_DURATION = 60000; // 1 minute cache
 
@@ -18,6 +19,9 @@ class ApiClient {
     this.responseCache = new Map(); // Cache responses
     this.requestQueue = new Map(); // Queue similar requests
     this.rateLimitBackoff = new Map(); // Track rate limit backoff per endpoint
+    
+    // ✅ NEW: User ID resolution cache for Clerk ID vs UUID mapping
+    this.userIdCache = new Map(); // Cache user ID mappings
     
     console.log('📊 RATE LIMITING: Initialized request deduplication and caching');
     
@@ -46,6 +50,14 @@ class ApiClient {
     for (const [key, value] of this.responseCache) {
       if (now - value.timestamp > CACHE_DURATION) {
         this.responseCache.delete(key);
+        cleaned++;
+      }
+    }
+    
+    // Also clean user ID cache
+    for (const [key, value] of this.userIdCache) {
+      if (now - value.timestamp > CACHE_DURATION) {
+        this.userIdCache.delete(key);
         cleaned++;
       }
     }
@@ -83,6 +95,7 @@ class ApiClient {
     this.responseCache.clear();
     this.pendingRequests.clear();
     this.rateLimitBackoff.clear();
+    this.userIdCache.clear();
     console.log('🧹 API CLIENT: Destroyed and cleaned up');
   }
 
@@ -256,9 +269,15 @@ class ApiClient {
           this.responseCache.delete(key);
         }
       }
+      for (const [key] of this.userIdCache) {
+        if (key.includes(pattern)) {
+          this.userIdCache.delete(key);
+        }
+      }
       console.log(`💾 CACHE CLEAR: Cleared entries matching "${pattern}"`);
     } else {
       this.responseCache.clear();
+      this.userIdCache.clear();
       console.log('💾 CACHE CLEAR: All cache cleared');
     }
   }
@@ -280,7 +299,8 @@ class ApiClient {
       valid,
       expired,
       pending: this.pendingRequests.size,
-      rateLimited: this.rateLimitBackoff.size
+      rateLimited: this.rateLimitBackoff.size,
+      userIdMappings: this.userIdCache.size
     };
   }
 
@@ -303,6 +323,107 @@ class ApiClient {
 
   async delete(endpoint) {
     return this.request(endpoint, 'DELETE');
+  }
+
+  // ✅ NEW: USER ID RESOLUTION METHODS (Fixes Clerk ID vs UUID mismatch)
+  async resolveUserId(identifier) {
+    console.log('🔍 Resolving user ID:', identifier);
+    
+    // Check cache first
+    const cached = this.userIdCache.get(identifier);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+      console.log(`💾 USER ID CACHE HIT: ${identifier}`);
+      return cached.data;
+    }
+    
+    try {
+      const response = await this.get(`/users/resolve/${identifier}`);
+      
+      if (response.success) {
+        // Cache the result
+        this.userIdCache.set(identifier, {
+          data: response.data,
+          timestamp: Date.now()
+        });
+        
+        // Also cache reverse mapping
+        this.userIdCache.set(response.data.id, {
+          data: response.data,
+          timestamp: Date.now()
+        });
+        this.userIdCache.set(response.data.clerkId, {
+          data: response.data,
+          timestamp: Date.now()
+        });
+        
+        console.log('✅ User ID resolved:', response.data.id, '→', response.data.clerkId);
+        return response.data;
+      } else {
+        console.log('⚠️ User ID not found:', identifier);
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Error resolving user ID:', error);
+      return null;
+    }
+  }
+
+  async resolveUserIds(identifiers) {
+    console.log('🔍 Resolving multiple user IDs:', identifiers.length);
+    
+    const resolved = new Map();
+    const toResolve = [];
+    
+    // Check cache first
+    for (const id of identifiers) {
+      const cached = this.userIdCache.get(id);
+      if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+        resolved.set(id, cached.data);
+      } else {
+        toResolve.push(id);
+      }
+    }
+    
+    // Resolve uncached IDs
+    if (toResolve.length > 0) {
+      try {
+        const promises = toResolve.map(id => this.resolveUserId(id));
+        const results = await Promise.all(promises);
+        
+        results.forEach((userData, index) => {
+          if (userData) {
+            const originalId = toResolve[index];
+            resolved.set(originalId, userData);
+          }
+        });
+      } catch (error) {
+        console.error('❌ Error resolving multiple user IDs:', error);
+      }
+    }
+    
+    console.log(`✅ Resolved ${resolved.size}/${identifiers.length} user IDs`);
+    return resolved;
+  }
+
+  // ✅ ENHANCED: Check if current user owns message (handles ID mismatch)
+  async isMyMessage(message, currentClerkId) {
+    if (!currentClerkId || !message.senderId) return false;
+    
+    // Direct match
+    if (message.senderId === currentClerkId) return true;
+    
+    // Resolve sender ID to check for match
+    const senderData = await this.resolveUserId(message.senderId);
+    if (senderData && senderData.clerkId === currentClerkId) return true;
+    
+    // Handle prefix variations
+    const clerkIdWithoutPrefix = currentClerkId.replace(/^user_/, '');
+    if (message.senderId === clerkIdWithoutPrefix) return true;
+    
+    const messageIdWithPrefix = `user_${message.senderId}`;
+    if (currentClerkId === messageIdWithPrefix) return true;
+    
+    return false;
   }
 
   // ✅ HEALTH CHECK
@@ -602,16 +723,91 @@ class ApiClient {
     return this.delete(`/messages/${id}`);
   }
 
-  // ✅ CONVERSATIONS (Enhanced B2B messaging) - PROPERLY INTEGRATED
+  // ✅ ENHANCED: CONVERSATIONS with user resolution 
   async getConversations(params = {}) {
     console.log('💬 Getting conversations with params:', params);
-    const queryString = new URLSearchParams(params).toString();
-    return this.get(`/conversations${queryString ? `?${queryString}` : ''}`);
+    try {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await this.get(`/conversations${queryString ? `?${queryString}` : ''}`);
+      
+      if (response.success && response.data) {
+        // ✅ Resolve user IDs for all participants
+        const allUserIds = new Set();
+        
+        response.data.forEach(conv => {
+          if (conv.participants) {
+            conv.participants.forEach(p => {
+              if (p.userId) allUserIds.add(p.userId);
+              if (p.user?.id) allUserIds.add(p.user.id);
+            });
+          }
+          if (conv.lastMessage?.senderId) {
+            allUserIds.add(conv.lastMessage.senderId);
+          }
+        });
+        
+        // Resolve all user IDs at once
+        const userMappings = await this.resolveUserIds(Array.from(allUserIds));
+        
+        // Enhance conversations with resolved user data
+        const enhancedConversations = response.data.map(conv => ({
+          ...conv,
+          participants: conv.participants?.map(p => ({
+            ...p,
+            user: userMappings.get(p.userId) || userMappings.get(p.user?.id) || p.user
+          })),
+          lastMessage: conv.lastMessage ? {
+            ...conv.lastMessage,
+            sender: userMappings.get(conv.lastMessage.senderId)
+          } : undefined
+        }));
+        
+        return {
+          ...response,
+          data: enhancedConversations
+        };
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Error getting conversations:', error);
+      throw error;
+    }
   }
 
   async getConversation(id) {
     console.log('💬 Getting conversation:', id);
-    return this.get(`/conversations/${id}`);
+    try {
+      const response = await this.get(`/conversations/${id}`);
+      
+      if (response.success && response.data?.messages) {
+        // ✅ Resolve user IDs for all message senders
+        const senderIds = response.data.messages
+          .map(msg => msg.senderId)
+          .filter(Boolean);
+        
+        const userMappings = await this.resolveUserIds(senderIds);
+        
+        // Enhance messages with sender data
+        const enhancedMessages = response.data.messages.map(msg => ({
+          ...msg,
+          sender: userMappings.get(msg.senderId)
+        }));
+        
+        return {
+          ...response,
+          data: {
+            ...response.data,
+            messages: enhancedMessages
+          }
+        };
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Error getting conversation:', error);
+      throw error;
+    }
   }
 
   async createConversation(data) {

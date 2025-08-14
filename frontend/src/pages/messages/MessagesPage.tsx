@@ -1,13 +1,13 @@
 // src/pages/messages/MessagesPage.tsx
-// ✅ Updated with WebSocket real-time messaging integration
-// ✅ FIXED: Message sender ID comparison issue + JSX warning
-// ✅ Maintains all existing functionality + adds real-time features
+// ✅ UPDATED: Fixed user ID mismatch + added enterprise loading components
+// ✅ FIXED: Optimistic updates with proper user resolution
+// ✅ ENHANCED: Professional enterprise messaging UI
+// ✅ WebSocket real-time messaging integration maintained
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useUser } from '@clerk/clerk-react';
-import VideoLoader from '@/components/ui/VideoLoader';
 import { 
   MessageSquare, 
   Send, 
@@ -42,15 +42,29 @@ import apiClient from '@/api/apiClient';
 import { useWebSocketMessages } from '@/hooks/useWebSocket';
 import { WSMessage } from '@/services/websocketService';
 
-// ✅ TypeScript interfaces (same as before)
+// ✅ Import new enterprise loading components
+import { 
+  EnterpriseLoader,
+  MessageStatusIndicator,
+  EnterpriseSendButton,
+  ConnectionStatusIndicator,
+  TypingIndicator,
+  BusinessMessageTypeIndicator,
+  ConversationLoadingSkeleton,
+  MessageLoadingSkeleton
+} from '@/components/ui/EnterpriseLoading';
+
+// ✅ TypeScript interfaces (enhanced)
 interface User {
   id: string;
+  clerkId?: string;
   firstName?: string;
   lastName?: string;
   full_name?: string;
   businessName?: string;
   imageUrl?: string;
   isBusinessVerified?: boolean;
+  displayName?: string;
 }
 
 interface Participant {
@@ -67,6 +81,9 @@ interface Message {
   isOptimistic?: boolean;
   sender?: User;
   attachments?: Attachment[];
+  type?: string;
+  deliveryStatus?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
+  error?: string;
 }
 
 interface Attachment {
@@ -121,64 +138,103 @@ export default function MessagesPage(): JSX.Element {
   const [onlineUsers] = useState(new Set<string>()); // TODO: Implement real-time presence
   const [isTyping, setIsTyping] = useState(false);
   
+  // ✅ NEW: User resolution state for handling ID mismatches
+  const [userResolutionCache, setUserResolutionCache] = useState<Map<string, User>>(new Map());
+  const [optimisticMessages, setOptimisticMessages] = useState<Map<string, Message>>(new Map());
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ✅ FIXED: Enhanced message ownership detection with debugging
-  const isMyMessage = useCallback((message: Message): boolean => {
+  // ✅ ENHANCED: User ID resolution with caching
+  const resolveUser = useCallback(async (identifier: string): Promise<User | null> => {
+    if (!identifier) return null;
+    
+    // Check cache first
+    if (userResolutionCache.has(identifier)) {
+      return userResolutionCache.get(identifier) || null;
+    }
+    
+    try {
+      const userData = await apiClient.resolveUserId(identifier);
+      if (userData) {
+        setUserResolutionCache(prev => new Map(prev.set(identifier, userData)));
+        // Also cache by other ID formats
+        if (userData.clerkId && userData.clerkId !== identifier) {
+          setUserResolutionCache(prev => new Map(prev.set(userData.clerkId, userData)));
+        }
+        if (userData.id && userData.id !== identifier) {
+          setUserResolutionCache(prev => new Map(prev.set(userData.id, userData)));
+        }
+        return userData;
+      }
+    } catch (error) {
+      console.error('❌ Failed to resolve user:', identifier, error);
+    }
+    
+    return null;
+  }, [userResolutionCache]);
+
+  // ✅ FIXED: Enhanced message ownership detection with user resolution
+  const isMyMessage = useCallback(async (message: Message): Promise<boolean> => {
     if (!currentUser?.id || !message.senderId) {
-      console.log('🔍 MESSAGE DEBUG: Missing IDs', {
-        currentUserId: currentUser?.id,
-        messageSenderId: message.senderId,
-        messageId: message.id
-      });
       return false;
     }
     
-    // ✅ Try multiple ID comparison strategies
-    const currentId = currentUser.id;
-    const messageId = message.senderId;
+    // Handle optimistic messages
+    if (message.isOptimistic) return true;
     
-    // Strategy 1: Direct comparison
-    if (currentId === messageId) {
-      return true;
-    }
+    // Direct comparison
+    if (message.senderId === currentUser.id) return true;
     
-    // Strategy 2: Remove "user_" prefix from Clerk ID
-    const clerkIdWithoutPrefix = currentId.replace(/^user_/, '');
-    if (clerkIdWithoutPrefix === messageId) {
-      console.log('🔍 MESSAGE DEBUG: Matched with prefix removed', {
-        original: currentId,
-        withoutPrefix: clerkIdWithoutPrefix,
-        messageSenderId: messageId
-      });
-      return true;
-    }
+    // Use API client's enhanced method
+    return await apiClient.isMyMessage(message, currentUser.id);
+  }, [currentUser?.id]);
+
+  // ✅ SYNCHRONOUS version for immediate UI rendering (uses cache)
+  const isMyMessageSync = useCallback((message: Message): boolean => {
+    if (!currentUser?.id || !message.senderId) return false;
     
-    // Strategy 3: Add "user_" prefix to message ID
-    const messageIdWithPrefix = `user_${messageId}`;
-    if (currentId === messageIdWithPrefix) {
-      console.log('🔍 MESSAGE DEBUG: Matched with prefix added', {
-        currentUserId: currentId,
-        messageIdWithPrefix: messageIdWithPrefix,
-        originalMessageId: messageId
-      });
-      return true;
-    }
+    // Handle optimistic messages
+    if (message.isOptimistic) return true;
     
-    // ✅ Debug log for failed matches
-    console.log('🔍 MESSAGE DEBUG: No match found', {
-      currentUserId: currentId,
-      currentUserIdType: typeof currentId,
-      messageSenderId: messageId,
-      messageSenderIdType: typeof messageId,
-      messageIsOptimistic: message.isOptimistic,
-      messageContent: message.content.slice(0, 20) + '...'
-    });
+    // Direct comparison
+    if (message.senderId === currentUser.id) return true;
+    
+    // Check cache for resolved user
+    const resolvedUser = userResolutionCache.get(message.senderId);
+    if (resolvedUser && resolvedUser.clerkId === currentUser.id) return true;
+    
+    // Handle prefix variations as fallback
+    const clerkIdWithoutPrefix = currentUser.id.replace(/^user_/, '');
+    if (message.senderId === clerkIdWithoutPrefix) return true;
+    
+    const messageIdWithPrefix = `user_${message.senderId}`;
+    if (currentUser.id === messageIdWithPrefix) return true;
     
     return false;
-  }, [currentUser?.id]);
+  }, [currentUser?.id, userResolutionCache]);
+
+  // ✅ Helper to get user display name
+  const getUserDisplayName = useCallback((user: User | undefined): string => {
+    if (!user) return 'Unknown User';
+    
+    if (user.displayName) return user.displayName;
+    
+    return user.full_name || 
+           `${user.firstName || ''} ${user.lastName || ''}`.trim() || 
+           user.businessName || 
+           'Anonymous';
+  }, []);
+
+  // ✅ Helper to format file size
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
 
   // ✅ WebSocket integration for real-time messaging
   const {
@@ -206,7 +262,13 @@ export default function MessagesPage(): JSX.Element {
         isRead: false,
         sender: wsMessage.data.sender,
         attachments: wsMessage.data.attachments || [],
+        deliveryStatus: 'delivered'
       };
+      
+      // ✅ Resolve sender if not already cached
+      if (newMessage.senderId && !userResolutionCache.has(newMessage.senderId)) {
+        resolveUser(newMessage.senderId);
+      }
       
       // ✅ Add message to conversation
       setMessages(prev => {
@@ -233,7 +295,7 @@ export default function MessagesPage(): JSX.Element {
       // ✅ Auto-scroll to new message
       setTimeout(() => scrollToBottom(), 100);
       
-    }, [selectedConversation?.id]),
+    }, [selectedConversation?.id, userResolutionCache, resolveUser]),
     
     // ✅ Handle message read receipts
     useCallback((wsMessage: WSMessage) => {
@@ -243,7 +305,7 @@ export default function MessagesPage(): JSX.Element {
         setMessages(prev =>
           prev.map(msg =>
             msg.id === wsMessage.data.messageId
-              ? { ...msg, isRead: true }
+              ? { ...msg, isRead: true, deliveryStatus: 'read' }
               : msg
           )
         );
@@ -257,25 +319,7 @@ export default function MessagesPage(): JSX.Element {
     }, [])
   );
 
-  // ✅ Helper to get user display name
-  const getUserDisplayName = (user: User | undefined): string => {
-    if (!user) return 'Unknown User';
-    return user.full_name || 
-           `${user.firstName || ''} ${user.lastName || ''}`.trim() || 
-           user.businessName || 
-           'Anonymous';
-  };
-
-  // ✅ Helper to format file size
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  };
-
-  // ✅ Load conversations from API (fallback and initial load)
+  // ✅ Load conversations from API with user resolution
   const loadConversations = useCallback(async () => {
     if (!currentUser?.id) return;
     
@@ -320,7 +364,7 @@ export default function MessagesPage(): JSX.Element {
     }
   }, [currentUser?.id, navigationState]);
 
-  // ✅ Load messages for a conversation (fallback and initial load)
+  // ✅ Load messages for a conversation with user resolution
   const loadMessages = useCallback(async (conversationId: string) => {
     if (!conversationId) return;
     
@@ -334,17 +378,7 @@ export default function MessagesPage(): JSX.Element {
       if (response.success && isMountedRef.current) {
         console.log(`✅ Loaded ${response.data.messages.length} messages`);
         
-        // ✅ Debug message sender IDs
-        response.data.messages.forEach((msg: Message, index: number) => {
-          console.log(`🔍 MESSAGE ${index + 1} DEBUG:`, {
-            messageId: msg.id,
-            senderId: msg.senderId,
-            isMyMessage: isMyMessage(msg),
-            content: msg.content.slice(0, 30) + '...',
-            currentUserId: currentUser?.id
-          });
-        });
-        
+        // ✅ All user resolution is now handled by the enhanced API client
         setMessages(response.data.messages || []);
         
         // Update conversation data with any new info
@@ -369,7 +403,7 @@ export default function MessagesPage(): JSX.Element {
         setIsLoading(false);
       }
     }
-  }, [isMyMessage, currentUser?.id]);
+  }, []);
 
   // ✅ Handle typing indicator with debouncing
   const handleTypingChange = useCallback((typing: boolean) => {
@@ -418,7 +452,7 @@ export default function MessagesPage(): JSX.Element {
       conv.lastMessage?.content?.toLowerCase().includes(searchLower) ||
       conv.subject?.toLowerCase().includes(searchLower);
     });
-  }, [conversations, searchTerm]);
+  }, [conversations, searchTerm, getUserDisplayName]);
 
   // Get other user in conversation
   const otherUser = useMemo((): User | null => {
@@ -448,11 +482,13 @@ export default function MessagesPage(): JSX.Element {
     setTimeout(scrollToBottom, 100);
   }, [loadMessages, scrollToBottom]);
 
-  // ✅ FIXED: Enhanced send message with proper ID handling
+  // ✅ ENHANCED: Send message with optimistic updates and proper user resolution
   const handleSendMessage = useCallback(async () => {
     if (!newMessage.trim() || !selectedConversation?.id || !currentUser?.id) return;
     
     const messageContent = newMessage.trim();
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     setNewMessage('');
     setIsSending(true);
     
@@ -465,29 +501,27 @@ export default function MessagesPage(): JSX.Element {
       content: messageContent.slice(0, 30) + '...'
     });
     
-    // ✅ Send via WebSocket for real-time delivery
-    if (isConnected) {
-      sendChatMessage(
-        selectedConversation.id, 
-        messageContent,
-        otherUser?.id
-      );
-    }
-    
-    // ✅ Optimistic update for immediate UI feedback
+    // ✅ Create optimistic message with proper user data
     const optimisticMessage: Message = {
-      id: `temp_${Date.now()}`,
+      id: tempId,
       content: messageContent,
-      senderId: currentUser.id, // This should match currentUser.id format
+      senderId: currentUser.id,
       createdAt: new Date().toISOString(),
       isRead: false,
       isOptimistic: true,
+      deliveryStatus: 'sending',
       sender: {
         id: currentUser.id,
+        clerkId: currentUser.id,
         firstName: currentUser.firstName || undefined,
         lastName: currentUser.lastName || undefined,
         full_name: currentUser.fullName || undefined,
-        imageUrl: currentUser.imageUrl || undefined
+        imageUrl: currentUser.imageUrl || undefined,
+        displayName: getUserDisplayName({
+          firstName: currentUser.firstName || undefined,
+          lastName: currentUser.lastName || undefined,
+          full_name: currentUser.fullName || undefined
+        } as User)
       },
       attachments: [...attachments]
     };
@@ -496,15 +530,26 @@ export default function MessagesPage(): JSX.Element {
       id: optimisticMessage.id,
       senderId: optimisticMessage.senderId,
       currentUserId: currentUser.id,
-      willMatch: isMyMessage(optimisticMessage)
+      willMatch: true // Always true for optimistic messages
     });
 
+    // ✅ Add optimistic message to state
+    setOptimisticMessages(prev => new Map(prev.set(tempId, optimisticMessage)));
     setMessages(prev => [...prev, optimisticMessage]);
     setAttachments([]);
     scrollToBottom();
 
     try {
-      // ✅ Send via API as backup and for persistence
+      // ✅ Send via WebSocket for real-time delivery
+      if (isConnected) {
+        sendChatMessage(
+          selectedConversation.id, 
+          messageContent,
+          otherUser?.id
+        );
+      }
+      
+      // ✅ Send via API for persistence
       const response = await apiClient.sendMessageToConversation(
         selectedConversation.id,
         {
@@ -515,35 +560,26 @@ export default function MessagesPage(): JSX.Element {
       );
 
       if (response.success && isMountedRef.current) {
-        console.log('✅ API RESPONSE:', {
-          apiSenderId: response.data.senderId,
-          currentUserId: currentUser.id,
-          willMatch: response.data.senderId === currentUser.id || 
-                    response.data.senderId === currentUser.id.replace(/^user_/, '') ||
-                    `user_${response.data.senderId}` === currentUser.id
-        });
+        console.log('✅ Message sent successfully via API');
         
-        // ✅ FIXED: Ensure proper senderId in API response
+        // ✅ Replace optimistic message with real message
         const realMessage = {
           ...response.data,
-          senderId: currentUser.id, // Force to match current user ID format
-          isOptimistic: false
+          isOptimistic: false,
+          deliveryStatus: 'sent' as const
         };
 
-        console.log('🎨 RENDERING MESSAGE:', {
-          messageId: realMessage.id,
-          senderId: realMessage.senderId,
-          isMyMessage: isMyMessage(realMessage)
-        });
-
         setMessages(prev => 
-          prev.map(msg => {
-            if (msg.id === optimisticMessage.id) {
-              return realMessage;
-            }
-            return msg;
-          })
+          prev.map(msg => 
+            msg.id === tempId ? realMessage : msg
+          )
         );
+        
+        setOptimisticMessages(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(tempId);
+          return newMap;
+        });
         
         // ✅ Update conversation's last message
         setConversations(prev =>
@@ -557,26 +593,78 @@ export default function MessagesPage(): JSX.Element {
               : conv
           )
         );
-        
-        console.log('✅ Message sent successfully via API');
       } else {
         throw new Error(response.error || 'Failed to send message');
       }
     } catch (error: any) {
-      console.error('❌ Error sending message via API:', error);
+      console.error('❌ Error sending message:', error);
       
-      // ✅ Remove optimistic message on error only if WebSocket also failed
-      if (!isConnected && isMountedRef.current) {
-        setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
-        setNewMessage(messageContent); // Restore message text
-        alert(`Failed to send message: ${error.message}`);
+      if (isMountedRef.current) {
+        // ✅ Mark optimistic message as failed
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === tempId
+              ? { ...msg, deliveryStatus: 'failed' as const, error: error.message }
+              : msg
+          )
+        );
+        
+        // Don't remove the message, let user retry
+        if (!isConnected) {
+          setNewMessage(messageContent); // Restore message text if no websocket
+        }
       }
     } finally {
       if (isMountedRef.current) {
         setIsSending(false);
       }
     }
-  }, [newMessage, selectedConversation, currentUser, attachments, scrollToBottom, isConnected, sendChatMessage, otherUser?.id, handleTypingChange, isMyMessage]);
+  }, [newMessage, selectedConversation, currentUser, attachments, scrollToBottom, isConnected, sendChatMessage, otherUser?.id, handleTypingChange, getUserDisplayName]);
+
+  // ✅ Retry failed message
+  const handleRetryMessage = useCallback(async (messageId: string) => {
+    const failedMessage = messages.find(msg => msg.id === messageId);
+    if (!failedMessage || !selectedConversation?.id) return;
+    
+    // Update message status to sending
+    setMessages(prev =>
+      prev.map(msg =>
+        msg.id === messageId
+          ? { ...msg, deliveryStatus: 'sending' as const, error: undefined }
+          : msg
+      )
+    );
+    
+    try {
+      const response = await apiClient.sendMessageToConversation(
+        selectedConversation.id,
+        {
+          content: failedMessage.content,
+          type: 'GENERAL'
+        }
+      );
+      
+      if (response.success) {
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === messageId
+              ? { ...response.data, deliveryStatus: 'sent' as const }
+              : msg
+          )
+        );
+      } else {
+        throw new Error(response.error || 'Retry failed');
+      }
+    } catch (error: any) {
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === messageId
+            ? { ...msg, deliveryStatus: 'failed' as const, error: error.message }
+            : msg
+        )
+      );
+    }
+  }, [messages, selectedConversation?.id]);
 
   // Handle file selection
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -633,7 +721,7 @@ export default function MessagesPage(): JSX.Element {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // ✅ Loading state
+  // ✅ ENHANCED: Loading state with professional loader
   if (isLoadingConversations) {
     return (
       <div 
@@ -643,7 +731,7 @@ export default function MessagesPage(): JSX.Element {
           marginTop: '56px'
         }}
       >
-        <VideoLoader 
+        <EnterpriseLoader 
           size="xl"
           theme="brand"
           message="Loading messages..."
@@ -654,7 +742,7 @@ export default function MessagesPage(): JSX.Element {
     );
   }
 
-  // ✅ Error state
+  // ✅ ENHANCED: Error state with professional styling
   if (error) {
     return (
       <div 
@@ -690,9 +778,8 @@ export default function MessagesPage(): JSX.Element {
         marginTop: '56px'
       }}
     >
-      {/* FIXED: Mobile override for bottom navigation - removed jsx attribute */}
+      {/* Mobile override for bottom navigation */}
       <style>{`
-        /* Mobile: Account for both top navbar (56px) and bottom navigation (80px) */
         @media (max-width: 767px) {
           div[style*="calc(100vh - 56px)"] {
             height: calc(100vh - 56px - 80px) !important;
@@ -702,7 +789,6 @@ export default function MessagesPage(): JSX.Element {
           }
         }
         
-        /* Tablet and Desktop: Only account for top navbar */
         @media (min-width: 768px) {
           div[style*="calc(100vh - 56px)"] {
             height: calc(100vh - 56px) !important;
@@ -719,32 +805,18 @@ export default function MessagesPage(): JSX.Element {
           showMobileConversations ? 'w-full' : 'hidden'
         } md:flex md:w-80 border-r border-gray-200 flex flex-col h-full bg-white`}
       >
-        {/* ✅ Header with WebSocket status */}
+        {/* ✅ Enhanced Header with Connection Status */}
         <div className="p-3 border-b border-gray-200">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <h1 className="text-lg font-semibold text-gray-900">Messages</h1>
+              
               {/* ✅ WebSocket Connection Status */}
-              <div className="flex items-center gap-1">
-                {isConnected ? (
-                  <div className="relative group">
-                    <Wifi className="w-4 h-4 text-green-500" />
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                      Connected
-                    </div>
-                  </div>
-                ) : (
-                  <div className="relative group">
-                    <WifiOff 
-                      className="w-4 h-4 text-red-500 cursor-pointer" 
-                      onClick={reconnect}
-                    />
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                      Disconnected - Click to reconnect ({connectionState.reconnectAttempts} attempts)
-                    </div>
-                  </div>
-                )}
-              </div>
+              <ConnectionStatusIndicator 
+                isConnected={isConnected}
+                onReconnect={reconnect}
+                reconnectAttempts={connectionState.reconnectAttempts}
+              />
             </div>
             <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
               <Plus className="w-4 h-4 text-gray-600" />
@@ -927,7 +999,7 @@ export default function MessagesPage(): JSX.Element {
             <div className="flex-1 overflow-y-auto p-3 bg-gray-50">
               {isLoading ? (
                 <div className="flex items-center justify-center h-full">
-                  <VideoLoader 
+                  <EnterpriseLoader 
                     size="md"
                     theme="brand"
                     message="Loading messages..."
@@ -938,7 +1010,7 @@ export default function MessagesPage(): JSX.Element {
               ) : (
                 <div className="space-y-3">
                   {messages.map((message, index) => {
-                    const isMyMsg = isMyMessage(message);
+                    const isMyMsg = isMyMessageSync(message);
                     const showDate = index === 0 || 
                       new Date(message.createdAt).toDateString() !== 
                       new Date(messages[index - 1].createdAt).toDateString();
@@ -955,14 +1027,13 @@ export default function MessagesPage(): JSX.Element {
                         
                         <div className={`flex ${isMyMsg ? 'justify-end' : 'justify-start'} mb-2`}>
                           <div className={`max-w-[75%] ${isMyMsg ? 'order-2' : 'order-1'}`}>
-                            {/* ✅ Message Bubble with enhanced debugging */}
+                            {/* ✅ Message Bubble */}
                             <div 
                               className={`rounded-lg px-3 py-2 text-sm ${
                                 isMyMsg 
                                   ? 'bg-blue-500 text-white' 
                                   : 'bg-white text-gray-900 border border-gray-200'
                               } ${message.isOptimistic ? 'opacity-70' : ''}`}
-                              title={`Sender: ${message.senderId} | Current: ${currentUser?.id} | Mine: ${isMyMsg}`}
                             >
                               <p>{message.content}</p>
                               
@@ -1001,14 +1072,18 @@ export default function MessagesPage(): JSX.Element {
                                 </div>
                               )}
                               
-                              <div className={`flex items-center justify-end gap-1 mt-1 text-xs ${
+                              <div className={`flex items-center justify-between mt-1 text-xs ${
                                 isMyMsg ? 'text-white/70' : 'text-gray-500'
                               }`}>
                                 <span>{format(new Date(message.createdAt), 'p')}</span>
+                                
+                                {/* ✅ Enhanced message status for sent messages */}
                                 {isMyMsg && (
-                                  message.isRead ? 
-                                    <CheckCheck className="w-3 h-3" /> : 
-                                    <Check className="w-3 h-3" />
+                                  <MessageStatusIndicator
+                                    status={message.deliveryStatus || 'sent'}
+                                    error={message.error}
+                                    onRetry={message.deliveryStatus === 'failed' ? () => handleRetryMessage(message.id) : undefined}
+                                  />
                                 )}
                               </div>
                             </div>
@@ -1018,22 +1093,9 @@ export default function MessagesPage(): JSX.Element {
                     );
                   })}
                   
-                  {/* ✅ Typing Indicators */}
+                  {/* ✅ Enhanced Typing Indicators */}
                   {typingUsers.length > 0 && (
-                    <div className="flex justify-start mb-2">
-                      <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                          </div>
-                          <span className="text-xs">
-                            {typingUsers.length === 1 ? 'is' : 'are'} typing...
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                    <TypingIndicator users={typingUsers} />
                   )}
                   
                   <div ref={messagesEndRef} />
@@ -1041,7 +1103,7 @@ export default function MessagesPage(): JSX.Element {
               )}
             </div>
 
-            {/* ✅ Input Area */}
+            {/* ✅ ENHANCED Input Area */}
             <div className="flex-shrink-0 p-3 bg-white border-t border-gray-200">
               {/* ✅ Attachments Preview */}
               {attachments.length > 0 && (
@@ -1092,13 +1154,14 @@ export default function MessagesPage(): JSX.Element {
                       <Smile className="w-4 h-4 text-gray-400" />
                     </button>
                     
+                    {/* ✅ Enhanced Send Button */}
                     <button
                       onClick={handleSendMessage}
                       disabled={!newMessage.trim() || isSending}
                       className="p-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed bg-blue-500 hover:bg-blue-600 text-white"
                     >
                       {isSending ? 
-                        <VideoLoader size="xs" theme="white" className="w-4 h-4" message="Sending..." /> : 
+                        <EnterpriseLoader size="xs" theme="white" className="w-4 h-4" /> : 
                         <Send className="w-4 h-4" />
                       }
                     </button>
@@ -1108,7 +1171,7 @@ export default function MessagesPage(): JSX.Element {
             </div>
           </>
         ) : (
-          /* ✅ Empty State */
+          /* ✅ Enhanced Empty State */
           <div className="flex-1 flex items-center justify-center bg-gray-50">
             <div className="text-center">
               <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-3">
