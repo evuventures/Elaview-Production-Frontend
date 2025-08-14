@@ -10,11 +10,12 @@ import { useUser } from '@clerk/clerk-react';
 import { Button } from "@/components/ui/button";
 import { 
   X, ShoppingCart, Plus, CheckCircle, Star, MapPin, Users, TrendingUp, Eye,
-  Calendar, Heart, Calculator, ChevronRight, Package, Clock, DollarSign,
+  Calendar as CalendarIcon, Heart, Calculator, ChevronRight, Package, Clock, DollarSign,
   Building2, Info, AlertCircle, MessageSquare, Send
 } from "lucide-react";
 import { getAreaName, getNumericPrice } from '../utils/areaHelpers';
 import apiClient from '@/api/apiClient';
+import { Calendar } from '@/components/ui/calendar';
 
 export default function SpaceDetailsModal({ 
   selectedSpace, 
@@ -268,6 +269,35 @@ export default function SpaceDetailsModal({
     addToCart(selectedSpace, duration);
   };
 
+  // Availability calendar (minimal integration, derived from bookings)
+  const [month, setMonth] = useState(new Date());
+  const [bookedRanges, setBookedRanges] = useState([]);
+  const [loadingCal, setLoadingCal] = useState(false);
+  const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || '/api';
+
+  useEffect(() => {
+    if (!detailsExpanded || !selectedSpace?.id) return;
+    const y = month.getFullYear();
+    const m = `${month.getMonth() + 1}`.padStart(2, '0');
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        setLoadingCal(true);
+        const res = await fetch(`${API_BASE_URL}/spaces/${selectedSpace.id}/booked-dates?month=${y}-${m}`, { signal: controller.signal });
+        if (!res.ok) throw new Error('Failed to load availability');
+        const json = await res.json();
+        const ranges = (json?.data?.bookedRanges || []).map(r => ({ from: new Date(r.start), to: new Date(r.end) }));
+        setBookedRanges(ranges);
+      } catch (e) {
+        if (e.name !== 'AbortError') console.warn('Calendar load error:', e);
+      } finally {
+        setLoadingCal(false);
+      }
+    };
+    load();
+    return () => controller.abort();
+  }, [detailsExpanded, selectedSpace?.id, month]);
+
   if (!detailsExpanded || !selectedSpace) return null;
 
   const dailyPrice = getNumericPrice(selectedSpace);
@@ -308,9 +338,9 @@ export default function SpaceDetailsModal({
               />
             )}
             
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent pointer-events-none" />
             
-            <div className="absolute top-4 right-4 flex gap-2">
+            <div className="absolute top-4 right-4 flex gap-2 z-10">
               {/* Favorite button removed */}
               <Button
                 variant="ghost"
@@ -344,7 +374,7 @@ export default function SpaceDetailsModal({
 
           {/* Tabs */}
           <div className="flex border-b border-slate-200">
-            {['overview', 'analytics', 'pricing'].map((tab) => (
+            {['overview'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -367,83 +397,101 @@ export default function SpaceDetailsModal({
           <div className="flex-1 overflow-y-auto p-6">
             {activeTab === 'overview' && (
               <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Space Details</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500 mb-1">Space Type</p>
-                      <p className="font-medium text-slate-900">
-                        {selectedSpace.space_type || 'Advertisement Space'}
-                      </p>
-                    </div>
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500 mb-1">Dimensions</p>
-                      <p className="font-medium text-slate-900">
-                        {formatDimensions(selectedSpace.dimensions)}
-                      </p>
-                    </div>
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500 mb-1">Availability</p>
-                      <p className="font-medium text-green-600">Available Now</p>
-                    </div>
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      <p className="text-xs text-slate-500 mb-1">Min. Duration</p>
-                      <p className="font-medium text-slate-900">7 days</p>
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left: Space image */}
+      <div className="rounded-lg overflow-hidden bg-slate-100 border border-slate-200 min-h-[240px] flex items-center justify-center">
+                    {selectedSpace?.images ? (
+                      <img
+                        src={selectedSpace.images}
+                        alt={getAreaName(selectedSpace)}
+        className="w-full h-full max-h-[60vh] object-contain bg-slate-900"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div className="text-slate-500 text-sm p-6">No image available</div>
+                    )}
                   </div>
-                </div>
 
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Description</h3>
-                  <p className="text-slate-600 leading-relaxed">
-                    {selectedSpace.description || 'Prime advertising space in a high-traffic area. Perfect for brand visibility and customer engagement.'}
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Key Features</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      'High visibility location',
-                      '24/7 display time',
-                      'Weather-resistant materials',
-                      'Professional installation'
-                    ].map((feature, index) => (
-                      <div key={index} className="flex items-start gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-slate-600">{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* ✅ NEW: Property Owner Information */}
-                {owner && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Building2 className="w-5 h-5 text-blue-600 mt-0.5" />
-                      <div className="flex-1">
-                        <h4 className="font-medium text-slate-900 mb-1">Property Owner</h4>
-                        <p className="text-sm text-slate-600 mb-2">
-                          Managed by {owner.name}
-                        </p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleMessageOwner}
-                          className="text-blue-600 border-blue-300 hover:bg-blue-50 flex items-center gap-2"
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                          Message Owner
-                        </Button>
+                  {/* Right: Details + Availability */}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900 mb-3">Space Details</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-slate-50 rounded-lg p-3">
+                          <p className="text-xs text-slate-500 mb-1">Space Type</p>
+                          <p className="font-medium text-slate-900">
+                            {selectedSpace.space_type || 'Advertisement Space'}
+                          </p>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg p-3">
+                          <p className="text-xs text-slate-500 mb-1">Dimensions</p>
+                          <p className="font-medium text-slate-900">
+                            {formatDimensions(selectedSpace.dimensions)}
+                          </p>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg p-3">
+                          <p className="text-xs text-slate-500 mb-1">Min. Duration</p>
+                          <p className="font-medium text-slate-900">7 days</p>
+                        </div>
                       </div>
                     </div>
+
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900 mb-3">Description</h3>
+                      <p className="text-slate-600 leading-relaxed">
+                        {selectedSpace.description || 'Prime advertising space in a high-traffic area. Perfect for brand visibility and customer engagement.'}
+                      </p>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                          <CalendarIcon className="w-4 h-4" /> Availability
+                        </h3>
+                        {loadingCal && (
+                          <span className="text-xs text-slate-500">Loading…</span>
+                        )}
+                      </div>
+                      <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                        <Calendar
+                          mode="range"
+                          month={month}
+                          onMonthChange={setMonth}
+                          numberOfMonths={1}
+                          disabled={bookedRanges}
+                          showOutsideDays
+                        />
+                        <p className="mt-2 text-xs text-slate-500">Booked dates are disabled. You’ll select dates during checkout.</p>
+                      </div>
+                    </div>
+
+                    {/* Owner info (kept) */}
+                    {owner && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <Building2 className="w-5 h-5 text-blue-600 mt-0.5" />
+                          <div className="flex-1">
+                            <h4 className="font-medium text-slate-900 mb-1">Property Owner</h4>
+                            <p className="text-sm text-slate-600 mb-2">Managed by {owner.name}</p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleMessageOwner}
+                              className="text-blue-600 border-blue-300 hover:bg-blue-50 flex items-center gap-2"
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                              Message Owner
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             )}
 
-            {activeTab === 'analytics' && (
+            {false && activeTab === 'analytics' && (
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900 mb-3">Performance Metrics</h3>
@@ -525,7 +573,7 @@ export default function SpaceDetailsModal({
               </div>
             )}
 
-            {activeTab === 'pricing' && (
+            {false && activeTab === 'pricing' && (
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900 mb-3">Pricing Calculator</h3>
@@ -615,26 +663,6 @@ export default function SpaceDetailsModal({
               </div>
               
               <div className="flex items-center gap-3">
-                {/* ✅ NEW: Message Owner Button */}
-                <Button
-                  variant="outline"
-                  onClick={handleMessageOwner}
-                  className="flex items-center gap-2"
-                  style={{ 
-                    borderColor: '#4668AB',
-                    color: '#4668AB'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = '#EFF6FF';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = 'transparent';
-                  }}
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  Message Owner
-                </Button>
-
                 {isInCart && isInCart(selectedSpace.id) ? (
                   <Button
                     variant="outline"
@@ -665,7 +693,7 @@ export default function SpaceDetailsModal({
                   onMouseEnter={(e) => e.target.style.backgroundColor = '#39558C'}
                   onMouseLeave={(e) => e.target.style.backgroundColor = '#4668AB'}
                 >
-                  <Calendar className="w-4 h-4" />
+                  <CalendarIcon className="w-4 h-4" />
                   Book Now
                   <ChevronRight className="w-4 h-4" />
                 </Button>
