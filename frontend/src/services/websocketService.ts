@@ -3,9 +3,10 @@
 // ✅ FIXED: URL construction and environment variable handling
 
 // ✅ Message Types
+// ✅ Message Types
 export interface WSMessage {
   id: string;
-  type: 'NEW_MESSAGE' | 'MESSAGE_READ' | 'USER_TYPING' | 'USER_ONLINE' | 'USER_OFFLINE' | 'CONVERSATION_UPDATE';
+  type: 'NEW_MESSAGE' | 'MESSAGE_READ' | 'USER_TYPING' | 'USER_ONLINE' | 'USER_OFFLINE' | 'CONVERSATION_UPDATE' | 'PING' | 'PONG';
   conversationId?: string;
   senderId?: string;
   recipientId?: string;
