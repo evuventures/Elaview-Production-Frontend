@@ -472,13 +472,13 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
                           damping: 30,
                           duration: 0.2 
                         }}
-                        className="fixed top-14 right-4 w-72 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden z-[999999] backdrop-blur-sm"
+                        className="fixed top-14 bg-slate-200 right-4 w-72 border border-gray-200 rounded-xl shadow-2xl overflow-hidden z-[999999] backdrop-blur-sm"
                         style={{ 
                           transformOrigin: 'top right'
                         }}
                       >
                         {/* User Info Header */}
-                        <div className="px-4 py-4 bg-gray-50 border-b border-gray-200">
+                        <div className="px-4 py-4 bg-slate-300 border-b border-gray-200">
                           <div className="flex items-center gap-3">
                             {currentUser?.imageUrl ? (
                               <img 

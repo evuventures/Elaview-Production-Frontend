@@ -163,7 +163,7 @@ export default function SettingsPage() {
   );
 
   const Appearance = () => (
-    <Card className="glass-strong">
+    <Card className="glass-strong bg-slate-100">
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><Monitor className="w-4 h-4" /> Appearance</CardTitle>
         <CardDescription>Choose theme and display preferences</CardDescription>
@@ -377,7 +377,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-200">
       <div className="max-w-7xl mx-auto p-4 md:p-8">
         {/* Header */}
         <div className="mb-6 flex items-center gap-3">
@@ -394,7 +394,7 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           {/* Sidebar */}
           <div className="md:col-span-4 lg:col-span-3">
-            <Card className="glass-strong sticky top-20">
+            <Card className="glass-strong sticky top-20 bg-slate-100">
               <CardContent className="p-4 space-y-3">
                 <div className="relative">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -433,7 +433,7 @@ export default function SettingsPage() {
             {renderContent()}
 
             <div className="flex justify-end">
-              <Button onClick={onSave} disabled={saving} className="gap-2">
+              <Button onClick={onSave} disabled={saving} className="gap-2 bg-slate-100">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Save preferences
               </Button>

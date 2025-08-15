@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import billboard1 from './../../public/billboard1.png'
 import { 
   ArrowRight, 
   Search, 
@@ -133,7 +134,7 @@ export default function Landing() {
                   size="lg"
                   onClick={() => {
                     console.log('Navigating to /sign-in');
-                    navigate('/sign-in');
+                    navigate('/dashboard');
                   }}
                   className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 group"
                 >
@@ -162,7 +163,7 @@ export default function Landing() {
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-3xl transform rotate-6"></div>
                 <div className="relative bg-white p-8 rounded-3xl shadow-2xl">
                   <img 
-                    src="https://images.unsplash.com/photo-1556761175-b413da4baf72?w=600&h=400&fit=crop" 
+                    src={billboard1} 
                     alt="Modern advertising billboard in urban setting"
                     className="w-full h-64 object-cover rounded-2xl"
                   />

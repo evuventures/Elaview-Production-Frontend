@@ -1311,43 +1311,7 @@ export default function BrowsePage() {
             )}
 
             {/* ✅ ENHANCED: Map legend with progressive disclosure */}
-            <div 
-              className="absolute bottom-4 left-4"
-              style={{ zIndex: Z_INDEX.MAP }}
-            >
-              <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium text-xs text-slate-800">Map Legend</h4>
-                  <button
-                    onClick={() => setShowMapLegend(!showMapLegend)}
-                    className="text-xs text-slate-500 hover:text-slate-700"
-                  >
-                    {showMapLegend ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-                {showMapLegend && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <div 
-                        className="w-3 h-3 rounded-full shadow-sm"
-                        style={{ backgroundColor: '#4668AB' }}
-                      ></div>
-                      <span className="text-xs text-slate-600">Ad Spaces</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
-                      <span className="text-xs text-slate-600">Properties</span>
-                    </div>
-                    {userLocation && (
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full shadow-sm animate-pulse"></div>
-                        <span className="text-xs text-slate-600">Your Location</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+            
 
             {/* ✅ ENHANCED: Loading state with better messaging */}
             {isLoading && (

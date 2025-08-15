@@ -1,7 +1,10 @@
 // src/pages/messages/MessagesPage.tsx
-// ✅ UPDATED: Fixed user ID mismatch + added enterprise loading components
+// ✅ UPDATED: Equal padding on top and bottom of containers
+// ✅ FIXED: Syntax errors in CSS template literals
+// ✅ GLASSMORPHISM: Enhanced with premium glass design system
+// ✅ FIXED: User ID mismatch + added enterprise loading components
 // ✅ FIXED: Optimistic updates with proper user resolution
-// ✅ ENHANCED: Professional enterprise messaging UI
+// ✅ ENHANCED: Professional enterprise messaging UI with glassmorphism
 // ✅ WebSocket real-time messaging integration maintained
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -53,6 +56,36 @@ import {
   ConversationLoadingSkeleton,
   MessageLoadingSkeleton
 } from '@/components/ui/EnterpriseLoading';
+
+// ✅ GLASSMORPHISM: Enhanced Z-Index Scale for glass layering
+const Z_INDEX = {
+  BACKGROUND: 1,
+  GLASS_CONTAINERS: 10,
+  GLASS_OVERLAYS: 15,
+  CONTENT: 20,
+  MODAL_BACKDROP: 50,
+  MODAL_CONTENT: 55,
+  DROPDOWN: 60,
+  TOAST: 70
+};
+
+// ✅ EQUAL PADDING: Calculate navigation heights and equal spacing
+const NAVIGATION_HEIGHTS = {
+  DESKTOP: 64, // h-16 = 64px from your DesktopTopNavV2
+  MOBILE_TOP: 64, // h-16 = 64px from your MobileTopBar  
+  MOBILE_BOTTOM: 80 // Estimated mobile bottom nav height
+};
+
+const CONTAINER_PADDING = 24; // 24px padding for equal spacing top and bottom
+
+// ✅ FIXED: Pre-calculate CSS values to avoid template literal syntax errors
+const CSS_VALUES = {
+  DESKTOP_TOTAL_PADDING: NAVIGATION_HEIGHTS.DESKTOP + (CONTAINER_PADDING * 2),
+  MOBILE_TOTAL_PADDING: NAVIGATION_HEIGHTS.MOBILE_TOP + NAVIGATION_HEIGHTS.MOBILE_BOTTOM + (CONTAINER_PADDING * 2),
+  DESKTOP_TOP_PADDING: NAVIGATION_HEIGHTS.DESKTOP + CONTAINER_PADDING,
+  MOBILE_TOP_PADDING: NAVIGATION_HEIGHTS.MOBILE_TOP + CONTAINER_PADDING,
+  MOBILE_BOTTOM_PADDING: NAVIGATION_HEIGHTS.MOBILE_BOTTOM + CONTAINER_PADDING
+};
 
 // ✅ TypeScript interfaces (enhanced)
 interface User {
@@ -145,6 +178,40 @@ export default function MessagesPage(): JSX.Element {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ✅ EQUAL PADDING: Enhanced console logging for layout verification
+  useEffect(() => {
+    console.log('🎨 MESSAGES EQUAL PADDING: Enhanced styling applied', {
+      navigationHeights: NAVIGATION_HEIGHTS,
+      containerPadding: CONTAINER_PADDING,
+      calculatedValues: CSS_VALUES,
+      layoutOptimizations: [
+        'EQUAL SPACING: Top and bottom padding now balanced',
+        'RESPONSIVE: Mobile and desktop padding calculated separately',
+        'NAVIGATION AWARE: Accounts for actual navigation component heights',
+        'CONTAINER SIZING: Glassmorphism containers sized to fit with equal spacing',
+        'OVERFLOW PREVENTION: Fixed positioning prevents page-level scrolling',
+        'GLASSMORPHISM: Premium glass containers maintain visual hierarchy'
+      ],
+      spacingCalculations: {
+        desktop: {
+          totalHeight: '100vh',
+          navigationHeight: `${NAVIGATION_HEIGHTS.DESKTOP}px`,
+          availableHeight: `calc(100vh - ${NAVIGATION_HEIGHTS.DESKTOP}px)`,
+          containerPadding: `${CONTAINER_PADDING}px top and bottom`,
+          containerHeight: `calc(100vh - ${CSS_VALUES.DESKTOP_TOTAL_PADDING}px)`
+        },
+        mobile: {
+          totalHeight: '100vh', 
+          navigationHeight: `${NAVIGATION_HEIGHTS.MOBILE_TOP + NAVIGATION_HEIGHTS.MOBILE_BOTTOM}px`,
+          availableHeight: `calc(100vh - ${NAVIGATION_HEIGHTS.MOBILE_TOP + NAVIGATION_HEIGHTS.MOBILE_BOTTOM}px)`,
+          containerPadding: `${CONTAINER_PADDING}px top and bottom`,
+          containerHeight: `calc(100vh - ${CSS_VALUES.MOBILE_TOTAL_PADDING}px)`
+        }
+      },
+      timestamp: new Date().toISOString()
+    });
+  }, []);
 
   // ✅ ENHANCED: User ID resolution with caching
   const resolveUser = useCallback(async (identifier: string): Promise<User | null> => {
@@ -482,144 +549,167 @@ export default function MessagesPage(): JSX.Element {
     setTimeout(scrollToBottom, 100);
   }, [loadMessages, scrollToBottom]);
 
-  // ✅ ENHANCED: Send message with optimistic updates and proper user resolution
-  const handleSendMessage = useCallback(async () => {
-    if (!newMessage.trim() || !selectedConversation?.id || !currentUser?.id) return;
-    
-    const messageContent = newMessage.trim();
-    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    setNewMessage('');
-    setIsSending(true);
-    
-    // ✅ Stop typing indicator
-    handleTypingChange(false);
-    
-    console.log('📤 SEND MESSAGE DEBUG:', {
-      currentUserId: currentUser.id,
-      conversationId: selectedConversation.id,
-      content: messageContent.slice(0, 30) + '...'
-    });
-    
-    // ✅ Create optimistic message with proper user data
-    const optimisticMessage: Message = {
-      id: tempId,
-      content: messageContent,
-      senderId: currentUser.id,
-      createdAt: new Date().toISOString(),
-      isRead: false,
-      isOptimistic: true,
-      deliveryStatus: 'sending',
-      sender: {
-        id: currentUser.id,
-        clerkId: currentUser.id,
+  // ✅ FIXED: Send message with proper user ID resolution
+const handleSendMessage = useCallback(async () => {
+  if (!newMessage.trim() || !selectedConversation?.id || !currentUser?.id) return;
+  
+  const messageContent = newMessage.trim();
+  const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  setNewMessage('');
+  setIsSending(true);
+  
+  // ✅ Stop typing indicator
+  handleTypingChange(false);
+  
+  console.log('📤 SEND MESSAGE DEBUG:', {
+    currentUserId: currentUser.id,
+    conversationId: selectedConversation.id,
+    content: messageContent.slice(0, 30) + '...'
+  });
+  
+  // ✅ Create optimistic message with proper user data
+  const optimisticMessage: Message = {
+    id: tempId,
+    content: messageContent,
+    senderId: currentUser.id,
+    createdAt: new Date().toISOString(),
+    isRead: false,
+    isOptimistic: true,
+    deliveryStatus: 'sending',
+    sender: {
+      id: currentUser.id,
+      clerkId: currentUser.id,
+      firstName: currentUser.firstName || undefined,
+      lastName: currentUser.lastName || undefined,
+      full_name: currentUser.fullName || undefined,
+      imageUrl: currentUser.imageUrl || undefined,
+      displayName: getUserDisplayName({
         firstName: currentUser.firstName || undefined,
         lastName: currentUser.lastName || undefined,
-        full_name: currentUser.fullName || undefined,
-        imageUrl: currentUser.imageUrl || undefined,
-        displayName: getUserDisplayName({
+        full_name: currentUser.fullName || undefined
+      } as User)
+    },
+    attachments: [...attachments]
+  };
+
+  console.log('📝 OPTIMISTIC MESSAGE:', {
+    id: optimisticMessage.id,
+    senderId: optimisticMessage.senderId,
+    currentUserId: currentUser.id,
+    willMatch: true // Always true for optimistic messages
+  });
+
+  // ✅ Add optimistic message to state
+  setOptimisticMessages(prev => new Map(prev.set(tempId, optimisticMessage)));
+  setMessages(prev => [...prev, optimisticMessage]);
+  setAttachments([]);
+  scrollToBottom();
+
+  try {
+    // ✅ Send via WebSocket for real-time delivery
+    if (isConnected) {
+      sendChatMessage(
+        selectedConversation.id, 
+        messageContent,
+        otherUser?.id
+      );
+    }
+    
+    // ✅ Send via API for persistence
+    const response = await apiClient.sendMessageToConversation(
+      selectedConversation.id,
+      {
+        content: messageContent,
+        type: 'GENERAL',
+        businessContext: attachments.length > 0 ? { hasAttachments: true } : undefined
+      }
+    );
+
+    if (response.success && isMountedRef.current) {
+      console.log('✅ Message sent successfully via API');
+      
+      // ✅ FIXED: Ensure the real message maintains correct ownership
+      const realMessage: Message = {
+        ...response.data,
+        isOptimistic: false,
+        deliveryStatus: 'sent' as const,
+        // ✅ CRITICAL FIX: Override senderId to ensure it matches currentUser.id
+        senderId: currentUser.id,
+        // ✅ CRITICAL FIX: Ensure sender data is preserved
+        sender: {
+          id: currentUser.id,
+          clerkId: currentUser.id,
           firstName: currentUser.firstName || undefined,
           lastName: currentUser.lastName || undefined,
-          full_name: currentUser.fullName || undefined
-        } as User)
-      },
-      attachments: [...attachments]
-    };
-
-    console.log('📝 OPTIMISTIC MESSAGE:', {
-      id: optimisticMessage.id,
-      senderId: optimisticMessage.senderId,
-      currentUserId: currentUser.id,
-      willMatch: true // Always true for optimistic messages
-    });
-
-    // ✅ Add optimistic message to state
-    setOptimisticMessages(prev => new Map(prev.set(tempId, optimisticMessage)));
-    setMessages(prev => [...prev, optimisticMessage]);
-    setAttachments([]);
-    scrollToBottom();
-
-    try {
-      // ✅ Send via WebSocket for real-time delivery
-      if (isConnected) {
-        sendChatMessage(
-          selectedConversation.id, 
-          messageContent,
-          otherUser?.id
-        );
-      }
-      
-      // ✅ Send via API for persistence
-      const response = await apiClient.sendMessageToConversation(
-        selectedConversation.id,
-        {
-          content: messageContent,
-          type: 'GENERAL',
-          businessContext: attachments.length > 0 ? { hasAttachments: true } : undefined
+          full_name: currentUser.fullName || undefined,
+          imageUrl: currentUser.imageUrl || undefined,
+          displayName: getUserDisplayName({
+            firstName: currentUser.firstName || undefined,
+            lastName: currentUser.lastName || undefined,
+            full_name: currentUser.fullName || undefined
+          } as User)
         }
+      };
+
+      console.log('🔧 REAL MESSAGE FIXED:', {
+        originalSenderId: response.data.senderId,
+        fixedSenderId: realMessage.senderId,
+        currentUserId: currentUser.id,
+        willMatchNow: true
+      });
+
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === tempId ? realMessage : msg
+        )
       );
-
-      if (response.success && isMountedRef.current) {
-        console.log('✅ Message sent successfully via API');
-        
-        // ✅ Replace optimistic message with real message
-        const realMessage = {
-          ...response.data,
-          isOptimistic: false,
-          deliveryStatus: 'sent' as const
-        };
-
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === tempId ? realMessage : msg
-          )
-        );
-        
-        setOptimisticMessages(prev => {
-          const newMap = new Map(prev);
-          newMap.delete(tempId);
-          return newMap;
-        });
-        
-        // ✅ Update conversation's last message
-        setConversations(prev =>
-          prev.map(conv =>
-            conv.id === selectedConversation.id
-              ? { 
-                  ...conv, 
-                  lastMessage: realMessage,
-                  updatedAt: realMessage.createdAt
-                }
-              : conv
-          )
-        );
-      } else {
-        throw new Error(response.error || 'Failed to send message');
-      }
-    } catch (error: any) {
-      console.error('❌ Error sending message:', error);
       
-      if (isMountedRef.current) {
-        // ✅ Mark optimistic message as failed
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === tempId
-              ? { ...msg, deliveryStatus: 'failed' as const, error: error.message }
-              : msg
-          )
-        );
-        
-        // Don't remove the message, let user retry
-        if (!isConnected) {
-          setNewMessage(messageContent); // Restore message text if no websocket
-        }
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setIsSending(false);
+      setOptimisticMessages(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(tempId);
+        return newMap;
+      });
+      
+      // ✅ Update conversation's last message
+      setConversations(prev =>
+        prev.map(conv =>
+          conv.id === selectedConversation.id
+            ? { 
+                ...conv, 
+                lastMessage: realMessage,
+                updatedAt: realMessage.createdAt
+              }
+            : conv
+        )
+      );
+    } else {
+      throw new Error(response.error || 'Failed to send message');
+    }
+  } catch (error: any) {
+    console.error('❌ Error sending message:', error);
+    
+    if (isMountedRef.current) {
+      // ✅ Mark optimistic message as failed
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === tempId
+            ? { ...msg, deliveryStatus: 'failed' as const, error: error.message }
+            : msg
+        )
+      );
+      
+      // Don't remove the message, let user retry
+      if (!isConnected) {
+        setNewMessage(messageContent); // Restore message text if no websocket
       }
     }
-  }, [newMessage, selectedConversation, currentUser, attachments, scrollToBottom, isConnected, sendChatMessage, otherUser?.id, handleTypingChange, getUserDisplayName]);
+  } finally {
+    if (isMountedRef.current) {
+      setIsSending(false);
+    }
+  }
+}, [newMessage, selectedConversation, currentUser, attachments, scrollToBottom, isConnected, sendChatMessage, otherUser?.id, handleTypingChange, getUserDisplayName]);
 
   // ✅ Retry failed message
   const handleRetryMessage = useCallback(async (messageId: string) => {
@@ -721,46 +811,122 @@ export default function MessagesPage(): JSX.Element {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // ✅ ENHANCED: Loading state with professional loader
+  // ✅ EQUAL PADDING: Enhanced loading state with proper spacing
   if (isLoadingConversations) {
     return (
       <div 
-        className="flex w-full items-center justify-center bg-gray-50 messages-loading-state"
+        className="flex items-center justify-center messages-loading-state relative"
         style={{ 
-          height: 'calc(100vh - 56px)',
-          marginTop: '56px'
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          overflow: 'hidden',
+          background: 'linear-gradient(135deg, #F8FAFF 0%, #E8F2FF 50%, #F0F8FF 100%)'
         }}
       >
-        <EnterpriseLoader 
-          size="xl"
-          theme="brand"
-          message="Loading messages..."
-          showMessage={true}
-          centered={true}
+        {/* ✅ GLASSMORPHISM: Enhanced background pattern */}
+        <div 
+          className="absolute inset-0 opacity-30"
+          style={{
+            background: 'radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 40% 40%, rgba(120, 198, 119, 0.3) 0%, transparent 50%)'
+          }}
         />
+        
+        {/* ✅ GLASSMORPHISM: Premium loading container */}
+        <div 
+          className="relative rounded-2xl p-8 text-center max-w-md mx-4 overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.25) 100%)',
+            backdropFilter: 'blur(20px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            border: '1px solid rgba(255, 255, 255, 0.18)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(255, 255, 255, 0.05)',
+            zIndex: Z_INDEX.GLASS_CONTAINERS
+          }}
+        >
+          {/* Glass reflection overlay */}
+          <div 
+            className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-t-2xl"
+            style={{
+              background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%)',
+              zIndex: Z_INDEX.GLASS_OVERLAYS
+            }}
+          />
+          
+          <div style={{ zIndex: Z_INDEX.CONTENT }} className="relative">
+            <EnterpriseLoader 
+              size="xl"
+              theme="brand"
+              message="Loading messages..."
+              showMessage={true}
+              centered={true}
+            />
+          </div>
+        </div>
       </div>
     );
   }
 
-  // ✅ ENHANCED: Error state with professional styling
+  // ✅ EQUAL PADDING: Enhanced error state with proper spacing
   if (error) {
     return (
       <div 
-        className="flex w-full items-center justify-center bg-gray-50 messages-loading-state"
+        className="flex items-center justify-center messages-loading-state relative"
         style={{ 
-          height: 'calc(100vh - 56px)',
-          marginTop: '56px'
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          overflow: 'hidden',
+          background: 'linear-gradient(135deg, #FFF8F8 0%, #FFE8E8 50%, #FFF0F0 100%)'
         }}
       >
-        <div className="text-center max-w-md mx-4">
-          <div className="text-center p-8 rounded-xl bg-white shadow-lg">
+        {/* Error background pattern */}
+        <div 
+          className="absolute inset-0 opacity-20"
+          style={{
+            background: 'radial-gradient(circle at 20% 80%, rgba(239, 68, 68, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(239, 68, 68, 0.2) 0%, transparent 50%)'
+          }}
+        />
+        
+        <div 
+          className="relative rounded-2xl p-8 text-center max-w-md mx-4 overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.25) 100%)',
+            backdropFilter: 'blur(20px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            border: '1px solid rgba(255, 255, 255, 0.18)',
+            boxShadow: '0 8px 32px rgba(239, 68, 68, 0.15), 0 4px 16px rgba(239, 68, 68, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(255, 255, 255, 0.05)',
+            zIndex: Z_INDEX.GLASS_CONTAINERS
+          }}
+        >
+          {/* Glass reflection overlay */}
+          <div 
+            className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-t-2xl"
+            style={{
+              background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%)',
+              zIndex: Z_INDEX.GLASS_OVERLAYS
+            }}
+          />
+          
+          <div style={{ zIndex: Z_INDEX.CONTENT }} className="relative">
             <AlertCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Connection Error</h3>
             <p className="text-red-600 mb-4">{error}</p>
             <button
               onClick={loadConversations}
-              className="px-6 py-3 rounded-lg text-white font-bold hover:opacity-90 transition-opacity"
-              style={{ background: 'linear-gradient(135deg, #667EEA 0%, #764BA2 100%)' }}
+              className="px-6 py-3 rounded-lg text-white font-bold hover:opacity-90 transition-all duration-300 relative overflow-hidden"
+              style={{ 
+                background: 'linear-gradient(135deg, #667EEA 0%, #764BA2 100%)',
+                boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)'
+              }}
             >
               Try Again
             </button>
@@ -772,418 +938,847 @@ export default function MessagesPage(): JSX.Element {
 
   return (
     <div 
-      className="flex w-full bg-slate-200"
+      className="flex messages-container"
       style={{ 
-        height: 'calc(100vh - 56px)',
-        marginTop: '56px'
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        overflow: 'hidden',
+        background: 'linear-gradient(135deg, #F8FAFF 0%, #E8F2FF 25%, #F0F8FF 50%, #E8F2FF 75%, #F8FAFF 100%)'
       }}
     >
-      {/* Mobile override for bottom navigation */}
+      {/* ✅ GLASSMORPHISM: Enhanced background with subtle patterns */}
+      <div 
+        className="absolute inset-0 opacity-40"
+        style={{
+          background: 'radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%), radial-gradient(circle at 40% 40%, rgba(120, 198, 119, 0.1) 0%, transparent 50%)',
+          zIndex: Z_INDEX.BACKGROUND
+        }}
+      />
+
+      {/* ✅ FIXED: Enhanced mobile/desktop responsive styling with correct CSS syntax */}
       <style>{`
-        @media (max-width: 767px) {
-          div[style*="calc(100vh - 56px)"] {
-            height: calc(100vh - 56px - 80px) !important;
+        /* ✅ EQUAL PADDING: Desktop layout with balanced spacing */
+        @media (min-width: 768px) {
+          .messages-container {
+            padding: ${CONTAINER_PADDING}px;
+            padding-top: ${CSS_VALUES.DESKTOP_TOP_PADDING}px;
+            padding-bottom: ${CONTAINER_PADDING}px;
           }
-          .messages-loading-state {
-            height: calc(100vh - 56px - 80px) !important;
+          .glassmorphism-container {
+            height: calc(100vh - ${CSS_VALUES.DESKTOP_TOTAL_PADDING}px) !important;
+            max-height: calc(100vh - ${CSS_VALUES.DESKTOP_TOTAL_PADDING}px) !important;
           }
         }
         
-        @media (min-width: 768px) {
-          div[style*="calc(100vh - 56px)"] {
-            height: calc(100vh - 56px) !important;
+        /* ✅ EQUAL PADDING: Mobile layout with balanced spacing */
+        @media (max-width: 767px) {
+          .messages-container {
+            padding: ${CONTAINER_PADDING}px;
+            padding-top: ${CSS_VALUES.MOBILE_TOP_PADDING}px;
+            padding-bottom: ${CSS_VALUES.MOBILE_BOTTOM_PADDING}px;
           }
+          .glassmorphism-container {
+            height: calc(100vh - ${CSS_VALUES.MOBILE_TOTAL_PADDING}px) !important;
+            max-height: calc(100vh - ${CSS_VALUES.MOBILE_TOTAL_PADDING}px) !important;
+          }
+        }
+        
+        /* ✅ CRITICAL: Prevent any scrolling */
+        .messages-container, .glassmorphism-container {
+          overflow: hidden !important;
+        }
+        
+        /* ✅ EQUAL PADDING: Loading states get the same treatment */
+        .messages-loading-state {
+          padding: ${CONTAINER_PADDING}px !important;
+        }
+        
+        @media (min-width: 768px) {
           .messages-loading-state {
-            height: calc(100vh - 56px) !important;
+            padding-top: ${CSS_VALUES.DESKTOP_TOP_PADDING}px !important;
+            padding-bottom: ${CONTAINER_PADDING}px !important;
+          }
+        }
+        
+        @media (max-width: 767px) {
+          .messages-loading-state {
+            padding-top: ${CSS_VALUES.MOBILE_TOP_PADDING}px !important;
+            padding-bottom: ${CSS_VALUES.MOBILE_BOTTOM_PADDING}px !important;
           }
         }
       `}</style>
 
-      {/* ✅ CONVERSATIONS SIDEBAR */}
+      {/* ✅ GLASSMORPHISM: CONVERSATIONS SIDEBAR with enhanced glass effect */}
       <div 
         className={`${
           showMobileConversations ? 'w-full' : 'hidden'
-        } md:flex md:w-80 border-r border-gray-200 flex flex-col h-full bg-white`}
+        } md:flex md:w-80 flex-col md:mr-6`}
+        style={{ 
+          zIndex: Z_INDEX.GLASS_CONTAINERS
+        }}
       >
-        {/* ✅ Enhanced Header with Connection Status */}
-        <div className="p-3 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <h1 className="text-lg font-semibold text-gray-900">Messages</h1>
-              
-              {/* ✅ WebSocket Connection Status */}
-              <ConnectionStatusIndicator 
-                isConnected={isConnected}
-                onReconnect={reconnect}
-                reconnectAttempts={connectionState.reconnectAttempts}
-              />
-            </div>
-            <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-              <Plus className="w-4 h-4 text-gray-600" />
-            </button>
-          </div>
+        {/* ✅ GLASSMORPHISM: Premium glass container with equal padding */}
+        <div 
+          className="glassmorphism-container rounded-2xl overflow-hidden relative"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.25) 100%)',
+            backdropFilter: 'blur(20px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            border: '1px solid rgba(255, 255, 255, 0.18)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(255, 255, 255, 0.05)'
+          }}
+        >
+          {/* ✅ GLASSMORPHISM: Glass reflection overlay */}
+          <div 
+            className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-t-2xl"
+            style={{
+              background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%)',
+              zIndex: Z_INDEX.GLASS_OVERLAYS
+            }}
+          />
 
-          {/* ✅ Search */}
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search conversations..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-        </div>
-
-        {/* ✅ Conversations List */}
-        <div className="flex-1 overflow-y-auto">
-          {filteredConversations.length === 0 ? (
-            <div className="p-4 text-center">
-              <MessageCircle className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              <p className="text-sm text-gray-600">No conversations yet</p>
-            </div>
-          ) : (
-            filteredConversations.map(conversation => {
-              const otherParticipant = conversation.otherParticipants?.[0];
-              const user = otherParticipant?.user;
-              
-              if (!user) return null;
-              
-              const isSelected = selectedConversation?.id === conversation.id;
-              const isOnline = onlineUsers.has(user.id);
-              
-              return (
-                <div
-                  key={conversation.id}
-                  onClick={() => handleSelectConversation(conversation)}
-                  className={`p-3 cursor-pointer transition-colors hover:bg-gray-50 ${
-                    isSelected ? 'bg-blue-50 border-l-2 border-blue-500' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    {/* ✅ Avatar */}
-                    <div className="relative flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
-                        {user.imageUrl ? (
-                          <img 
-                            src={user.imageUrl} 
-                            alt={getUserDisplayName(user)}
-                            className="w-10 h-10 rounded-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-sm font-medium text-gray-600">
-                            {getUserDisplayName(user).slice(0, 2).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      {isOnline && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
-                      )}
-                    </div>
-
-                    {/* ✅ Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <h3 className="font-medium text-gray-900 truncate text-sm">
-                          {getUserDisplayName(user)}
-                        </h3>
-                        <span className="text-xs text-gray-500 flex-shrink-0">
-                          {conversation.lastMessage ? 
-                            format(new Date(conversation.lastMessage.createdAt), 'p') :
-                            format(new Date(conversation.createdAt), 'p')
-                          }
-                        </span>
-                      </div>
-                      
-                      <p className="text-xs text-gray-600 truncate">
-                        {conversation.lastMessage?.content || conversation.subject || 'New conversation'}
-                      </p>
-
-                      {/* ✅ Business context */}
-                      {(conversation.property || conversation.campaign || conversation.booking) && (
-                        <p className="text-xs text-blue-600 truncate mt-0.5">
-                          • {conversation.property?.title || 
-                             conversation.campaign?.title || 
-                             `Booking #${conversation.booking?.id?.slice(-6)}`}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* ✅ Unread Badge */}
-                    {conversation.unreadCount > 0 && (
-                      <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
-                        <span className="text-xs font-medium text-white">
-                          {conversation.unreadCount}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-
-      {/* ✅ MESSAGES PANEL */}
-      <div 
-        className={`${
-          showMobileConversations ? 'hidden' : 'flex'
-        } md:flex flex-1 flex-col h-full bg-white`}
-      >
-        {selectedConversation && otherUser ? (
-          <>
-            {/* ✅ Header */}
-            <div className="flex-shrink-0 p-3 border-b border-gray-200 bg-white">
-              <div className="flex items-center justify-between">
+          {/* Content with proper z-index */}
+          <div className="flex flex-col relative h-full" style={{ zIndex: Z_INDEX.CONTENT }}>
+            {/* ✅ Enhanced Header with Connection Status */}
+            <div 
+              className="p-4 relative"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.4) 100%)',
+                backdropFilter: 'blur(15px) saturate(150%)',
+                WebkitBackdropFilter: 'blur(15px) saturate(150%)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.15)'
+              }}
+            >
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setShowMobileConversations(true)}
-                    className="md:hidden p-1.5 rounded-lg hover:bg-gray-100"
-                  >
-                    <ChevronLeft className="w-4 h-4 text-gray-600" />
-                  </button>
+                  <h1 className="text-lg font-semibold text-gray-900" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>Messages</h1>
                   
-                  <div className="relative">
-                    <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
-                      {otherUser.imageUrl ? (
-                        <img 
-                          src={otherUser.imageUrl} 
-                          alt={getUserDisplayName(otherUser)}
-                          className="w-8 h-8 rounded-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-xs font-medium text-gray-600">
-                          {getUserDisplayName(otherUser).slice(0, 2).toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    {onlineUsers.has(otherUser.id) && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border border-white" />
-                    )}
-                  </div>
-                  
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="font-medium text-gray-900 text-sm">
-                        {getUserDisplayName(otherUser)}
-                      </h2>
-                      {onlineUsers.has(otherUser.id) && (
-                        <div className="w-2 h-2 bg-green-500 rounded-full" />
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-600">
-                      {selectedConversation.property?.title || 
-                       selectedConversation.campaign?.title ||
-                       otherUser.businessName || 'Space Inquiry'}
-                    </p>
-                  </div>
+                  {/* ✅ WebSocket Connection Status */}
+                  <ConnectionStatusIndicator 
+                    isConnected={isConnected}
+                    onReconnect={reconnect}
+                    reconnectAttempts={connectionState.reconnectAttempts}
+                  />
                 </div>
+                <button 
+                  className="p-1.5 rounded-lg transition-all duration-300 relative overflow-hidden"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
+                    backdropFilter: 'blur(10px) saturate(150%)',
+                    WebkitBackdropFilter: 'blur(10px) saturate(150%)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0px)';
+                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                  }}
+                >
+                  {/* Glass reflection on button */}
+                  <div 
+                    className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-lg"
+                    style={{
+                      background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%)'
+                    }}
+                  />
+                  <Plus className="w-4 h-4 text-gray-600 relative z-10" />
+                </button>
+              </div>
 
-                <div className="flex items-center gap-1">
-                  <button className="p-1.5 rounded-lg hover:bg-gray-100">
-                    <Phone className="w-4 h-4 text-gray-600" />
-                  </button>
-                  <button className="p-1.5 rounded-lg hover:bg-gray-100">
-                    <Video className="w-4 h-4 text-gray-600" />
-                  </button>
-                  <button className="p-1.5 rounded-lg hover:bg-gray-100">
-                    <MoreVertical className="w-4 h-4 text-gray-600" />
-                  </button>
-                </div>
+              {/* ✅ Enhanced Search with glassmorphism */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search conversations..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-8 pr-3 py-2 text-sm rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none transition-all duration-300"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.7) 100%)',
+                    backdropFilter: 'blur(10px) saturate(120%)',
+                    WebkitBackdropFilter: 'blur(10px) saturate(120%)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 0 rgba(255, 255, 255, 0.1)'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = 'rgba(70, 104, 171, 0.5)';
+                    e.target.style.boxShadow = 'inset 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 0 2px rgba(70, 104, 171, 0.2)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+                    e.target.style.boxShadow = 'inset 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 0 rgba(255, 255, 255, 0.1)';
+                  }}
+                />
               </div>
             </div>
 
-            {/* ✅ Messages Area */}
-            <div className="flex-1 overflow-y-auto p-3 bg-gray-50">
-              {isLoading ? (
-                <div className="flex items-center justify-center h-full">
-                  <EnterpriseLoader 
-                    size="md"
-                    theme="brand"
-                    message="Loading messages..."
-                    showMessage={true}
-                    centered={true}
-                  />
+            {/* ✅ GLASSMORPHISM: Enhanced Conversations List */}
+            <div className="flex-1 overflow-y-auto">
+              {filteredConversations.length === 0 ? (
+                <div className="p-4 text-center">
+                  <MessageCircle className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                  <p className="text-sm text-gray-600" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)'}}>No conversations yet</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {messages.map((message, index) => {
-                    const isMyMsg = isMyMessageSync(message);
-                    const showDate = index === 0 || 
-                      new Date(message.createdAt).toDateString() !== 
-                      new Date(messages[index - 1].createdAt).toDateString();
-                    
-                    return (
-                      <div key={message.id}>
-                        {showDate && (
-                          <div className="flex justify-center mb-3">
-                            <div className="px-2 py-1 rounded-full text-xs text-gray-500 bg-white">
-                              {format(new Date(message.createdAt), 'MMM d, yyyy')}
-                            </div>
+                filteredConversations.map(conversation => {
+                  const otherParticipant = conversation.otherParticipants?.[0];
+                  const user = otherParticipant?.user;
+                  
+                  if (!user) return null;
+                  
+                  const isSelected = selectedConversation?.id === conversation.id;
+                  const isOnline = onlineUsers.has(user.id);
+                  
+                  return (
+                    <div
+                      key={conversation.id}
+                      onClick={() => handleSelectConversation(conversation)}
+                      className={`mx-2 my-1 p-3 rounded-xl cursor-pointer transition-all duration-300 relative overflow-hidden ${
+                        isSelected ? 'ring-2' : ''
+                      }`}
+                      style={{
+                        background: isSelected 
+                          ? 'linear-gradient(135deg, rgba(70, 104, 171, 0.15) 0%, rgba(70, 104, 171, 0.25) 50%, rgba(70, 104, 171, 0.15) 100%)'
+                          : 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.4) 100%)',
+                        backdropFilter: 'blur(15px) saturate(150%)',
+                        WebkitBackdropFilter: 'blur(15px) saturate(150%)',
+                        border: `1px solid ${isSelected ? 'rgba(70, 104, 171, 0.3)' : 'rgba(255, 255, 255, 0.15)'}`,
+                        ringColor: isSelected ? '#4668AB' : 'transparent',
+                        boxShadow: isSelected 
+                          ? '0 4px 16px rgba(70, 104, 171, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                          : '0 2px 8px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0.5) 100%)';
+                          e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.transform = 'translateY(0px)';
+                          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.4) 100%)';
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                        }
+                      }}
+                    >
+                      {/* ✅ GLASSMORPHISM: Glass reflection on conversation items */}
+                      <div 
+                        className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-xl"
+                        style={{
+                          background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%)'
+                        }}
+                      />
+
+                      <div className="flex items-center gap-3 relative z-10">
+                        {/* ✅ Avatar */}
+                        <div className="relative flex-shrink-0">
+                          <div 
+                            className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden"
+                            style={{
+                              background: 'linear-gradient(135deg, rgba(156, 163, 175, 0.3) 0%, rgba(156, 163, 175, 0.5) 100%)',
+                              backdropFilter: 'blur(10px)',
+                              WebkitBackdropFilter: 'blur(10px)',
+                              border: '1px solid rgba(255, 255, 255, 0.2)'
+                            }}
+                          >
+                            {user.imageUrl ? (
+                              <img 
+                                src={user.imageUrl} 
+                                alt={getUserDisplayName(user)}
+                                className="w-10 h-10 rounded-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-sm font-medium text-gray-600" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>
+                                {getUserDisplayName(user).slice(0, 2).toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                          {isOnline && (
+                            <div 
+                              className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2"
+                              style={{
+                                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                borderColor: 'rgba(255, 255, 255, 0.8)',
+                                boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
+                              }}
+                            />
+                          )}
+                        </div>
+
+                        {/* ✅ Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <h3 className="font-medium text-gray-900 truncate text-sm" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>
+                              {getUserDisplayName(user)}
+                            </h3>
+                            <span className="text-xs text-gray-500 flex-shrink-0" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)'}}>
+                              {conversation.lastMessage ? 
+                                format(new Date(conversation.lastMessage.createdAt), 'p') :
+                                format(new Date(conversation.createdAt), 'p')
+                              }
+                            </span>
+                          </div>
+                          
+                          <p className="text-xs text-gray-600 truncate" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)'}}>
+                            {conversation.lastMessage?.content || conversation.subject || 'New conversation'}
+                          </p>
+
+                          {/* ✅ Business context */}
+                          {(conversation.property || conversation.campaign || conversation.booking) && (
+                            <p 
+                              className="text-xs truncate mt-0.5"
+                              style={{ 
+                                color: '#4668AB',
+                                textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'
+                              }}
+                            >
+                              • {conversation.property?.title || 
+                                 conversation.campaign?.title || 
+                                 `Booking #${conversation.booking?.id?.slice(-6)}`}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* ✅ GLASSMORPHISM: Enhanced Unread Badge */}
+                        {conversation.unreadCount > 0 && (
+                          <div 
+                            className="w-5 h-5 rounded-full flex items-center justify-center relative overflow-hidden"
+                            style={{
+                              background: 'linear-gradient(135deg, #4668AB 0%, #3A5490 100%)',
+                              backdropFilter: 'blur(10px)',
+                              WebkitBackdropFilter: 'blur(10px)',
+                              border: '1px solid rgba(255, 255, 255, 0.2)',
+                              boxShadow: '0 2px 8px rgba(70, 104, 171, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                            }}
+                          >
+                            {/* Glass reflection on badge */}
+                            <div 
+                              className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-full"
+                              style={{
+                                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%)'
+                              }}
+                            />
+                            <span className="text-xs font-medium text-white relative z-10">
+                              {conversation.unreadCount}
+                            </span>
                           </div>
                         )}
-                        
-                        <div className={`flex ${isMyMsg ? 'justify-end' : 'justify-start'} mb-2`}>
-                          <div className={`max-w-[75%] ${isMyMsg ? 'order-2' : 'order-1'}`}>
-                            {/* ✅ Message Bubble */}
-                            <div 
-                              className={`rounded-lg px-3 py-2 text-sm ${
-                                isMyMsg 
-                                  ? 'bg-blue-500 text-white' 
-                                  : 'bg-white text-gray-900 border border-gray-200'
-                              } ${message.isOptimistic ? 'opacity-70' : ''}`}
-                            >
-                              <p>{message.content}</p>
-                              
-                              {/* ✅ File Attachments */}
-                              {message.attachments && message.attachments.length > 0 && (
-                                <div className="mt-2 space-y-1">
-                                  {message.attachments.map(att => (
-                                    <div key={att.id} className={`flex items-center gap-2 p-2 rounded border ${
-                                      isMyMsg ? 'bg-white/10 border-white/20' : 'bg-gray-50 border-gray-200'
-                                    }`}>
-                                      <div className={`p-1 rounded ${
-                                        isMyMsg ? 'bg-white/10' : 'bg-blue-100'
-                                      }`}>
-                                        {att.type.startsWith('image/') ? 
-                                          <Image className={`w-3 h-3 ${isMyMsg ? 'text-white' : 'text-blue-600'}`} /> : 
-                                          <FileText className={`w-3 h-3 ${isMyMsg ? 'text-white' : 'text-blue-600'}`} />
-                                        }
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className={`text-xs font-medium truncate ${
-                                          isMyMsg ? 'text-white' : 'text-gray-900'
-                                        }`}>
-                                          {att.name}
-                                        </p>
-                                        <p className={`text-xs ${
-                                          isMyMsg ? 'text-white/70' : 'text-gray-500'
-                                        }`}>
-                                          {formatFileSize(att.size)}
-                                        </p>
-                                      </div>
-                                      <Download className={`w-3 h-3 ${
-                                        isMyMsg ? 'text-white' : 'text-gray-400'
-                                      }`} />
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              
-                              <div className={`flex items-center justify-between mt-1 text-xs ${
-                                isMyMsg ? 'text-white/70' : 'text-gray-500'
-                              }`}>
-                                <span>{format(new Date(message.createdAt), 'p')}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ✅ GLASSMORPHISM: MESSAGES PANEL - 50% width with enhanced glass effect and gap */}
+      <div 
+        className={`${
+          showMobileConversations ? 'hidden' : 'flex'
+        } flex flex-col w-full md:w-[50%]`}
+        style={{ 
+          zIndex: Z_INDEX.GLASS_CONTAINERS
+        }}
+      >
+        {selectedConversation && otherUser ? (
+          <div 
+            className="glassmorphism-container rounded-2xl overflow-hidden relative"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.25) 100%)',
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+              border: '1px solid rgba(255, 255, 255, 0.18)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(255, 255, 255, 0.05)'
+            }}
+          >
+            {/* ✅ GLASSMORPHISM: Glass reflection overlay */}
+            <div 
+              className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-t-2xl"
+              style={{
+                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%)',
+                zIndex: Z_INDEX.GLASS_OVERLAYS
+              }}
+            />
+
+            <div className="flex flex-col relative h-full" style={{ zIndex: Z_INDEX.CONTENT }}>
+              {/* ✅ GLASSMORPHISM: Enhanced Header */}
+              <div 
+                className="flex-shrink-0 p-4 relative"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.4) 100%)',
+                  backdropFilter: 'blur(15px) saturate(150%)',
+                  WebkitBackdropFilter: 'blur(15px) saturate(150%)',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.15)'
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setShowMobileConversations(true)}
+                      className="md:hidden p-1.5 rounded-lg transition-all duration-300"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)'
+                      }}
+                    >
+                      <ChevronLeft className="w-4 h-4 text-gray-600" />
+                    </button>
+                    
+                    <div className="relative">
+                      <div 
+                        className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(156, 163, 175, 0.3) 0%, rgba(156, 163, 175, 0.5) 100%)',
+                          backdropFilter: 'blur(10px)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)'
+                        }}
+                      >
+                        {otherUser.imageUrl ? (
+                          <img 
+                            src={otherUser.imageUrl} 
+                            alt={getUserDisplayName(otherUser)}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-xs font-medium text-gray-600" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>
+                            {getUserDisplayName(otherUser).slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      {onlineUsers.has(otherUser.id) && (
+                        <div 
+                          className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border"
+                          style={{
+                            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                            borderColor: 'rgba(255, 255, 255, 0.8)'
+                          }}
+                        />
+                      )}
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="font-medium text-gray-900 text-sm" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>
+                          {getUserDisplayName(otherUser)}
+                        </h2>
+                        {onlineUsers.has(otherUser.id) && (
+                          <div 
+                            className="w-2 h-2 rounded-full"
+                            style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}
+                          />
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-600" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)'}}>
+                        {selectedConversation.property?.title || 
+                         selectedConversation.campaign?.title ||
+                         otherUser.businessName || 'Space Inquiry'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    {[Phone, Video, MoreVertical].map((Icon, index) => (
+                      <button 
+                        key={index}
+                        className="p-1.5 rounded-lg transition-all duration-300 relative overflow-hidden"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
+                          backdropFilter: 'blur(10px)',
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0px)';
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.05)';
+                        }}
+                      >
+                        <Icon className="w-4 h-4 text-gray-600" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* ✅ GLASSMORPHISM: Enhanced Messages Area */}
+              <div 
+                className="flex-1 overflow-y-auto p-4 relative"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(248, 250, 252, 0.3) 0%, rgba(248, 250, 252, 0.4) 50%, rgba(248, 250, 252, 0.3) 100%)',
+                  backdropFilter: 'blur(10px) saturate(120%)',
+                  WebkitBackdropFilter: 'blur(10px) saturate(120%)'
+                }}
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <EnterpriseLoader 
+                      size="md"
+                      theme="brand"
+                      message="Loading messages..."
+                      showMessage={true}
+                      centered={true}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {messages.map((message, index) => {
+                      const isMyMsg = isMyMessageSync(message);
+                      const showDate = index === 0 || 
+                        new Date(message.createdAt).toDateString() !== 
+                        new Date(messages[index - 1].createdAt).toDateString();
+                      
+                      return (
+                        <div key={message.id}>
+                          {showDate && (
+                            <div className="flex justify-center mb-3">
+                              <div 
+                                className="px-3 py-1 rounded-full text-xs text-gray-500 relative overflow-hidden"
+                                style={{
+                                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.9) 100%)',
+                                  backdropFilter: 'blur(10px)',
+                                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+                                }}
+                              >
+                                {format(new Date(message.createdAt), 'MMM d, yyyy')}
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className={`flex ${isMyMsg ? 'justify-end' : 'justify-start'} mb-2`}>
+                            <div className={`max-w-[75%] ${isMyMsg ? 'order-2' : 'order-1'}`}>
+                              {/* ✅ GLASSMORPHISM: Enhanced Message Bubble */}
+                              <div 
+                                className={`rounded-lg px-3 py-2 text-sm relative overflow-hidden ${
+                                  message.isOptimistic ? 'opacity-70' : ''
+                                }`}
+                                style={isMyMsg ? {
+                                  background: 'linear-gradient(135deg, #5A7BC2 0%, #4668AB 50%, #3A5490 100%)',
+                                  backdropFilter: 'blur(10px)',
+                                  color: 'white',
+                                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                                  boxShadow: '0 4px 16px rgba(70, 104, 171, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                                } : {
+                                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
+                                  backdropFilter: 'blur(15px) saturate(150%)',
+                                  WebkitBackdropFilter: 'blur(15px) saturate(150%)',
+                                  color: '#1F2937',
+                                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                                }}
+                              >
+                                {/* Glass reflection on message bubbles */}
+                                <div 
+                                  className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-lg"
+                                  style={{
+                                    background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%)'
+                                  }}
+                                />
                                 
-                                {/* ✅ Enhanced message status for sent messages */}
-                                {isMyMsg && (
-                                  <MessageStatusIndicator
-                                    status={message.deliveryStatus || 'sent'}
-                                    error={message.error}
-                                    onRetry={message.deliveryStatus === 'failed' ? () => handleRetryMessage(message.id) : undefined}
-                                  />
+                                <p className="relative z-10">{message.content}</p>
+                                
+                                {/* ✅ File Attachments */}
+                                {message.attachments && message.attachments.length > 0 && (
+                                  <div className="mt-2 space-y-1 relative z-10">
+                                    {message.attachments.map(att => (
+                                      <div key={att.id} className={`flex items-center gap-2 p-2 rounded border ${
+                                        isMyMsg ? 'bg-white/10 border-white/20' : 'bg-gray-50 border-gray-200'
+                                      }`}>
+                                        <div className={`p-1 rounded ${
+                                          isMyMsg ? 'bg-white/10' : 'bg-blue-100'
+                                        }`}>
+                                          {att.type.startsWith('image/') ? 
+                                            <Image className={`w-3 h-3 ${isMyMsg ? 'text-white' : 'text-blue-600'}`} /> : 
+                                            <FileText className={`w-3 h-3 ${isMyMsg ? 'text-white' : 'text-blue-600'}`} />
+                                          }
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className={`text-xs font-medium truncate ${
+                                            isMyMsg ? 'text-white' : 'text-gray-900'
+                                          }`}>
+                                            {att.name}
+                                          </p>
+                                          <p className={`text-xs ${
+                                            isMyMsg ? 'text-white/70' : 'text-gray-500'
+                                          }`}>
+                                            {formatFileSize(att.size)}
+                                          </p>
+                                        </div>
+                                        <Download className={`w-3 h-3 ${
+                                          isMyMsg ? 'text-white' : 'text-gray-400'
+                                        }`} />
+                                      </div>
+                                    ))}
+                                  </div>
                                 )}
+                                
+                                <div className={`flex items-center justify-between mt-1 text-xs relative z-10 ${
+                                  isMyMsg ? 'text-white/70' : 'text-gray-500'
+                                }`}>
+                                  <span>{format(new Date(message.createdAt), 'p')}</span>
+                                  
+                                  {/* ✅ Enhanced message status for sent messages */}
+                                  {isMyMsg && (
+                                    <MessageStatusIndicator
+                                      status={message.deliveryStatus || 'sent'}
+                                      error={message.error}
+                                      onRetry={message.deliveryStatus === 'failed' ? () => handleRetryMessage(message.id) : undefined}
+                                    />
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                  
-                  {/* ✅ Enhanced Typing Indicators */}
-                  {typingUsers.length > 0 && (
-                    <TypingIndicator users={typingUsers} />
-                  )}
-                  
-                  <div ref={messagesEndRef} />
-                </div>
-              )}
-            </div>
+                      );
+                    })}
+                    
+                    {/* ✅ Enhanced Typing Indicators */}
+                    {typingUsers.length > 0 && (
+                      <TypingIndicator users={typingUsers} />
+                    )}
+                    
+                    <div ref={messagesEndRef} />
+                  </div>
+                )}
+              </div>
 
-            {/* ✅ ENHANCED Input Area */}
-            <div className="flex-shrink-0 p-3 bg-white border-t border-gray-200">
-              {/* ✅ Attachments Preview */}
-              {attachments.length > 0 && (
-                <div className="mb-2 flex gap-2 flex-wrap">
-                  {attachments.map(att => (
-                    <div key={att.id} className="flex items-center gap-1 px-2 py-1 rounded bg-gray-100 text-xs">
-                      {att.type.startsWith('image/') ? 
-                        <Image className="w-3 h-3 text-gray-500" /> : 
-                        <FileText className="w-3 h-3 text-gray-500" />
-                      }
-                      <span className="text-gray-700 max-w-[80px] truncate">{att.name}</span>
-                      <button
-                        onClick={() => setAttachments(prev => prev.filter(a => a.id !== att.id))}
-                        className="p-0.5 rounded hover:bg-gray-200"
+              {/* ✅ GLASSMORPHISM: Enhanced Input Area */}
+              <div 
+                className="flex-shrink-0 p-4 relative"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.4) 100%)',
+                  backdropFilter: 'blur(15px) saturate(150%)',
+                  WebkitBackdropFilter: 'blur(15px) saturate(150%)',
+                  borderTop: '1px solid rgba(255, 255, 255, 0.15)'
+                }}
+              >
+                {/* ✅ Attachments Preview with glassmorphism */}
+                {attachments.length > 0 && (
+                  <div className="mb-2 flex gap-2 flex-wrap">
+                    {attachments.map(att => (
+                      <div 
+                        key={att.id} 
+                        className="flex items-center gap-1 px-2 py-1 rounded text-xs relative overflow-hidden"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(156, 163, 175, 0.4) 0%, rgba(156, 163, 175, 0.5) 100%)',
+                          backdropFilter: 'blur(10px)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)'
+                        }}
                       >
-                        <X className="w-3 h-3 text-gray-500" />
+                        {att.type.startsWith('image/') ? 
+                          <Image className="w-3 h-3 text-gray-500" /> : 
+                          <FileText className="w-3 h-3 text-gray-500" />
+                        }
+                        <span className="text-gray-700 max-w-[80px] truncate">{att.name}</span>
+                        <button
+                          onClick={() => setAttachments(prev => prev.filter(a => a.id !== att.id))}
+                          className="p-0.5 rounded hover:bg-gray-200"
+                        >
+                          <X className="w-3 h-3 text-gray-500" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-2">
+                  <label 
+                    className="p-2 rounded-lg cursor-pointer transition-all duration-300 relative overflow-hidden"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0px)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.05)';
+                    }}
+                  >
+                    <Paperclip className="w-4 h-4 text-gray-600" />
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={handleFileSelect}
+                      accept="image/*,.pdf,.doc,.docx"
+                    />
+                  </label>
+                  
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={handleInputChange}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Type a message..."
+                      className="w-full px-3 py-2 pr-20 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none text-sm transition-all duration-300"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.9) 100%)',
+                        backdropFilter: 'blur(15px) saturate(150%)',
+                        WebkitBackdropFilter: 'blur(15px) saturate(150%)',
+                        border: '1px solid rgba(255, 255, 255, 0.25)',
+                        boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 0 rgba(255, 255, 255, 0.1)'
+                      }}
+                      disabled={isSending}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = 'rgba(70, 104, 171, 0.5)';
+                        e.target.style.boxShadow = 'inset 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 0 2px rgba(70, 104, 171, 0.2)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+                        e.target.style.boxShadow = 'inset 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 0 rgba(255, 255, 255, 0.1)';
+                      }}
+                    />
+                    
+                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      <button 
+                        className="p-1.5 rounded-lg transition-all duration-300"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
+                          backdropFilter: 'blur(10px)',
+                          border: '1px solid rgba(255, 255, 255, 0.3)'
+                        }}
+                      >
+                        <Smile className="w-4 h-4 text-gray-400" />
+                      </button>
+                      
+                      {/* ✅ GLASSMORPHISM: Enhanced Send Button */}
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={!newMessage.trim() || isSending}
+                        className="p-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 relative overflow-hidden"
+                        style={{ 
+                          background: 'linear-gradient(135deg, #5A7BC2 0%, #4668AB 50%, #3A5490 100%)',
+                          backdropFilter: 'blur(10px)',
+                          color: 'white',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          boxShadow: '0 4px 16px rgba(70, 104, 171, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, #6B8BD1 0%, #5A7BC2 50%, #4668AB 100%)';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(70, 104, 171, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, #5A7BC2 0%, #4668AB 50%, #3A5490 100%)';
+                            e.currentTarget.style.transform = 'translateY(0px)';
+                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(70, 104, 171, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+                          }
+                        }}
+                      >
+                        {/* Glass reflection on send button */}
+                        <div 
+                          className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-lg"
+                          style={{
+                            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%)'
+                          }}
+                        />
+                        {isSending ? 
+                          <EnterpriseLoader size="xs" theme="white" className="w-4 h-4 relative z-10" /> : 
+                          <Send className="w-4 h-4 relative z-10" />
+                        }
                       </button>
                     </div>
-                  ))}
-                </div>
-              )}
-              
-              <div className="flex items-center gap-2">
-                <label className="p-2 rounded-lg hover:bg-gray-100 cursor-pointer">
-                  <Paperclip className="w-4 h-4 text-gray-600" />
-                  <input
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={handleFileSelect}
-                    accept="image/*,.pdf,.doc,.docx"
-                  />
-                </label>
-                
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={handleInputChange}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Type a message..."
-                    className="w-full px-3 py-2 pr-20 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                    disabled={isSending}
-                  />
-                  
-                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <button className="p-1.5 rounded-lg hover:bg-gray-100">
-                      <Smile className="w-4 h-4 text-gray-400" />
-                    </button>
-                    
-                    {/* ✅ Enhanced Send Button */}
-                    <button
-                      onClick={handleSendMessage}
-                      disabled={!newMessage.trim() || isSending}
-                      className="p-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed bg-blue-500 hover:bg-blue-600 text-white"
-                    >
-                      {isSending ? 
-                        <EnterpriseLoader size="xs" theme="white" className="w-4 h-4" /> : 
-                        <Send className="w-4 h-4" />
-                      }
-                    </button>
                   </div>
                 </div>
               </div>
             </div>
-          </>
+          </div>
         ) : (
-          /* ✅ Enhanced Empty State */
-          <div className="flex-1 flex items-center justify-center bg-gray-50">
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-3">
-                <MessageCircle className="w-8 h-8 text-blue-600" />
+          /* ✅ GLASSMORPHISM: Enhanced Empty State */
+          <div 
+            className="glassmorphism-container rounded-2xl overflow-hidden relative flex items-center justify-center"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.25) 100%)',
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+              border: '1px solid rgba(255, 255, 255, 0.18)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(255, 255, 255, 0.05)'
+            }}
+          >
+            {/* Glass reflection overlay */}
+            <div 
+              className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-t-2xl"
+              style={{
+                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%)',
+                zIndex: Z_INDEX.GLASS_OVERLAYS
+              }}
+            />
+            
+            <div className="text-center relative" style={{ zIndex: Z_INDEX.CONTENT }}>
+              <div 
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 relative overflow-hidden"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(70, 104, 171, 0.2) 0%, rgba(70, 104, 171, 0.3) 100%)',
+                  backdropFilter: 'blur(15px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  boxShadow: '0 4px 16px rgba(70, 104, 171, 0.2)'
+                }}
+              >
+                {/* Glass reflection on icon container */}
+                <div 
+                  className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-full"
+                  style={{
+                    background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%)'
+                  }}
+                />
+                <MessageCircle 
+                  className="w-8 h-8 relative z-10"
+                  style={{ color: '#4668AB' }}
+                />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">Welcome to Messages</h3>
-              <p className="text-gray-600 text-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-1" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>Welcome to Messages</h3>
+              <p className="text-gray-600 text-sm" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)'}}>
                 Select a conversation to start chatting
               </p>
             </div>
           </div>
         )}
+      </div>
+
+      {/* ✅ RESERVED SPACE: 30% width for future content - Desktop only */}
+      <div 
+        className="hidden md:block md:w-[30%]"
+        style={{ 
+          minWidth: '200px'
+        }}
+      >
+        {/* Future content area - currently empty as requested */}
+        {/* This space is reserved for additional features like:
+            - Contact information panel
+            - Shared files/media
+            - Business context details
+            - Campaign information
+            - Property details
+            - Calendar integration
+            - etc. */}
       </div>
     </div>
   );
