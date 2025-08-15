@@ -9,7 +9,7 @@ import {
   User, ChevronDown, Bell, Settings, LogOut,
   Building2, Calendar, MessageSquare, Map, LayoutDashboard,
   MapPin, Calendar as CalendarIcon, Mail, UserCircle, Shield,
-  Bookmark, HelpCircle, LogIn, Clock, Loader2, Check, Search
+  HelpCircle, LogIn, Clock, Loader2, Check, Search
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -560,17 +560,7 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
                             </div>
                           </Link>
 
-                          <Link
-                            to="/saved"
-                            onClick={closeUserMenu}
-                            className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-200"
-                          >
-                            <Bookmark className="w-4 h-4 text-blue-500" />
-                            <div className="flex-1">
-                              <div className="font-medium">Saved Spaces</div>
-                              <div className="text-xs text-slate-500">Your bookmarked listings</div>
-                            </div>
-                          </Link>
+                          
 
                           <Link
                             to="/help"

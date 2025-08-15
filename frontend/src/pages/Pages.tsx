@@ -5,6 +5,7 @@ import AdvertisingPage from "./dashboard/advertiser/AdvertiserDashboard.tsx"; //
 import Map from "./browse/BrowsePage.jsx";
 import Messages from "./messages/MessagesPage.tsx";
 import Profile from "./user/Profile.jsx";
+import Settings from "./user/Settings.jsx";
 import Help from "./help/Help.jsx";
 import Dashboard from "./dashboard/owner/OwnerDashboard.tsx"; // Space Owner Dashboard
 import Invoices from "./payments/Invoices.jsx";
@@ -58,6 +59,7 @@ const PAGES = {
     CampaignCheckout: CampaignCheckout, // ✅ Campaign checkout (from payments folder)
     AdvertisingPage: AdvertisingPage, // ✅ NEW: Bookings management page
     Profile: Profile,
+    Settings: Settings,
     Help: Help,
     Dashboard: Dashboard, // Space Owner Dashboard
     Invoices: Invoices,
@@ -201,6 +203,13 @@ function PagesContent() {
                 <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="profile-protected">
                     <Layout currentPageName="Profile" key="profile-page">
                         <Profile key="profile-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="settings-protected">
+                    <Layout currentPageName="Settings" key="settings-page">
+                        <Settings key="settings-component" />
                     </Layout>
                 </ProtectedRoute>
             } />
