@@ -1,17 +1,20 @@
 // src/pages/dashboard/admin/Admin.tsx
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   Users, Building2, Calendar, FileText, 
   TrendingUp, DollarSign, Shield, Settings,
   ChevronRight, AlertCircle, CheckCircle,
-  Package, Truck, UserPlus
+  Package, Truck, UserPlus, Menu, X,
+  BarChart3, Database, Activity
 } from 'lucide-react';
 import apiClient from '@/api/apiClient';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     fetchAdminStats();
@@ -42,83 +45,101 @@ export default function AdminDashboard() {
     }
   };
 
-  const adminSections = [
-    // ✅ CORE PLATFORM MANAGEMENT
+  const sidebarSections = [
     {
-      title: 'User Management',
-      description: 'View and manage all platform users',
-      icon: Users,
-      link: '/admin/users',
-      color: 'bg-blue-500',
-      bgColor: 'bg-blue-50',
-      textColor: 'text-blue-700'
+      title: 'Core Platform',
+      items: [
+        {
+          title: 'User Management',
+          description: 'View and manage all platform users',
+          icon: Users,
+          link: '/admin/users',
+          color: 'text-blue-600',
+          hoverColor: 'hover:bg-blue-50'
+        },
+        {
+          title: 'Properties',
+          description: 'Review and approve property listings',
+          icon: Building2,
+          link: '/admin/properties',
+          color: 'text-green-600',
+          hoverColor: 'hover:bg-green-50'
+        },
+        {
+          title: 'Bookings',
+          description: 'Monitor all platform bookings',
+          icon: Calendar,
+          link: '/admin/bookings',
+          color: 'text-purple-600',
+          hoverColor: 'hover:bg-purple-50'
+        }
+      ]
     },
     {
-      title: 'Property Approvals',
-      description: 'Review and approve property listings',
-      icon: Building2,
-      link: '/admin/properties',
-      color: 'bg-green-500',
-      bgColor: 'bg-green-50',
-      textColor: 'text-green-700'
+      title: 'Material Sourcing',
+      items: [
+        {
+          title: 'Material Catalog',
+          description: 'Manage materials, suppliers, and pricing',
+          icon: Package,
+          link: '/admin/materials/catalog',
+          color: 'text-indigo-600',
+          hoverColor: 'hover:bg-indigo-50'
+        },
+        {
+          title: 'Material Orders',
+          description: 'Process dropshipping and order fulfillment',
+          icon: Truck,
+          link: '/admin/materials/orders',
+          color: 'text-pink-600',
+          hoverColor: 'hover:bg-pink-50'
+        },
+        {
+          title: 'Client Onboarding',
+          description: 'Manually set up new clients and spaces',
+          icon: UserPlus,
+          link: '/admin/clients/onboard',
+          color: 'text-teal-600',
+          hoverColor: 'hover:bg-teal-50'
+        }
+      ]
     },
     {
-      title: 'Booking Oversight',
-      description: 'Monitor all platform bookings',
-      icon: Calendar,
-      link: '/admin/bookings',
-      color: 'bg-purple-500',
-      bgColor: 'bg-purple-50',
-      textColor: 'text-purple-700'
-    },
-    
-    // ✅ MATERIAL SOURCING MANAGEMENT
-    {
-      title: 'Material Catalog',
-      description: 'Manage materials, suppliers, and pricing',
-      icon: Package,
-      link: '/admin/materials/catalog',
-      color: 'bg-indigo-500',
-      bgColor: 'bg-indigo-50',
-      textColor: 'text-indigo-700'
-    },
-    {
-      title: 'Material Orders',
-      description: 'Process dropshipping and order fulfillment',
-      icon: Truck,
-      link: '/admin/materials/orders',
-      color: 'bg-pink-500',
-      bgColor: 'bg-pink-50',
-      textColor: 'text-pink-700'
-    },
-    {
-      title: 'Client Onboarding',
-      description: 'Manually set up new clients and spaces',
-      icon: UserPlus,
-      link: '/admin/clients/onboard',
-      color: 'bg-teal-500',
-      bgColor: 'bg-teal-50',
-      textColor: 'text-teal-700'
-    },
-    
-    // ✅ ANALYTICS & REPORTING
-    {
-      title: 'Reports & Analytics',
-      description: 'View platform statistics and reports',
-      icon: FileText,
-      link: '/admin/reports',
-      color: 'bg-orange-500',
-      bgColor: 'bg-orange-50',
-      textColor: 'text-orange-700'
-    },
-    {
-      title: 'Data Management',
-      description: 'Seed database and manage test data',
-      icon: TrendingUp,
-      link: '/data-seeder',
-      color: 'bg-amber-500',
-      bgColor: 'bg-amber-50', 
-      textColor: 'text-amber-700'
+      title: 'Analytics & System',
+      items: [
+        {
+          title: 'Reports & Analytics',
+          description: 'View platform statistics and reports',
+          icon: BarChart3,
+          link: '/admin/reports',
+          color: 'text-orange-600',
+          hoverColor: 'hover:bg-orange-50'
+        },
+        {
+          title: 'Data Management',
+          description: 'Seed database and manage test data',
+          icon: Database,
+          link: '/data-seeder',
+          color: 'text-amber-600',
+          hoverColor: 'hover:bg-amber-50'
+        },
+        {
+          title: 'System Settings',
+          description: 'Configure platform settings',
+          icon: Settings,
+          link: '/admin/settings',
+          color: 'text-gray-600',
+          hoverColor: 'hover:bg-gray-50'
+        },
+        {
+          title: 'Activity Logs',
+          description: 'View system and user activity logs',
+          icon: Activity,
+          link: '/admin/logs',
+          color: 'text-red-600',
+          hoverColor: 'hover:bg-red-50'
+        }
+      ]
     }
   ];
 
@@ -128,35 +149,56 @@ export default function AdminDashboard() {
       value: stats?.totalUsers || 0,
       icon: Users,
       change: stats?.recentUsers || 0,
-      changeLabel: 'new this week'
+      changeLabel: 'new this week',
+      color: 'text-blue-600'
     },
     {
       label: 'Active Properties',
       value: stats?.totalProperties || 0,
       icon: Building2,
       change: 0,
-      changeLabel: 'pending approval'
+      changeLabel: 'pending approval',
+      color: 'text-green-600'
     },
     {
       label: 'Total Bookings',
       value: stats?.totalBookings || 0,
       icon: Calendar,
       change: stats?.recentBookings || 0,
-      changeLabel: 'this week'
+      changeLabel: 'this week',
+      color: 'text-purple-600'
     },
     {
       label: 'Active Campaigns',
       value: stats?.totalCampaigns || 0,
       icon: TrendingUp,
       change: 0,
-      changeLabel: 'running'
+      changeLabel: 'running',
+      color: 'text-orange-600'
     }
   ];
 
+  const isActiveLink = (link: string) => {
+    return location.pathname === link;
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
+      <div className="min-h-screen bg-gray-50 flex">
+        {/* Sidebar placeholder */}
+        <div className="w-80 bg-white border-r border-gray-200">
+          <div className="animate-pulse p-6">
+            <div className="h-8 bg-gray-200 rounded w-48 mb-6"></div>
+            <div className="space-y-4">
+              {[1,2,3,4,5,6].map(i => (
+                <div key={i} className="h-12 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+        
+        {/* Main content placeholder */}
+        <div className="flex-1 p-6">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-64 mb-8"></div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -174,162 +216,198 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <div className={`
+        fixed inset-y-0 left-0 z-50 w-80 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3">
             <Shield className="w-8 h-8 text-purple-600" />
-            <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+            <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
           </div>
-          <p className="text-gray-600">Welcome to the Elaview admin control panel</p>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden p-2 rounded-md hover:bg-gray-100"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {quickStats.map((stat, index) => (
-            <div key={index} className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <stat.icon className="w-8 h-8 text-gray-400" />
-                <span className="text-xs text-gray-500">{stat.changeLabel}</span>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900">{stat.value}</h3>
-              <p className="text-sm text-gray-600 mt-1">{stat.label}</p>
-              {stat.change > 0 && (
-                <p className="text-xs text-green-600 mt-2">+{stat.change} new</p>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Admin Sections - Updated to show 3 columns for better layout */}
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Management Areas</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {adminSections.map((section, index) => (
-            <Link
-              key={index}
-              to={section.link}
-              className="group bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-4">
-                  <div className={`p-3 rounded-lg ${section.bgColor}`}>
-                    <section.icon className={`w-6 h-6 ${section.textColor}`} />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 group-hover:text-gray-700">
-                      {section.title}
-                    </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {section.description}
-                    </p>
-                  </div>
+        
+        <nav className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-8">
+            {sidebarSections.map((section, sectionIndex) => (
+              <div key={sectionIndex}>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                  {section.title}
+                </h3>
+                <div className="space-y-1">
+                  {section.items.map((item, itemIndex) => (
+                    <Link
+                      key={itemIndex}
+                      to={item.link}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`
+                        group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200
+                        ${isActiveLink(item.link) 
+                          ? 'bg-purple-50 text-purple-700 border-r-2 border-purple-600' 
+                          : `text-gray-700 ${item.hoverColor}`
+                        }
+                      `}
+                    >
+                      <item.icon className={`
+                        flex-shrink-0 w-5 h-5 mr-3 transition-colors
+                        ${isActiveLink(item.link) ? 'text-purple-600' : item.color}
+                      `} />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium">{item.title}</div>
+                        <div className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                          {item.description}
+                        </div>
+                      </div>
+                      {!isActiveLink(item.link) && (
+                        <ChevronRight className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      )}
+                    </Link>
+                  ))}
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all" />
               </div>
-            </Link>
-          ))}
-        </div>
-
-        {/* Quick Access Links Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Access</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Link
-              to="/admin/users"
-              className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-            >
-              <Users className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-700">Users</span>
-            </Link>
-            <Link
-              to="/admin/properties"
-              className="flex items-center gap-2 p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
-            >
-              <Building2 className="w-4 h-4 text-green-600" />
-              <span className="text-sm font-medium text-green-700">Properties</span>
-            </Link>
-            <Link
-              to="/admin/materials/catalog"
-              className="flex items-center gap-2 p-3 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
-            >
-              <Package className="w-4 h-4 text-indigo-600" />
-              <span className="text-sm font-medium text-indigo-700">Materials</span>
-            </Link>
-            <Link
-              to="/admin/materials/orders"
-              className="flex items-center gap-2 p-3 bg-pink-50 rounded-lg hover:bg-pink-100 transition-colors"
-            >
-              <Truck className="w-4 h-4 text-pink-600" />
-              <span className="text-sm font-medium text-pink-700">Orders</span>
-            </Link>
+            ))}
           </div>
-        </div>
+        </nav>
+      </div>
 
-        {/* Recent Activity */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Activity</h2>
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-blue-600" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">Admin access configured</p>
-                <p className="text-xs text-gray-600">You now have full admin privileges</p>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 rounded-md hover:bg-gray-100"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+                <p className="text-sm text-gray-600">Welcome to the Elaview admin control panel</p>
               </div>
-              <span className="text-xs text-gray-500">Just now</span>
-            </div>
-            
-            <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-              <Package className="w-5 h-5 text-green-600" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">Material sourcing system ready</p>
-                <p className="text-xs text-gray-600">All admin pages for material management are now available</p>
-              </div>
-              <span className="text-xs text-gray-500">System</span>
-            </div>
-            
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-gray-600" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">No pending approvals</p>
-                <p className="text-xs text-gray-600">All property listings are up to date</p>
-              </div>
-              <span className="text-xs text-gray-500">System</span>
             </div>
           </div>
-        </div>
+        </header>
 
-        {/* Quick Actions */}
-        <div className="mt-8 flex gap-4">
-          <Link
-            to="/admin/settings"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-            Platform Settings
-          </Link>
-          <Link
-            to="/admin/clients/onboard"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <UserPlus className="w-4 h-4" />
-            Onboard Client
-          </Link>
-          <Link
-            to="/admin/materials/catalog"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            <Package className="w-4 h-4" />
-            Manage Materials
-          </Link>
-          <Link
-            to="/admin/logs"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <FileText className="w-4 h-4" />
-            View Logs
-          </Link>
-        </div>
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-auto p-6">
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {quickStats.map((stat, index) => (
+              <div key={index} className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <stat.icon className={`w-8 h-8 ${stat.color}`} />
+                  <span className="text-xs text-gray-500">{stat.changeLabel}</span>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">{stat.value}</h3>
+                <p className="text-sm text-gray-600 mt-1">{stat.label}</p>
+                {stat.change > 0 && (
+                  <p className="text-xs text-green-600 mt-2">+{stat.change} new</p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Link
+                to="/admin/clients/onboard"
+                className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg hover:from-blue-100 hover:to-blue-200 transition-all duration-200 group"
+              >
+                <UserPlus className="w-8 h-8 text-blue-600" />
+                <div>
+                  <div className="font-semibold text-blue-900">Onboard Client</div>
+                  <div className="text-sm text-blue-700">Set up new client</div>
+                </div>
+              </Link>
+              
+              <Link
+                to="/admin/materials/catalog"
+                className="flex items-center gap-3 p-4 bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-lg hover:from-indigo-100 hover:to-indigo-200 transition-all duration-200 group"
+              >
+                <Package className="w-8 h-8 text-indigo-600" />
+                <div>
+                  <div className="font-semibold text-indigo-900">Manage Materials</div>
+                  <div className="text-sm text-indigo-700">Update catalog</div>
+                </div>
+              </Link>
+              
+              <Link
+                to="/admin/reports"
+                className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg hover:from-orange-100 hover:to-orange-200 transition-all duration-200 group"
+              >
+                <BarChart3 className="w-8 h-8 text-orange-600" />
+                <div>
+                  <div className="font-semibold text-orange-900">View Reports</div>
+                  <div className="text-sm text-orange-700">Analytics & insights</div>
+                </div>
+              </Link>
+              
+              <Link
+                to="/data-seeder"
+                className="flex items-center gap-3 p-4 bg-gradient-to-r from-amber-50 to-amber-100 rounded-lg hover:from-amber-100 hover:to-amber-200 transition-all duration-200 group"
+              >
+                <Database className="w-8 h-8 text-amber-600" />
+                <div>
+                  <div className="font-semibold text-amber-900">Seed Data</div>
+                  <div className="text-sm text-amber-700">Manage test data</div>
+                </div>
+              </Link>
+            </div>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Activity</h2>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
+                <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">Admin access configured</p>
+                  <p className="text-xs text-gray-600">You now have full admin privileges</p>
+                </div>
+                <span className="text-xs text-gray-500">Just now</span>
+              </div>
+              
+              <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
+                <Package className="w-5 h-5 text-green-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">Material sourcing system ready</p>
+                  <p className="text-xs text-gray-600">All admin pages for material management are now available</p>
+                </div>
+                <span className="text-xs text-gray-500">System</span>
+              </div>
+              
+              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-gray-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">No pending approvals</p>
+                  <p className="text-xs text-gray-600">All property listings are up to date</p>
+                </div>
+                <span className="text-xs text-gray-500">System</span>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );

@@ -1085,8 +1085,7 @@ export default function BrowsePage() {
   // ✅ IMPROVED: Desktop layout with enhanced flexibility and loading states
   return (
     <div 
-      className="h-screen overflow-hidden"
-      style={{ backgroundColor: '#F8FAFF' }}
+      className="h-screen overflow-hidden bg-slate-200"
     >
       <div className="flex h-full">
         

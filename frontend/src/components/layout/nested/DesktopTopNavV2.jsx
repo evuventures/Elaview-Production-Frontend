@@ -307,8 +307,7 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
     <>
       {/* Navigation Header - Deep Charcoal Version */}
       <header 
-        className="fixed top-0 left-0 right-0 h-14 shadow-xl backdrop-blur-sm z-50 border-b border-white/5"
-        style={{ backgroundColor: '#0F172A' }}
+        className="fixed top-0 left-0 right-0 h-18 shadow-xl backdrop-blur-sm z-50 border-b border-white/5 bg-slate-800"
       >
         <div className="flex items-center justify-between h-full px-4 lg:px-6">
           

@@ -772,7 +772,7 @@ export default function MessagesPage(): JSX.Element {
 
   return (
     <div 
-      className="flex w-full bg-white"
+      className="flex w-full bg-slate-200"
       style={{ 
         height: 'calc(100vh - 56px)',
         marginTop: '56px'
