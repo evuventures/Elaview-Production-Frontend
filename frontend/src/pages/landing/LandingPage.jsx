@@ -116,29 +116,18 @@ export default function Landing() {
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4">
+              {/* ✅ UPDATED: Single CTA Button to Sign In */}
+              <div className="flex justify-center lg:justify-start">
                 <Button 
                   size="lg" 
                   onClick={() => {
-                    console.log('Navigating to /browse');
-                    navigate('/browse');
+                    console.log('Get Started - Navigating to /sign-in');
+                    navigate('/sign-in');
                   }}
                   className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 group"
                 >
-                  Find Your Space
-                  
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  onClick={() => {
-                    console.log('Navigating to /sign-in');
-                    navigate('/dashboard');
-                  }}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 group"
-                >
-                  List your Property
+                  Get Started Today
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </div>
 
@@ -255,12 +244,13 @@ export default function Landing() {
             ))}
           </div>
 
+          {/* ✅ UPDATED: Single CTA Button in How It Works Section */}
           <div className="text-center mt-12">
             <Button 
               size="lg"
               onClick={() => {
-                console.log('Get Started - Navigating to /browse');
-                navigate('/browse');
+                console.log('Get Started Today - Navigating to /sign-in');
+                navigate('/sign-in');
               }}
               className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
             >
@@ -326,29 +316,18 @@ export default function Landing() {
               that will elevate your brand to new heights.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+            {/* ✅ UPDATED: Single CTA Button in Final Section */}
+            <div className="flex justify-center pt-4">
               <Button 
                 size="lg" 
                 onClick={() => {
-                  console.log('Start Browsing Spaces - Navigating to /browse');
-                  navigate('/browse');
+                  console.log('Join Elaview Today - Navigating to /sign-in');
+                  navigate('/sign-in');
                 }}
                 className="bg-white text-blue-700 hover:bg-blue-50 px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 group"
               >
-                Start Browsing Spaces
+                Join Elaview Today
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                size="lg"
-                onClick={() => {
-                  console.log('Login to Your Account - Navigating to /sign-in');
-                  navigate('/sign-in');
-                }}
-                className="border-2 border-white/30 hover:border-white/50 hover:bg-white/10 text-white px-8 py-4 text-lg font-semibold transition-all duration-300"
-              >
-                Login to Your Account
               </Button>
             </div>
 

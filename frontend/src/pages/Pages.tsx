@@ -20,15 +20,11 @@ import CampaignCheckout from "./payments/Checkout.jsx";
 import CampaignDetails from "./campaigns/CampaignDetails.jsx";
 import PaymentTest from "./payments/PaymentTest.jsx";
 import ProtectedRoute from "../components/auth/ProtectedRoute.jsx";
-import EnhancedProtectedRoute from "../components/auth/ProtectedRoute.jsx"; // ✅ NEW: Enhanced route with intro logic
 import SignInPage from "./auth/SignIn.jsx";
 import SignUpPage from "./auth/SignUp.jsx";
 import LearnMore from "./learn-more/LearnMore.jsx";
 import SSOCallback from "./auth/SSOCallback.jsx";
 import DebugSignUpPage from "./auth/DebugSignUp.jsx";
-
-// ✅ NEW: Import IntroPage
-import IntroPage from "./onboarding/IntroPage.jsx";
 
 // Admin page imports
 import UserManagement from "./admin/UserManagement.tsx";
@@ -45,7 +41,7 @@ import MinimalTestMap from "@/dev/debug/MinimalTestMap.tsx";
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation, useParams } from 'react-router-dom';
 import { useEffect } from 'react';
 
-// ✅ UPDATED: Added IntroPage to PAGES object
+// ✅ UPDATED: Removed IntroPage from PAGES object
 const PAGES = {
     Landing: Landing,
     Browse: Map,
@@ -76,7 +72,6 @@ const PAGES = {
     LearnMore: LearnMore,
     SSOCallback: SSOCallback,
     DebugSignUp: DebugSignUpPage,
-    IntroPage: IntroPage, // ✅ NEW: IntroPage component
     ApiDebugTest: ApiDebugTest,
     MinimalTestMap: MinimalTestMap,
 }
@@ -114,9 +109,6 @@ function PagesContent() {
             {/* ✅ DEFAULT ROUTE - Landing page (no layout wrapper) */}
             <Route path="/" element={<Landing />} />
             
-            {/* ✅ NEW: INTRO ROUTE - First-time tutorial (no layout, no protection) */}
-            <Route path="/intro" element={<IntroPage />} />
-            
             {/* 🧪 TEMPORARY DEBUG ROUTES */}
             <Route path="/debug-api" element={
                 <Layout currentPageName="Debug" key="debug-api-page">
@@ -141,13 +133,13 @@ function PagesContent() {
             {/* ✅ STANDALONE PAGES - NO LAYOUT */}
             <Route path="/learn-more" element={<LearnMore />} />
             
-            {/* ✅ PUBLIC ROUTES - Enhanced Protection with Intro Check */}
+            {/* ✅ PUBLIC ROUTES - Standard Protection (Intro modal handled in BrowsePage) */}
             <Route path="/browse" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={false} key="browse-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="browse-protected">
                     <Layout currentPageName="Browse" key="browse-page">
                         <Map key="map-browse" />
                     </Layout>
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
             <Route path="/map" element={<Navigate to="/browse" replace />} />
             <Route path="/help" element={
@@ -156,104 +148,104 @@ function PagesContent() {
                 </Layout>
             } />
             
-            {/* ✅ PROTECTED ROUTES - Enhanced Protection with Intro Check */}
+            {/* ✅ PROTECTED ROUTES - Standard Protection */}
             <Route path="/dashboard" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={false} key="dashboard-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="dashboard-protected">
                     <Layout currentPageName="Dashboard" key="dashboard-page">
                         <Dashboard key="dashboard-component" />
                     </Layout>
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
 
             <Route path="/advertise" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={false} key="bookings-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="bookings-protected">
                     <Layout currentPageName="Bookings" key="bookings-page">
                         <AdvertisingPage key="bookings-component" />
                     </Layout>
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
 
             <Route path="/messages" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={false} key="messages-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="messages-protected">
                     <Layout currentPageName="Messages" key="messages-page">
                         <Messages key="messages-component" />
                     </Layout>
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
             
             <Route path="/profile" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={false} key="profile-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="profile-protected">
                     <Layout currentPageName="Profile" key="profile-page">
                         <Profile key="profile-component" />
                     </Layout>
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
             
             <Route path="/settings" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={false} key="settings-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="settings-protected">
                     <Layout currentPageName="Settings" key="settings-page">
                         <Settings key="settings-component" />
                     </Layout>
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
             
             <Route path="/invoices" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={false} key="invoices-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="invoices-protected">
                     <Layout currentPageName="Invoices" key="invoices-page">
                         <Invoices key="invoices-component" />
                     </Layout>
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
 
             {/* ✅ CHECKOUT ROUTES */}
             <Route path="/checkout" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={false} key="cart-checkout-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="cart-checkout-protected">
                     <Layout currentPageName="Checkout" key="cart-checkout-page">
                         <CheckoutPage key="cart-checkout-component" />
                     </Layout>
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
 
             <Route path="/checkout/:propertyId/:spaceId" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={false} key="space-checkout-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="space-checkout-protected">
                     <Layout currentPageName="Checkout" key="space-checkout-page">
                         <CheckoutPage key="space-checkout-component" />
                     </Layout>
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
 
             <Route path="/campaign-checkout" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={false} key="campaign-checkout-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="campaign-checkout-protected">
                     <Layout currentPageName="Campaign Checkout" key="campaign-checkout-page">
                         <CampaignCheckout key="campaign-checkout-component" />
                     </Layout>
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
 
             {/* ✅ Legacy redirect */}
             <Route path="/booking/:propertyId/:spaceId" element={<BookingToCheckoutRedirect />} />
 
             <Route path="/booking-management" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={false} key="booking-management-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="booking-management-protected">
                     <Layout currentPageName="BookingManagement" key="booking-management-page">
                         <BookingManagement key="booking-management-component" />
                     </Layout>
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
             
             <Route path="/create-campaign" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={false} key="create-campaign-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="create-campaign-protected">
                     <Layout currentPageName="CreateCampaign" key="create-campaign-page">
                         <CreateCampaignWizard key="create-campaign-component" />
                     </Layout>
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
             
-            {/* ✅ List Space route - Skip intro check since it's a creation flow */}
+            {/* ✅ List Space route - No special intro handling needed */}
             <Route path="/list-space" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={true} key="list-space-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="list-space-protected">
                     <CreateListingWizard key="list-space-component" />
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
             
             {/* ✅ Legacy redirects */}
@@ -261,38 +253,38 @@ function PagesContent() {
             <Route path="/createproperty" element={<Navigate to="/list-space" replace />} />
             
             <Route path="/property-management" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={false} key="property-management-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="property-management-protected">
                     <Layout currentPageName="PropertyManagement" key="property-management-page">
                         <PropertyManagement key="property-management-component" />
                     </Layout>
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
             
             <Route path="/edit-property" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={false} key="edit-property-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="edit-property-protected">
                     <Layout currentPageName="EditProperty" key="edit-property-page">
                         <EditProperty key="edit-property-component" />
                     </Layout>
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
             
             <Route path="/campaign-details" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={false} key="campaign-details-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="campaign-details-protected">
                     <Layout currentPageName="CampaignDetails" key="campaign-details-page">
                         <CampaignDetails key="campaign-details-component" />
                     </Layout>
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
             
             <Route path="/payment-test" element={
-                <EnhancedProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipIntroCheck={false} key="payment-test-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="payment-test-protected">
                     <Layout currentPageName="PaymentTest" key="payment-test-page">
                         <PaymentTest key="payment-test-component" />
                     </Layout>
-                </EnhancedProtectedRoute>
+                </ProtectedRoute>
             } />
             
-            {/* ✅ ADMIN ROUTES - Using original ProtectedRoute since admin flow is different */}
+            {/* ✅ ADMIN ROUTES - Using regular ProtectedRoute with admin requirement */}
             <Route path="/admin" element={
                 <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" key="admin-protected">
                     <Layout currentPageName="Admin" key="admin-page">
