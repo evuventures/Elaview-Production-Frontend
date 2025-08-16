@@ -1,10 +1,19 @@
 // src/components/layout/MobileNav.jsx
-// ✅ UPDATED: Added viewMode support and dynamic label switching with brand colors
+// ✅ UPDATED: Added 5-item navigation with advertiser/space owner specific routes
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import { Badge } from '@/components/ui/badge';
-import { LayoutDashboard, MapPin, Mail } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  MapPin, 
+  Mail, 
+  Home, 
+  Target, 
+  Building2, 
+  CalendarCheck, 
+  Receipt 
+} from 'lucide-react';
 import apiClient from '@/api/apiClient';
 
 const MobileNav = ({ 
@@ -13,7 +22,11 @@ const MobileNav = ({
   actionItemsCount, 
   currentUser,
   viewMode = 'buyer', // Default to advertiser/buyer view
-  onViewModeChange // Function to change view mode
+  onViewModeChange, // Function to change view mode
+  campaignCount = 0, // New: Campaign notifications for advertisers
+  bookingCount = 0, // New: Booking notifications for space owners
+  spaceCount = 0, // New: Space-related notifications
+  invoiceCount = 0 // New: Invoice notifications
 }) => {
   const location = useLocation();
   const { isSignedIn } = useAuth();
@@ -23,14 +36,15 @@ const MobileNav = ({
 
   // ✅ COLOR SCHEME: Verification on mount
   useEffect(() => {
-    console.log('🎨 MOBILE NAV: Updated color scheme verification', {
+    console.log('🎨 MOBILE NAV: Updated 5-item navigation with color scheme verification', {
       primaryBlue: '#4668AB',
       whiteBackground: '#FFFFFF',
       offWhiteCards: '#F9FAFB',
       lightGrayBorders: '#E5E7EB',
+      viewMode: viewMode,
       timestamp: new Date().toISOString()
     });
-  }, []);
+  }, [viewMode]);
 
   // ✅ OPTIMIZED: Fetch notification count with rate limit protection
   const fetchNotificationCount = async (force = false) => {
@@ -90,38 +104,58 @@ const MobileNav = ({
     }
   }, [isSignedIn]);
 
-  // ✅ UPDATED: Dynamic navigation items based on view mode
+  // ✅ UPDATED: 5-item navigation based on view mode
   const getNavigationItems = (mode) => {
     const totalUnreadCount = (unreadCount || 0) + notificationCount;
     
     if (mode === 'seller') {
+      // Space Owner Navigation (5 items)
       return [
         {
-          title: 'Listings', // Changed from Dashboard to Listings for space owner
+          title: 'Dashboard',
           url: '/dashboard',
           icon: LayoutDashboard,
-          badge: pendingInvoices || 0
+          badge: actionItemsCount || 0
         },
         {
-          title: 'Browse',
-          url: '/browse', 
-          icon: MapPin,
-          badge: 0
+          title: 'Spaces',
+          url: '/spaces', // Route not created yet
+          icon: Building2,
+          badge: spaceCount || 0
+        },
+        {
+          title: 'Bookings',
+          url: '/bookings', // Route not created yet
+          icon: CalendarCheck,
+          badge: bookingCount || 0
         },
         {
           title: 'Messages',
           url: '/messages',
           icon: Mail,
           badge: totalUnreadCount
+        },
+        {
+          title: 'Invoices',
+          url: '/invoices', // Route not created yet
+          icon: Receipt,
+          badge: invoiceCount || 0
         }
       ];
     } else {
+      // Advertiser Navigation (5 items)
       return [
         {
-          title: 'Bookings', // Changed from Dashboard to Bookings for advertiser
-          url: '/advertise',
-          icon: LayoutDashboard,
-          badge: actionItemsCount || 0
+          title: 'Home',
+          url: '/home', // Route not created yet
+          icon: Home,
+          badge: 0
+        },
+        {
+          title: 'Campaigns',
+          url: '/campaigns', // Route not created yet
+          icon: Target,
+          badge: campaignCount || 0
         },
         {
           title: 'Browse',
@@ -134,6 +168,12 @@ const MobileNav = ({
           url: '/messages',
           icon: Mail,
           badge: totalUnreadCount
+        },
+        {
+          title: 'Invoices',
+          url: '/invoices', // Route not created yet
+          icon: Receipt,
+          badge: invoiceCount || 0
         }
       ];
     }
@@ -146,6 +186,31 @@ const MobileNav = ({
     return count.toString();
   };
 
+  // ✅ NEW: Check if route exists (for placeholder routes)
+  const isRouteActive = (url) => {
+    // For placeholder routes that don't exist yet, only match exact path
+    if (['/home', '/campaigns', '/spaces', '/bookings', '/invoices'].includes(url)) {
+      return location.pathname === url;
+    }
+    
+    // For existing routes, use standard matching
+    return location.pathname === url;
+  };
+
+  // ✅ NEW: Handle navigation click for non-existent routes
+  const handleNavClick = (e, item) => {
+    const placeholderRoutes = ['/home', '/campaigns', '/spaces', '/bookings', '/invoices'];
+    
+    if (placeholderRoutes.includes(item.url)) {
+      e.preventDefault();
+      console.log(`🚧 Navigation: ${item.title} route (${item.url}) not implemented yet`);
+      
+      // Optional: Show a toast notification or alert
+      // For now, just log to console
+      alert(`${item.title} feature coming soon!`);
+    }
+  };
+
   return (
     <div 
       className="fixed bottom-0 left-0 right-0 bg-white z-40 md:hidden border-t"
@@ -155,36 +220,39 @@ const MobileNav = ({
         backgroundColor: '#F8FAFF'
       }}
     >
-      <div className="flex items-center justify-around py-2">
+      {/* ✅ UPDATED: Adjusted spacing for 5 items */}
+      <div className="flex items-center justify-around py-2 px-1">
         {navigationItems.map((item) => {
-          const isActive = location.pathname === item.url;
+          const isActive = isRouteActive(item.url);
           return (
             <Link
               key={item.title}
               to={item.url}
-              className={`relative flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+              onClick={(e) => handleNavClick(e, item)}
+              className={`relative flex flex-col items-center gap-1 px-2 py-2 rounded-lg text-xs font-medium transition-all duration-200 min-w-0 flex-1 ${
                 isActive
-                  ? 'text-white'
+                  ? 'text-slate-700'
                   : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
               }`}
-              style={isActive ? { 
-                backgroundColor: '#4668AB',
-                color: '#FFFFFF'
-              } : {}}
             >
               <div className="relative">
-                <item.icon className="w-5 h-5" />
+                <item.icon 
+                  className="w-4 h-4 transition-all duration-200" 
+                  style={isActive ? { color: '#4668AB' } : {}}
+                /> {/* Slightly smaller icon for 5 items */}
                 {item.badge > 0 && (
-                  <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1 py-0 rounded-full min-w-[16px] h-4 flex items-center justify-center">
+                  <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1 py-0 rounded-full min-w-[14px] h-3 flex items-center justify-center text-[10px]">
                     {formatBadgeCount(item.badge, 9)}
                   </Badge>
                 )}
                 {/* Rate limit indicator for Messages (since it includes notifications) */}
                 {isRateLimited && item.title === 'Messages' && (
-                  <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-orange-500 rounded-full"></div>
+                  <div className="absolute -bottom-1 -right-1 w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
                 )}
               </div>
-              <span>{item.title}</span>
+              <span className="truncate text-center leading-tight max-w-full">
+                {item.title}
+              </span>
             </Link>
           );
         })}
