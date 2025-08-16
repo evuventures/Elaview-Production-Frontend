@@ -7,26 +7,57 @@ import { Card, CardContent } from '@/components/ui/card';
 import apiClient from '@/api/apiClient';
 
 /**
- * ProtectedRoute component that handles authentication and authorization
+ * Enhanced ProtectedRoute component that handles authentication, authorization, and first-time tutorial flow
  * @param {Object} props
  * @param {React.ReactNode} props.children - The component to render if authorized
  * @param {boolean} props.requireAdmin - Whether admin access is required
  * @param {string[]} props.allowedRoles - Specific roles that are allowed (optional)
  * @param {string} props.redirectTo - Where to redirect if not authenticated (default: /sign-in)
+ * @param {boolean} props.skipIntroCheck - Skip the first-time tutorial check (default: false)
  */
 const ProtectedRoute = ({ 
   children, 
   requireAdmin = false, 
   allowedRoles = [], 
-  redirectTo = '/sign-in' 
+  redirectTo = '/sign-in',
+  skipIntroCheck = false
 }) => {
   const { isSignedIn, isLoaded } = useAuth();
   const { user } = useUser();
   const location = useLocation();
+  
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(requireAdmin);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCheckingFirstTime, setIsCheckingFirstTime] = useState(!skipIntroCheck);
+  const [isFirstTime, setIsFirstTime] = useState(false);
+  const [hasCheckedIntro, setHasCheckedIntro] = useState(skipIntroCheck);
 
-  // ✅ NEW: Check admin status from backend
+  // ✅ Development bypass checks
+  const shouldSkipIntro = () => {
+    // Environment variable bypass
+    if (import.meta.env.VITE_SKIP_INTRO === 'true') {
+      console.log('🚀 VITE_SKIP_INTRO bypass active');
+      return true;
+    }
+    
+    // URL parameter bypass
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('skip_intro') === 'true') {
+      console.log('🚀 URL parameter bypass active');
+      return true;
+    }
+    
+    // Local storage bypass (for dev reset)
+    if (localStorage.getItem('dev_reset_intro') === 'true') {
+      console.log('🚀 Dev reset bypass active');
+      localStorage.removeItem('dev_reset_intro');
+      return false; // This actually forces intro to show
+    }
+    
+    return false;
+  };
+
+  // ✅ Check admin status
   useEffect(() => {
     const checkAdminStatus = async () => {
       if (requireAdmin && isSignedIn && user) {
@@ -55,8 +86,55 @@ const ProtectedRoute = ({
     }
   }, [isLoaded, isSignedIn, user, requireAdmin]);
 
-  // Show loading state while Clerk is initializing or checking admin status
-  if (!isLoaded || isCheckingAdmin) {
+  // ✅ Check first-time login status
+  useEffect(() => {
+    const checkFirstTimeStatus = async () => {
+      if (!skipIntroCheck && isSignedIn && user && !hasCheckedIntro) {
+        try {
+          console.log('🎯 Checking first-time login status...');
+          
+          // Check development bypasses first
+          if (shouldSkipIntro()) {
+            setIsFirstTime(false);
+            setHasCheckedIntro(true);
+            setIsCheckingFirstTime(false);
+            return;
+          }
+          
+          const response = await apiClient.get('/users/first-time-status');
+          
+          if (response.success) {
+            const firstTimeStatus = response.data.isFirstTime;
+            console.log('🎯 First-time status:', firstTimeStatus);
+            setIsFirstTime(firstTimeStatus);
+            setHasCheckedIntro(true);
+          } else {
+            console.error('❌ Failed to check first-time status:', response.error);
+            // Default to false to avoid blocking user
+            setIsFirstTime(false);
+            setHasCheckedIntro(true);
+          }
+        } catch (error) {
+          console.error('❌ Error checking first-time status:', error);
+          // Default to false to avoid blocking user
+          setIsFirstTime(false);
+          setHasCheckedIntro(true);
+        } finally {
+          setIsCheckingFirstTime(false);
+        }
+      } else if (skipIntroCheck) {
+        setIsCheckingFirstTime(false);
+        setHasCheckedIntro(true);
+      }
+    };
+
+    if (isLoaded) {
+      checkFirstTimeStatus();
+    }
+  }, [isLoaded, isSignedIn, user, skipIntroCheck, hasCheckedIntro]);
+
+  // Show loading state while checking
+  if (!isLoaded || isCheckingAdmin || isCheckingFirstTime) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-96">
@@ -66,7 +144,9 @@ const ProtectedRoute = ({
               <Skeleton className="h-4 w-3/4" />
               <Skeleton className="h-4 w-1/2" />
               <div className="text-center text-sm text-muted-foreground">
-                {isCheckingAdmin ? 'Verifying access...' : 'Loading...'}
+                {isCheckingAdmin ? 'Verifying access...' : 
+                 isCheckingFirstTime ? 'Checking tutorial status...' : 
+                 'Loading...'}
               </div>
             </div>
           </CardContent>
@@ -77,12 +157,25 @@ const ProtectedRoute = ({
 
   // Redirect to sign-in if not authenticated
   if (!isSignedIn) {
-    // ✅ FIXED: Store the attempted URL to redirect back after sign-in
     const returnUrl = location.pathname + location.search;
     return <Navigate to={`${redirectTo}?redirect_url=${encodeURIComponent(returnUrl)}`} replace />;
   }
 
-  // ✅ UPDATED: Check admin requirement using isAdmin from backend
+  // ✅ First-time user redirect to intro (unless bypassed or specific routes)
+  if (!skipIntroCheck && isFirstTime && hasCheckedIntro) {
+    // Don't redirect if already on intro page or specific excluded routes
+    const excludedPaths = ['/intro', '/sign-out', '/help'];
+    const isExcludedPath = excludedPaths.some(path => 
+      location.pathname.startsWith(path)
+    );
+    
+    if (!isExcludedPath) {
+      console.log('🎯 Redirecting first-time user to intro page');
+      return <Navigate to="/intro" replace />;
+    }
+  }
+
+  // Check admin requirement
   if (requireAdmin && !isAdmin) {
     console.log('🚫 Admin access denied - user is not admin');
     return (
@@ -107,7 +200,7 @@ const ProtectedRoute = ({
     );
   }
 
-  // Check specific role requirements (kept for backward compatibility)
+  // Check specific role requirements
   if (allowedRoles.length > 0) {
     const userRole = user?.publicMetadata?.role || user?.privateMetadata?.role || 'USER';
     const hasAllowedRole = allowedRoles.includes(userRole);

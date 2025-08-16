@@ -1077,6 +1077,110 @@ class ApiClient {
     return this.get(`/search?${queryString}`);
   }
 
+  // Add these methods to your existing src/api/apiClient.js file
+
+// ✅ NEW: Intro tutorial methods
+async completeIntroTutorial() {
+  console.log('🎯 Completing intro tutorial...');
+  try {
+    const response = await this.post('/users/complete-intro');
+    
+    if (response.success) {
+      console.log('✅ Intro tutorial completed successfully');
+      // Clear any intro-related cache
+      this.clearCache('users/first-time');
+      return response;
+    } else {
+      console.error('❌ Failed to complete intro tutorial:', response.error);
+      return response;
+    }
+  } catch (error) {
+    console.error('❌ Complete intro tutorial error:', error);
+    return {
+      success: false,
+      error: 'Failed to complete intro tutorial'
+    };
+  }
+}
+
+async checkFirstTimeStatus() {
+  console.log('🔍 Checking first-time login status...');
+  try {
+    const response = await this.get('/users/first-time-status');
+    
+    if (response.success) {
+      console.log('✅ First-time status retrieved:', response.data.isFirstTime);
+      return response;
+    } else {
+      console.error('❌ Failed to check first-time status:', response.error);
+      return response;
+    }
+  } catch (error) {
+    console.error('❌ Check first-time status error:', error);
+    return {
+      success: false,
+      error: 'Failed to check first-time status',
+      data: { isFirstTime: false } // Default to false to avoid blocking
+    };
+  }
+}
+
+// ✅ DEVELOPMENT: Reset intro status (dev environment only)
+async resetIntroStatus() {
+  console.log('🔄 Resetting intro status (DEV ONLY)...');
+  try {
+    const response = await this.post('/users/reset-intro');
+    
+    if (response.success) {
+      console.log('✅ Intro status reset successfully');
+      // Clear related cache
+      this.clearCache('users/first-time');
+      this.clearCache('users/profile');
+      return response;
+    } else {
+      console.error('❌ Failed to reset intro status:', response.error);
+      return response;
+    }
+  } catch (error) {
+    console.error('❌ Reset intro status error:', error);
+    return {
+      success: false,
+      error: 'Failed to reset intro status'
+    };
+  }
+}
+
+// ✅ ENHANCED: Get user profile with intro status
+async getUserProfileWithIntro() {
+  console.log('👤 Getting user profile with intro status...');
+  try {
+    const [profileResponse, introResponse] = await Promise.all([
+      this.getUserProfile(),
+      this.checkFirstTimeStatus()
+    ]);
+    
+    if (profileResponse.success && introResponse.success) {
+      return {
+        success: true,
+        data: {
+          ...profileResponse.data,
+          isFirstTime: introResponse.data.isFirstTime,
+          lastSeenAt: introResponse.data.lastSeenAt
+        }
+      };
+    } else {
+      // Return profile data even if intro check fails
+      return profileResponse;
+    }
+  } catch (error) {
+    console.error('❌ Get user profile with intro error:', error);
+    return {
+      success: false,
+      error: 'Failed to get user profile with intro status'
+    };
+  }
+}
+
   // ✅ FILE UPLOAD
   async uploadFile(file, type = 'general') {
     const formData = new FormData();
@@ -1099,6 +1203,8 @@ class ApiClient {
     return response.json();
   }
 }
+
+
 
 // ✅ CRITICAL: Export the instance as default - NO CODE AFTER THIS LINE
 export default new ApiClient();
