@@ -25,6 +25,9 @@ import SignUpPage from "./auth/SignUp.jsx";
 import LearnMore from "./learn-more/LearnMore.jsx";
 import SSOCallback from "./auth/SSOCallback.jsx";
 import DebugSignUpPage from "./auth/DebugSignUp.jsx";
+import MobileDashboard from "./dashboard/mobile/MobileDashboard.jsx";
+import MobileSpaces from "./dashboard/mobile/MobileSpaces.jsx";
+import MobileBookings from "./dashboard/mobile/MobileBookings.jsx";
 
 // Admin page imports
 import UserManagement from "./admin/UserManagement.tsx";
@@ -74,6 +77,9 @@ const PAGES = {
     DebugSignUp: DebugSignUpPage,
     ApiDebugTest: ApiDebugTest,
     MinimalTestMap: MinimalTestMap,
+    MobileDashboard: MobileDashboard,
+    MobileSpaces: MobileSpaces,
+    MobileBookings: MobileBookings,
 }
 
 function BookingToCheckoutRedirect() {
@@ -247,6 +253,22 @@ function PagesContent() {
                     <CreateListingWizard key="list-space-component" />
                 </ProtectedRoute>
             } />
+
+            <Route path="/spaces" element={
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="spaces-protected">
+                    <Layout currentPageName="Spaces" key="spaces-page">
+                        <MobileSpaces key="spaces-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/bookings" element={
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="bookings-protected">
+                    <Layout currentPageName="Bookings" key="bookings-page">
+                        <MobileBookings key="bookings-component" />
+                    </Layout>
+               </ProtectedRoute>
+            } />         
             
             {/* ✅ Legacy redirects */}
             <Route path="/create-property" element={<Navigate to="/list-space" replace />} />

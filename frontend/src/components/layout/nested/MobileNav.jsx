@@ -1,5 +1,5 @@
 // src/components/layout/MobileNav.jsx
-// ✅ UPDATED: Added 5-item navigation with advertiser/space owner specific routes
+// ✅ UPDATED: Removed placeholder handling for implemented routes (/spaces, /bookings)
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
@@ -42,6 +42,7 @@ const MobileNav = ({
       offWhiteCards: '#F9FAFB',
       lightGrayBorders: '#E5E7EB',
       viewMode: viewMode,
+      implementedRoutes: ['/spaces', '/bookings'],
       timestamp: new Date().toISOString()
     });
   }, [viewMode]);
@@ -115,31 +116,36 @@ const MobileNav = ({
           title: 'Dashboard',
           url: '/dashboard',
           icon: LayoutDashboard,
-          badge: actionItemsCount || 0
+          badge: actionItemsCount || 0,
+          implemented: true
         },
         {
           title: 'Spaces',
-          url: '/spaces', // Route not created yet
+          url: '/spaces',
           icon: Building2,
-          badge: spaceCount || 0
+          badge: spaceCount || 0,
+          implemented: true // ✅ NOW IMPLEMENTED
         },
         {
           title: 'Bookings',
-          url: '/bookings', // Route not created yet
+          url: '/bookings',
           icon: CalendarCheck,
-          badge: bookingCount || 0
+          badge: bookingCount || 0,
+          implemented: true // ✅ NOW IMPLEMENTED
         },
         {
           title: 'Messages',
           url: '/messages',
           icon: Mail,
-          badge: totalUnreadCount
+          badge: totalUnreadCount,
+          implemented: true
         },
         {
           title: 'Invoices',
-          url: '/invoices', // Route not created yet
+          url: '/invoices',
           icon: Receipt,
-          badge: invoiceCount || 0
+          badge: invoiceCount || 0,
+          implemented: false // Still needs implementation
         }
       ];
     } else {
@@ -147,33 +153,38 @@ const MobileNav = ({
       return [
         {
           title: 'Home',
-          url: '/home', // Route not created yet
+          url: '/home',
           icon: Home,
-          badge: 0
+          badge: 0,
+          implemented: false // Still needs implementation
         },
         {
           title: 'Campaigns',
-          url: '/campaigns', // Route not created yet
+          url: '/campaigns',
           icon: Target,
-          badge: campaignCount || 0
+          badge: campaignCount || 0,
+          implemented: false // Still needs implementation
         },
         {
           title: 'Browse',
           url: '/browse',
           icon: MapPin,
-          badge: 0
+          badge: 0,
+          implemented: true
         },
         {
           title: 'Messages',
           url: '/messages',
           icon: Mail,
-          badge: totalUnreadCount
+          badge: totalUnreadCount,
+          implemented: true
         },
         {
           title: 'Invoices',
-          url: '/invoices', // Route not created yet
+          url: '/invoices',
           icon: Receipt,
-          badge: invoiceCount || 0
+          badge: invoiceCount || 0,
+          implemented: false // Still needs implementation
         }
       ];
     }
@@ -186,29 +197,28 @@ const MobileNav = ({
     return count.toString();
   };
 
-  // ✅ NEW: Check if route exists (for placeholder routes)
+  // ✅ UPDATED: Only check for routes that aren't implemented yet
   const isRouteActive = (url) => {
-    // For placeholder routes that don't exist yet, only match exact path
-    if (['/home', '/campaigns', '/spaces', '/bookings', '/invoices'].includes(url)) {
-      return location.pathname === url;
-    }
-    
-    // For existing routes, use standard matching
     return location.pathname === url;
   };
 
-  // ✅ NEW: Handle navigation click for non-existent routes
+  // ✅ UPDATED: Only handle clicks for non-implemented routes
   const handleNavClick = (e, item) => {
-    const placeholderRoutes = ['/home', '/campaigns', '/spaces', '/bookings', '/invoices'];
-    
-    if (placeholderRoutes.includes(item.url)) {
+    // ✅ UPDATED: Only prevent navigation for routes that aren't implemented
+    if (!item.implemented) {
       e.preventDefault();
       console.log(`🚧 Navigation: ${item.title} route (${item.url}) not implemented yet`);
       
-      // Optional: Show a toast notification or alert
-      // For now, just log to console
-      alert(`${item.title} feature coming soon!`);
+      // Show a more user-friendly message
+      const message = `${item.title} feature coming soon! We're working hard to bring you this functionality.`;
+      
+      // You could replace this with a proper toast notification
+      if (window.confirm(`${message}\n\nWould you like to be notified when it's ready?`)) {
+        console.log(`📧 User interested in ${item.title} notifications`);
+        // Here you could add logic to subscribe user to notifications
+      }
     }
+    // ✅ For implemented routes, let the Link component handle navigation normally
   };
 
   return (
@@ -233,13 +243,13 @@ const MobileNav = ({
                 isActive
                   ? 'text-slate-700'
                   : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-              }`}
+              } ${!item.implemented ? 'opacity-75' : ''}`} // ✅ Dim unimplemented items
             >
               <div className="relative">
                 <item.icon 
                   className="w-4 h-4 transition-all duration-200" 
                   style={isActive ? { color: '#4668AB' } : {}}
-                /> {/* Slightly smaller icon for 5 items */}
+                />
                 {item.badge > 0 && (
                   <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1 py-0 rounded-full min-w-[14px] h-3 flex items-center justify-center text-[10px]">
                     {formatBadgeCount(item.badge, 9)}
@@ -248,6 +258,10 @@ const MobileNav = ({
                 {/* Rate limit indicator for Messages (since it includes notifications) */}
                 {isRateLimited && item.title === 'Messages' && (
                   <div className="absolute -bottom-1 -right-1 w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                )}
+                {/* ✅ NEW: Coming soon indicator for unimplemented routes */}
+                {!item.implemented && (
+                  <div className="absolute -top-0.5 -left-0.5 w-2 h-2 bg-yellow-400 rounded-full border border-white"></div>
                 )}
               </div>
               <span className="truncate text-center leading-tight max-w-full">
