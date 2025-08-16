@@ -1293,7 +1293,7 @@ export default function BrowsePage() {
                   <div 
                     className="border-t shadow-lg px-6 py-4 rounded-lg mt-6 sticky bottom-0"
                     style={{ 
-                      backgroundColor: '#FFFFFF', 
+                      
                       borderColor: '#E5E7EB',
                       backdropFilter: 'blur(10px)',
                       backgroundColor: 'rgba(255, 255, 255, 0.95)'

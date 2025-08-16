@@ -214,18 +214,18 @@ export default function SignInPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Dark Hero Section */}
-      <div className="hidden lg:flex lg:w-1/2 bg-slate-800 text-white flex-col justify-center items-center p-12 relative">
-        {/* Logo */}
-        <div className="absolute top-8 left-8">
-          <img 
-            src={elaviewLogo} 
-            alt="Elaview Logo" 
-            className="h-10 w-auto filter brightness-0 invert"
-          />
-        </div>
-
+      <div className="hidden lg:flex lg:w-1/2 bg-slate-800 text-white flex-col justify-center items-center p-12">
         {/* Main Content */}
         <div className="text-center max-w-lg">
+          {/* Logo positioned above heading */}
+          <div className="flex justify-center mb-8">
+            <img 
+              src={elaviewLogo} 
+              alt="Elaview Logo" 
+              className="h-12 w-auto filter brightness-0 invert"
+            />
+          </div>
+
           <h1 className="text-5xl font-light leading-tight mb-6">
             Your business,{' '}
             <span className="text-blue-400 font-medium text-6xl block">amplified</span>

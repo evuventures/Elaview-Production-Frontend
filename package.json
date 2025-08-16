@@ -5,5 +5,12 @@
     "@tailwindcss/typography": "^0.5.16",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.12"
+  },
+  "devDependencies": {
+    "@types/react-lazy-load-image-component": "^1.6.4",
+    "react-lazy-load-image-component": "^1.6.3",
+    "rollup-plugin-visualizer": "^6.0.3",
+    "vite-plugin-compression2": "^2.2.0",
+    "web-vitals": "^5.1.0"
   }
 }
