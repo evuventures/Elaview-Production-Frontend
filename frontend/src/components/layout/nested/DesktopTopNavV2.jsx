@@ -1,7 +1,7 @@
 // Enhanced Navigation - Deep Charcoal Version (#0F172A)
-// ✅ UPDATED: Sleek, professional design with deep charcoal background
-// ✅ FIXED: Proper navigation items for Space Owner view
-// ✅ OPTIMIZED: Premium feel with sophisticated color scheme
+// ✅ FIXED: Resolved infinite re-render loop in notification fetching
+// ✅ OPTIMIZED: Proper useCallback dependencies and memoization
+// ✅ ADDED: Console logs for debugging and verification
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
@@ -48,11 +48,24 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
     });
   }, []);
 
-  // ✅ OPTIMIZED: Notification state with better rate limiting
+  // ✅ FIXED: Notification state with proper ref for lastFetchTime
   const [notifications, setNotifications] = useState([]);
   const [notificationCount, setNotificationCount] = useState(0);
-  const [lastFetchTime, setLastFetchTime] = useState(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
+  
+  // ✅ CRITICAL FIX: Use useRef for lastFetchTime to avoid useCallback dependency issues
+  const lastFetchTimeRef = useRef(null);
+  const fetchIntervalRef = useRef(null);
+
+  console.log('🔄 DESKTOP NAV: Component render', {
+    isSignedIn,
+    notificationCount,
+    isRateLimited,
+    isFetching,
+    lastFetchTime: lastFetchTimeRef.current,
+    timestamp: new Date().toISOString()
+  });
 
   // ✅ UPDATED: Navigation items with proper Space Owner items
   const navigationItems = useMemo(() => {
@@ -101,44 +114,74 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
     }
   }, [viewMode, pendingInvoices, unreadCount, actionItemsCount]);
 
-  // ✅ OPTIMIZED: Fetch notification count with better throttling and rate limit handling
+  // ✅ CRITICAL FIX: Stabilized fetchNotificationCount without problematic dependencies
   const fetchNotificationCount = useCallback(async (force = false) => {
-    if (!isSignedIn || isRateLimited) return;
-    
-    const now = Date.now();
-    if (!force && lastFetchTime && (now - lastFetchTime) < 120000) {
-      console.log('⏳ Notification fetch throttled (< 2 minutes since last fetch)');
+    // ✅ Early returns to prevent unnecessary calls
+    if (!isSignedIn) {
+      console.log('⚠️ NOTIFICATION FETCH: Not signed in, skipping');
       return;
     }
+    
+    if (isRateLimited) {
+      console.log('⚠️ NOTIFICATION FETCH: Rate limited, skipping');
+      return;
+    }
+
+    if (isFetching) {
+      console.log('⚠️ NOTIFICATION FETCH: Already fetching, skipping');
+      return;
+    }
+    
+    const now = Date.now();
+    const lastFetch = lastFetchTimeRef.current;
+    
+    // ✅ Throttling check with ref instead of state
+    if (!force && lastFetch && (now - lastFetch) < 120000) {
+      console.log(`⏳ NOTIFICATION FETCH: Throttled (${Math.round((now - lastFetch) / 1000)}s since last fetch)`);
+      return;
+    }
+
+    setIsFetching(true);
+    console.log('🔄 NOTIFICATION FETCH: Starting fetch...', { force, lastFetch: lastFetch ? new Date(lastFetch).toISOString() : 'never' });
 
     try {
       const response = await apiClient.getNotificationCount();
       
       if (response.success) {
-        setNotificationCount(response.count || 0);
-        setLastFetchTime(now);
+        const count = response.count || 0;
+        setNotificationCount(count);
+        lastFetchTimeRef.current = now; // ✅ Use ref instead of state
         setIsRateLimited(false);
-        console.log('✅ Notification count fetched:', response.count);
+        console.log('✅ NOTIFICATION FETCH: Success', { count, timestamp: new Date(now).toISOString() });
+      } else {
+        console.warn('⚠️ NOTIFICATION FETCH: API returned success: false', response);
       }
     } catch (error) {
-      console.error('❌ Failed to fetch notification count:', error);
+      console.error('❌ NOTIFICATION FETCH: Failed', error.message);
       
-      if (error.message.includes('429')) {
-        console.warn('🚫 Rate limited - pausing notification fetching for 5 minutes');
+      if (error.message.includes('429') || error.message.includes('Rate limited')) {
+        console.warn('🚫 NOTIFICATION FETCH: Rate limited - backing off for 5 minutes');
         setIsRateLimited(true);
         setTimeout(() => {
           setIsRateLimited(false);
-          console.log('✅ Rate limit reset - resuming notification fetching');
+          console.log('✅ NOTIFICATION FETCH: Rate limit reset - resuming');
         }, 300000);
       }
+    } finally {
+      setIsFetching(false);
+      console.log('🏁 NOTIFICATION FETCH: Complete');
     }
-  }, [isSignedIn, isRateLimited, lastFetchTime]);
+  }, [isSignedIn, isRateLimited, isFetching]); // ✅ Removed lastFetchTime dependency
 
-  // ✅ OPTIMIZED: Fetch full notifications with rate limit protection
+  // ✅ FIXED: Fetch full notifications with proper error handling
   const fetchFullNotifications = useCallback(async () => {
-    if (!isSignedIn || isRateLimited) {
+    if (!isSignedIn || isRateLimited || isFetching) {
+      console.log('⚠️ FULL NOTIFICATIONS: Skipping fetch', { isSignedIn, isRateLimited, isFetching });
       return { notifications: [], count: notificationCount };
     }
+
+    console.log('🔄 FULL NOTIFICATIONS: Starting fetch...');
+    setIsFetching(true);
 
     try {
       const response = await apiClient.getUnreadNotifications();
@@ -147,26 +190,31 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
         const fetchedNotifications = response.notifications || [];
         setNotifications(fetchedNotifications);
         setNotificationCount(response.count || 0);
-        console.log('✅ Full notifications fetched:', fetchedNotifications.length);
+        console.log('✅ FULL NOTIFICATIONS: Success', { count: fetchedNotifications.length });
         return { notifications: fetchedNotifications, count: response.count || 0 };
+      } else {
+        console.warn('⚠️ FULL NOTIFICATIONS: API returned success: false', response);
       }
     } catch (error) {
-      console.error('❌ Failed to fetch full notifications:', error);
+      console.error('❌ FULL NOTIFICATIONS: Failed', error.message);
       
-      if (error.message.includes('429')) {
+      if (error.message.includes('429') || error.message.includes('Rate limited')) {
         setIsRateLimited(true);
         setTimeout(() => setIsRateLimited(false), 300000);
       }
       
       return { notifications, count: notificationCount };
+    } finally {
+      setIsFetching(false);
+      console.log('🏁 FULL NOTIFICATIONS: Complete');
     }
     
     return { notifications: [], count: 0 };
-  }, [isSignedIn, isRateLimited, notifications, notificationCount]);
+  }, [isSignedIn, isRateLimited, isFetching, notifications, notificationCount]);
 
   // ✅ OPTIMIZED: Handle notification actions with local state updates
   const handleNotificationAction = useCallback((action) => {
-    console.log('🔔 Notification action:', action);
+    console.log('🔔 NOTIFICATION ACTION:', action);
     
     if (action === 'approved' || action === 'declined' || action === 'messaged') {
       setNotificationCount(prev => Math.max(0, prev - 1));
@@ -176,6 +224,7 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
       setNotifications([]);
     }
     
+    // ✅ Refresh after action with delay
     setTimeout(() => {
       fetchNotificationCount(true);
     }, 2000);
@@ -200,50 +249,94 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
     };
   }, [userMenuOpen]);
 
-  // ✅ OPTIMIZED: Fetch notification count on auth change with 3-minute intervals
+  // ✅ CRITICAL FIX: Stabilized auth effect with proper cleanup
   useEffect(() => {
+    console.log('🔄 DESKTOP NAV: Auth state changed', { isSignedIn, isRateLimited });
+    
     if (isSignedIn) {
+      // ✅ Initial fetch
       fetchNotificationCount(true);
       
-      const interval = setInterval(() => {
-        if (!isRateLimited) {
-          fetchNotificationCount();
-        }
-      }, 180000);
+      // ✅ Set up interval with ref to avoid dependency issues
+      if (fetchIntervalRef.current) {
+        clearInterval(fetchIntervalRef.current);
+      }
       
-      return () => clearInterval(interval);
+      fetchIntervalRef.current = setInterval(() => {
+        console.log('⏰ DESKTOP NAV: Interval tick - checking if should fetch');
+        
+        // ✅ Check conditions before fetching
+        if (!isRateLimited && !isFetching) {
+          console.log('⏰ DESKTOP NAV: Interval fetch triggered');
+          fetchNotificationCount();
+        } else {
+          console.log('⏰ DESKTOP NAV: Interval fetch skipped', { isRateLimited, isFetching });
+        }
+      }, 180000); // 3 minutes
+      
+      console.log('✅ DESKTOP NAV: Notification fetching initialized');
+      
     } else {
+      // ✅ Clean up when not signed in
       setNotificationCount(0);
       setNotifications([]);
       setIsRateLimited(false);
+      lastFetchTimeRef.current = null;
+      
+      if (fetchIntervalRef.current) {
+        clearInterval(fetchIntervalRef.current);
+        fetchIntervalRef.current = null;
+      }
+      
+      console.log('🧹 DESKTOP NAV: Cleaned up notification state');
     }
-  }, [isSignedIn, fetchNotificationCount, isRateLimited]);
+
+    // ✅ Cleanup function
+    return () => {
+      if (fetchIntervalRef.current) {
+        clearInterval(fetchIntervalRef.current);
+        fetchIntervalRef.current = null;
+      }
+    };
+  }, [isSignedIn]); // ✅ Only depend on isSignedIn
+
+  // ✅ Separate effect for rate limit changes
+  useEffect(() => {
+    console.log('🔄 DESKTOP NAV: Rate limit state changed', { isRateLimited });
+  }, [isRateLimited]);
 
   // ✅ FIXED: Simplified view switch handler
   const handleViewSwitch = useCallback((newMode) => {
     if (!onViewModeChange) return;
     
-    console.log(`🔄 Desktop: Switching view from ${viewMode} to ${newMode}`);
+    console.log(`🔄 DESKTOP NAV: Switching view from ${viewMode} to ${newMode}`);
     onViewModeChange(newMode);
   }, [onViewModeChange, viewMode]);
 
   // ✅ OPTIMIZED: Memoize sign out handler
   const handleSignOut = useCallback(async () => {
     try {
-      console.log('🚪 Signing out user...');
+      console.log('🚪 DESKTOP NAV: Signing out user...');
       setUserMenuOpen(false);
+      
+      // ✅ Clean up before sign out
+      if (fetchIntervalRef.current) {
+        clearInterval(fetchIntervalRef.current);
+        fetchIntervalRef.current = null;
+      }
       
       await signOut({
         redirectUrl: '/browse'
       });
     } catch (error) {
-      console.error('❌ Error signing out:', error);
+      console.error('❌ DESKTOP NAV: Error signing out:', error);
       navigate('/browse');
     }
   }, [signOut, navigate]);
 
   // ✅ OPTIMIZED: Memoize sign in handler
   const handleSignIn = useCallback(() => {
+    console.log('🔑 DESKTOP NAV: Navigating to sign in');
     navigate('/sign-in');
   }, [navigate]);
 
@@ -257,6 +350,7 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
   const toggleUserMenu = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
+    console.log('👤 DESKTOP NAV: Toggling user menu');
     setUserMenuOpen(prev => !prev);
     setNotificationMenuOpen(false);
   }, []);
@@ -267,20 +361,25 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
     e.stopPropagation();
     
     const wasOpen = notificationMenuOpen;
+    console.log('🔔 DESKTOP NAV: Toggling notification menu', { wasOpen, isRateLimited });
+    
     setNotificationMenuOpen(prev => !prev);
     setUserMenuOpen(false);
     
-    if (!wasOpen && !isRateLimited) {
+    if (!wasOpen && !isRateLimited && !isFetching) {
+      console.log('🔔 DESKTOP NAV: Fetching full notifications on menu open');
       await fetchFullNotifications();
     }
-  }, [notificationMenuOpen, isRateLimited, fetchFullNotifications]);
+  }, [notificationMenuOpen, isRateLimited, isFetching, fetchFullNotifications]);
 
   // ✅ OPTIMIZED: Memoize close functions
   const closeUserMenu = useCallback(() => {
+    console.log('👤 DESKTOP NAV: Closing user menu');
     setUserMenuOpen(false);
   }, []);
 
   const closeNotificationMenu = useCallback(() => {
+    console.log('🔔 DESKTOP NAV: Closing notification menu');
     setNotificationMenuOpen(false);
   }, []);
 
@@ -302,6 +401,16 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
       </div>
     );
   }, [currentUser?.imageUrl]);
+
+  // ✅ DEBUG: Component unmount cleanup
+  useEffect(() => {
+    return () => {
+      console.log('🧹 DESKTOP NAV: Component unmounting - cleaning up');
+      if (fetchIntervalRef.current) {
+        clearInterval(fetchIntervalRef.current);
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -409,9 +518,9 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
                   size="sm"
                   variant="ghost"
                   onClick={toggleNotificationMenu}
-                  disabled={isRateLimited}
+                  disabled={isRateLimited || isFetching}
                   className={`relative w-9 h-9 p-0 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 backdrop-blur-sm ${
-                    isRateLimited ? 'opacity-50 cursor-not-allowed' : ''
+                    (isRateLimited || isFetching) ? 'opacity-50 cursor-not-allowed' : ''
                   } ${notificationMenuOpen ? 'bg-white/15 text-white shadow-lg' : ''}`}
                 >
                   <Bell className="w-4 h-4" />
@@ -420,8 +529,13 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
                       {notificationCount > 9 ? '9+' : notificationCount}
                     </div>
                   )}
+                  {/* Rate limit indicator */}
                   {isRateLimited && (
-                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-orange-500 rounded-full shadow-sm"></div>
+                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-orange-500 rounded-full shadow-sm" title="Rate limited"></div>
+                  )}
+                  {/* Fetching indicator */}
+                  {isFetching && (
+                    <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-blue-500 rounded-full shadow-sm animate-pulse" title="Fetching"></div>
                   )}
                 </Button>
 
@@ -431,7 +545,7 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
                   onNotificationAction={handleNotificationAction}
                   notifications={notifications}
                   notificationCount={notificationCount}
-                  isLoading={false}
+                  isLoading={isFetching}
                 />
               </div>
             )}
@@ -558,8 +672,6 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
                               <div className="text-xs text-slate-500">Notifications & privacy</div>
                             </div>
                           </Link>
-
-                          
 
                           <Link
                             to="/help"
