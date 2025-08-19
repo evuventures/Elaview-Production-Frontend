@@ -193,7 +193,7 @@ export default function SpaceDetailsModal({
     }));
     
     // Navigate to campaign selection
-    navigate('/TEMPUserJourney/CampaignSelection');
+    navigate('/CampaignSelection');
     
     // Close the modal
     setDetailsExpanded(false);

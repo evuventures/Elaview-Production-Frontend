@@ -1,4 +1,4 @@
-// src/pages/Pages.tsx - UPDATED with Mobile Home Page routing
+// src/pages/Pages.tsx - UPDATED with Campaign Flow routing
 import Layout from "../components/layout/Layout.tsx";
 import Landing from "./landing/LandingPage.jsx";
 import CheckoutPage from "./checkout/CheckoutPage.jsx";
@@ -30,8 +30,15 @@ import MobileDashboard from "./dashboard/mobile/MobileDashboard.jsx";
 import MobileSpaces from "./dashboard/mobile/MobileSpaces.jsx";
 import MobileBookings from "./dashboard/mobile/MobileBookings.jsx";
 
-// ✅ NEW: Mobile Home Page Import
+// ✅ EXISTING: Mobile Home Page Import
 import MobileHomePage from "./home/MobileHomePage.jsx";
+
+// ✅ EXISTING: Campaign Selection Import
+import CampaignSelection from "./TEMPUserJourney/CampaignSelection.tsx";
+
+// ✅ NEW: Campaign Flow Imports
+import AdvertiserConfirmationPage from "./TEMPUserJourney/AdvertiserConfirmationPage.tsx";
+import SpaceOwnerConfirmationPage from "./TEMPUserJourney/SpaceOwnerConfirmationPage.tsx";
 
 // Admin page imports
 import UserManagement from "./admin/UserManagement.tsx";
@@ -48,11 +55,11 @@ import MinimalTestMap from "@/dev/debug/MinimalTestMap.tsx";
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation, useParams } from 'react-router-dom';
 import { useEffect } from 'react';
 
-// ✅ UPDATED: Added MobileHomePage to PAGES object
+// ✅ UPDATED: Added new campaign flow pages to PAGES object
 const PAGES = {
     Landing: Landing,
     Browse: Map,
-    Home: MobileHomePage,  // ✅ NEW: Mobile home page
+    Home: MobileHomePage,
     Messages: Messages,
     CheckoutPage: CheckoutPage,
     CampaignCheckout: CampaignCheckout,
@@ -64,6 +71,9 @@ const PAGES = {
     Invoices: Invoices,
     BookingManagement: BookingManagement,
     CreateCampaign: CreateCampaignWizard,
+    CampaignSelection: CampaignSelection,  // ✅ EXISTING: Campaign Selection page
+    AdvertiserConfirmation: AdvertiserConfirmationPage,  // ✅ NEW: Advertiser confirmation page
+    SpaceOwnerConfirmation: SpaceOwnerConfirmationPage,  // ✅ NEW: Space owner confirmation page
     ListSpace: CreateListingWizard,
     PropertyManagement: PropertyManagement,
     DataSeeder: DataSeeder,
@@ -144,7 +154,7 @@ function PagesContent() {
             {/* ✅ STANDALONE PAGES - NO LAYOUT */}
             <Route path="/learn-more" element={<LearnMore />} />
             
-            {/* ✅ NEW: MOBILE HOME PAGE - Onboarding handles routing here */}
+            {/* ✅ EXISTING: MOBILE HOME PAGE - Onboarding handles routing here */}
             <Route path="/home" element={
                 <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="home-protected">
                     <Layout currentPageName="Home" key="home-page">
@@ -189,6 +199,42 @@ function PagesContent() {
                 <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="messages-protected">
                     <Layout currentPageName="Messages" key="messages-page">
                         <Messages key="messages-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+            
+            {/* ✅ EXISTING: CAMPAIGN SELECTION ROUTE - Part of booking flow */}
+            <Route path="/CampaignSelection" element={
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="campaign-selection-protected">
+                    <Layout currentPageName="Campaign Selection" key="campaign-selection-page">
+                        <CampaignSelection key="campaign-selection-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            {/* ✅ NEW: ADVERTISER CONFIRMATION ROUTE - Campaign confirmation for advertisers */}
+            <Route path="/AdvertiserConfirmation" element={
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="advertiser-confirmation-protected">
+                    <Layout currentPageName="Confirm Campaign" key="advertiser-confirmation-page">
+                        <AdvertiserConfirmationPage key="advertiser-confirmation-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            {/* ✅ NEW: SPACE OWNER CONFIRMATION ROUTE - Campaign approval for space owners */}
+            <Route path="/SpaceOwnerConfirmation" element={
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="space-owner-confirmation-protected">
+                    <Layout currentPageName="Campaign Approval" key="space-owner-confirmation-page">
+                        <SpaceOwnerConfirmationPage key="space-owner-confirmation-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+
+            {/* ✅ NEW: DYNAMIC SPACE OWNER CONFIRMATION WITH CAMPAIGN ID */}
+            <Route path="/SpaceOwnerConfirmation/:campaignId" element={
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="space-owner-confirmation-id-protected">
+                    <Layout currentPageName="Campaign Approval" key="space-owner-confirmation-id-page">
+                        <SpaceOwnerConfirmationPage key="space-owner-confirmation-id-component" />
                     </Layout>
                 </ProtectedRoute>
             } />
@@ -300,7 +346,7 @@ function PagesContent() {
             <Route path="/edit-property" element={
                 <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="edit-property-protected">
                     <Layout currentPageName="EditProperty" key="edit-property-page">
-                        <EditProperty key="edit-property-component" />
+                        <Settings key="edit-property-component" />
                     </Layout>
                 </ProtectedRoute>
             } />

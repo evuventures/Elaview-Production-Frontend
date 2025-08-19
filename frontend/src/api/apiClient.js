@@ -1,13 +1,14 @@
 // src/api/apiClient.js
-// ✅ UPDATED: Added user resolution methods for Clerk ID vs UUID mapping
-// ✅ FIXED: Complete ApiClient with conversation methods properly integrated
+// ✅ UPDATED: Added campaign invitation methods and notification handling
+// ✅ COMPREHENSIVE: Complete ApiClient with all existing functionality plus new campaign flow
 // ✅ RATE LIMITING FIXES: Request deduplication, caching, and exponential backoff
+// ✅ CAMPAIGN INVITATIONS: Full invitation flow methods added
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const API_TIMEOUT = 30000;
 const CACHE_DURATION = 60000; // 1 minute cache
 
-console.log('🚀 API Client initialized with rate limiting:', API_BASE_URL);
+console.log('🚀 API Client initialized with campaign invitations:', API_BASE_URL);
 
 class ApiClient {
   constructor() {
@@ -304,7 +305,10 @@ class ApiClient {
     };
   }
 
-  // ✅ CORE ENDPOINTS
+  // ============================================================================
+  // CORE ENDPOINTS
+  // ============================================================================
+  
   async get(endpoint) {
     return this.request(endpoint, 'GET');
   }
@@ -325,7 +329,10 @@ class ApiClient {
     return this.request(endpoint, 'DELETE');
   }
 
-  // ✅ NEW: USER ID RESOLUTION METHODS (Fixes Clerk ID vs UUID mismatch)
+  // ============================================================================
+  // USER ID RESOLUTION METHODS (Fixes Clerk ID vs UUID mismatch)
+  // ============================================================================
+
   async resolveUserId(identifier) {
     console.log('🔍 Resolving user ID:', identifier);
     
@@ -426,12 +433,18 @@ class ApiClient {
     return false;
   }
 
-  // ✅ HEALTH CHECK
+  // ============================================================================
+  // HEALTH CHECK
+  // ============================================================================
+
   async healthCheck() {
     return this.get('/health');
   }
 
-  // ✅ USERS (matches your actual schema)
+  // ============================================================================
+  // USER MANAGEMENT & ONBOARDING (FIXED - matches your backend routes)
+  // ============================================================================
+
   async getUsers(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     return this.get(`/users${queryString ? `?${queryString}` : ''}`);
@@ -453,7 +466,203 @@ class ApiClient {
     return this.delete(`/users/${id}`);
   }
 
-  // ✅ FIXED: BUSINESS PROFILE MANAGEMENT (404 handling fixed)
+  // ✅ ONBOARDING METHODS (FIXED - matches your backend exactly)
+
+  async completeIntroTutorial() {
+    console.log('🎯 Completing intro tutorial...');
+    try {
+      const response = await this.post('/users/complete-intro');
+      
+      if (response.success) {
+        console.log('✅ Intro tutorial completed successfully');
+        // Clear any intro-related cache
+        this.clearCache('users/first-time');
+        this.clearCache('users/profile');
+        return response;
+      } else {
+        console.error('❌ Failed to complete intro tutorial:', response.error);
+        return response;
+      }
+    } catch (error) {
+      console.error('❌ Complete intro tutorial error:', error);
+      return {
+        success: false,
+        error: 'Failed to complete intro tutorial'
+      };
+    }
+  }
+
+  // ✅ FIXED: Add missing completeOnboarding method (prevents race condition)
+  async completeOnboarding(data = {}) {
+    console.log('🎯 Completing onboarding with data:', data);
+    try {
+      const response = await this.post('/users/complete-onboarding', data);
+      
+      if (response.success) {
+        console.log('✅ Onboarding completed successfully');
+        // Clear any onboarding-related cache
+        this.clearCache('users/profile');
+        this.clearCache('users/first-time');
+        this.clearCache('users/onboarding');
+        return response;
+      } else {
+        console.error('❌ Failed to complete onboarding:', response.error);
+        return response;
+      }
+    } catch (error) {
+      console.error('❌ Complete onboarding error:', error);
+      return {
+        success: false,
+        error: 'Failed to complete onboarding'
+      };
+    }
+  }
+
+  async checkFirstTimeStatus() {
+    console.log('🔍 Checking first-time login status...');
+    try {
+      const response = await this.get('/users/first-time-status');
+      
+      if (response.success) {
+        console.log('✅ First-time status retrieved:', response.data.isFirstTime);
+        return response;
+      } else {
+        console.error('❌ Failed to check first-time status:', response.error);
+        return response;
+      }
+    } catch (error) {
+      console.error('❌ Check first-time status error:', error);
+      return {
+        success: false,
+        error: 'Failed to check first-time status',
+        data: { isFirstTime: false } // Default to false to avoid blocking
+      };
+    }
+  }
+
+  // ✅ ENHANCED: Get onboarding status (more detailed than first-time check)
+  async getOnboardingStatus() {
+    console.log('🔍 Checking detailed onboarding status...');
+    try {
+      const response = await this.get('/users/onboarding-status');
+      
+      if (response.success) {
+        console.log('✅ Onboarding status retrieved:', response.data);
+        return response;
+      } else {
+        console.error('❌ Failed to check onboarding status:', response.error);
+        // Fallback to checking user profile
+        const profileResponse = await this.getUserProfile();
+        if (profileResponse.success) {
+          return {
+            success: true,
+            data: {
+              hasCompletedOnboarding: profileResponse.data.hasCompletedOnboarding || false,
+              isFirstTime: !profileResponse.data.hasCompletedOnboarding,
+              preferredView: profileResponse.data.preferredView || 'ADVERTISER'
+            }
+          };
+        }
+        return response;
+      }
+    } catch (error) {
+      console.error('❌ Check onboarding status error:', error);
+      return {
+        success: false,
+        error: 'Failed to check onboarding status',
+        data: { 
+          hasCompletedOnboarding: false, 
+          isFirstTime: true,
+          preferredView: 'ADVERTISER'
+        }
+      };
+    }
+  }
+
+  // ✅ DEVELOPMENT: Reset intro status (dev environment only)
+  async resetIntroStatus() {
+    console.log('🔄 Resetting intro status (DEV ONLY)...');
+    try {
+      const response = await this.post('/users/reset-intro');
+      
+      if (response.success) {
+        console.log('✅ Intro status reset successfully');
+        // Clear related cache
+        this.clearCache('users/first-time');
+        this.clearCache('users/profile');
+        return response;
+      } else {
+        console.error('❌ Failed to reset intro status:', response.error);
+        return response;
+      }
+    } catch (error) {
+      console.error('❌ Reset intro status error:', error);
+      return {
+        success: false,
+        error: 'Failed to reset intro status'
+      };
+    }
+  }
+
+  // ✅ ENHANCED: Get user profile with intro status
+  async getUserProfileWithIntro() {
+    console.log('👤 Getting user profile with intro status...');
+    try {
+      const [profileResponse, introResponse] = await Promise.all([
+        this.getUserProfile(),
+        this.checkFirstTimeStatus()
+      ]);
+      
+      if (profileResponse.success && introResponse.success) {
+        return {
+          success: true,
+          data: {
+            ...profileResponse.data,
+            isFirstTime: introResponse.data.isFirstTime,
+            lastSeenAt: introResponse.data.lastSeenAt
+          }
+        };
+      } else {
+        // Return profile data even if intro check fails
+        return profileResponse;
+      }
+    } catch (error) {
+      console.error('❌ Get user profile with intro error:', error);
+      return {
+        success: false,
+        error: 'Failed to get user profile with intro status'
+      };
+    }
+  }
+
+  // ✅ USER VIEW SWITCHING
+  async switchUserView(preferredView) {
+    console.log('🔄 Switching user view to:', preferredView);
+    try {
+      const response = await this.put('/users/switch-view', { preferredView });
+      
+      if (response.success) {
+        console.log('✅ User view switched successfully');
+        // Clear profile cache to refetch updated view
+        this.clearCache('users/profile');
+        return response;
+      } else {
+        console.error('❌ Failed to switch user view:', response.error);
+        return response;
+      }
+    } catch (error) {
+      console.error('❌ Switch user view error:', error);
+      return {
+        success: false,
+        error: 'Failed to switch user view'
+      };
+    }
+  }
+
+  // ============================================================================
+  // BUSINESS PROFILE MANAGEMENT (matches your backend routes)
+  // ============================================================================
+
   async getUserBusinessProfile() {
     console.log('🏢 Fetching user business profile...');
     try {
@@ -569,7 +778,10 @@ class ApiClient {
     }
   }
 
-  // ✅ PROPERTIES (matches your actual schema)
+  // ============================================================================
+  // PROPERTIES (matches your actual schema)
+  // ============================================================================
+
   async getProperties(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     return this.get(`/properties${queryString ? `?${queryString}` : ''}`);
@@ -591,7 +803,10 @@ class ApiClient {
     return this.delete(`/properties/${id}`);
   }
 
-  // ✅ SPACES (Unified API for all advertising spaces)
+  // ============================================================================
+  // SPACES (Unified API for all advertising spaces)
+  // ============================================================================
+
   async getSpaces(params = {}) {
     console.log('🏢 Getting spaces with params:', params);
     const queryString = new URLSearchParams(params).toString();
@@ -618,7 +833,7 @@ class ApiClient {
     return this.delete(`/spaces/${id}`);
   }
 
-  // ✅ SPACE AVAILABILITY CHECKING (Progressive Configuration)
+  // ✅ SPACE AVAILABILITY CHECKING
   async checkSpaceAvailability(spaceId, startDate, endDate) {
     console.log('📅 Checking availability for space:', spaceId, 'from', startDate, 'to', endDate);
     return this.get(`/spaces/${spaceId}/availability?start=${startDate}&end=${endDate}`);
@@ -629,7 +844,23 @@ class ApiClient {
     return this.get(`/spaces/${spaceId}/booked-dates?month=${monthYear}`);
   }
 
-  // ✅ CAMPAIGNS (matches your actual schema)
+  async searchAvailableSpaces(filters = {}) {
+    const queryString = new URLSearchParams(filters).toString();
+    console.log('🔍 Searching available spaces with filters:', filters);
+    try {
+      const response = await this.get(`/spaces/search${queryString ? `?${queryString}` : ''}`);
+      return response;
+    } catch (error) {
+      // Fallback to regular spaces endpoint
+      console.log('🔄 Fallback to regular spaces endpoint:', error.message);
+      return this.getSpaces(filters);
+    }
+  }
+
+  // ============================================================================
+  // CAMPAIGNS (matches your actual schema)
+  // ============================================================================
+
   async getCampaigns(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     return this.get(`/campaigns${queryString ? `?${queryString}` : ''}`);
@@ -651,7 +882,183 @@ class ApiClient {
     return this.delete(`/campaigns/${id}`);
   }
 
-  // ✅ BOOKINGS (matches your actual schema - bookerId, totalAmount)
+  // ============================================================================
+  // ✅ NEW: CAMPAIGN INVITATIONS (Complete invitation flow)
+  // ============================================================================
+
+  async createCampaignInvitation(invitationData) {
+    console.log('📋 Creating campaign invitation:', invitationData);
+    try {
+      const response = await this.post('/campaigns/create-invitation', invitationData);
+      
+      if (response.success) {
+        console.log('✅ Campaign invitation created successfully:', response.data.invitationId);
+        // Clear campaign-related cache to refresh data
+        this.clearCache('campaigns');
+        this.clearCache('notifications');
+        return response;
+      } else {
+        console.error('❌ Failed to create campaign invitation:', response.error);
+        return response;
+      }
+    } catch (error) {
+      console.error('❌ Create campaign invitation error:', error);
+      return {
+        success: false,
+        error: 'Failed to create campaign invitation'
+      };
+    }
+  }
+
+  async getCampaignInvitation(invitationId) {
+    console.log('📋 Getting campaign invitation:', invitationId);
+    try {
+      const response = await this.get(`/campaigns/invitations/${invitationId}`);
+      
+      if (response.success) {
+        console.log('✅ Campaign invitation retrieved:', response.data.id);
+        return response;
+      } else {
+        console.error('❌ Failed to get campaign invitation:', response.error);
+        return response;
+      }
+    } catch (error) {
+      console.error('❌ Get campaign invitation error:', error);
+      return {
+        success: false,
+        error: 'Failed to get campaign invitation'
+      };
+    }
+  }
+
+  async getCampaignInvitations(params = {}) {
+    console.log('📋 Getting campaign invitations with params:', params);
+    try {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await this.get(`/campaigns/invitations${queryString ? `?${queryString}` : ''}`);
+      
+      if (response.success) {
+        console.log(`✅ Retrieved ${response.data?.length || 0} campaign invitations`);
+        return response;
+      } else {
+        console.error('❌ Failed to get campaign invitations:', response.error);
+        return response;
+      }
+    } catch (error) {
+      console.error('❌ Get campaign invitations error:', error);
+      return {
+        success: false,
+        error: 'Failed to get campaign invitations',
+        data: []
+      };
+    }
+  }
+
+  async respondToCampaignInvitation(responseData) {
+    console.log('📋 Responding to campaign invitation:', responseData);
+    try {
+      const response = await this.post('/campaigns/invitations/respond', responseData);
+      
+      if (response.success) {
+        console.log(`✅ Campaign invitation ${responseData.status} successfully`);
+        // Clear related cache to refresh data
+        this.clearCache('campaigns/invitations');
+        this.clearCache('notifications');
+        return response;
+      } else {
+        console.error('❌ Failed to respond to campaign invitation:', response.error);
+        return response;
+      }
+    } catch (error) {
+      console.error('❌ Respond to campaign invitation error:', error);
+      return {
+        success: false,
+        error: 'Failed to respond to campaign invitation'
+      };
+    }
+  }
+
+  // ✅ CAMPAIGN INVITATION STATUS METHODS
+  async approveCampaignInvitation(invitationId, message = '') {
+    console.log('✅ Approving campaign invitation:', invitationId);
+    return this.respondToCampaignInvitation({
+      invitationId,
+      status: 'APPROVED',
+      message: message || 'Campaign approved! You can now proceed with booking.',
+      responseDate: new Date().toISOString()
+    });
+  }
+
+  async denyCampaignInvitation(invitationId, message) {
+    console.log('❌ Denying campaign invitation:', invitationId);
+    if (!message || !message.trim()) {
+      return {
+        success: false,
+        error: 'A message is required when denying a campaign invitation'
+      };
+    }
+    return this.respondToCampaignInvitation({
+      invitationId,
+      status: 'DENIED',
+      message,
+      responseDate: new Date().toISOString()
+    });
+  }
+
+  async requestMoreInfoCampaignInvitation(invitationId, message) {
+    console.log('❓ Requesting more info for campaign invitation:', invitationId);
+    if (!message || !message.trim()) {
+      return {
+        success: false,
+        error: 'A message is required when requesting more information'
+      };
+    }
+    return this.respondToCampaignInvitation({
+      invitationId,
+      status: 'INFO_REQUESTED',
+      message,
+      responseDate: new Date().toISOString()
+    });
+  }
+
+  // ✅ GET INVITATIONS BY USER ROLE
+  async getAdvertiserCampaignInvitations(params = {}) {
+    console.log('📊 Getting advertiser campaign invitations');
+    return this.getCampaignInvitations({ 
+      ...params, 
+      role: 'advertiser' 
+    });
+  }
+
+  async getSpaceOwnerCampaignInvitations(params = {}) {
+    console.log('🏢 Getting space owner campaign invitations');
+    return this.getCampaignInvitations({ 
+      ...params, 
+      role: 'space_owner' 
+    });
+  }
+
+  // ✅ GET INVITATIONS BY STATUS
+  async getPendingCampaignInvitations(params = {}) {
+    console.log('⏳ Getting pending campaign invitations');
+    return this.getCampaignInvitations({ 
+      ...params, 
+      status: 'PENDING' 
+    });
+  }
+
+  async getApprovedCampaignInvitations(params = {}) {
+    console.log('✅ Getting approved campaign invitations');
+    return this.getCampaignInvitations({ 
+      ...params, 
+      status: 'APPROVED' 
+    });
+  }
+
+  // ============================================================================
+  // BOOKINGS (matches your actual schema)
+  // ============================================================================
+
   async getBookings(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     return this.get(`/bookings${queryString ? `?${queryString}` : ''}`);
@@ -673,9 +1080,15 @@ class ApiClient {
     return this.delete(`/bookings/${id}`);
   }
 
-  // ✅ PROGRESSIVE CONFIGURATION CHECKOUT ENDPOINTS
+  async createBookingWithMaterials(bookingData) {
+    console.log('📋 Creating booking with materials:', bookingData);
+    return this.post('/bookings/with-materials', bookingData);
+  }
+
+  // ============================================================================
+  // CHECKOUT & PAYMENTS
+  // ============================================================================
   
-  // Stripe Payment Processing
   async createPaymentIntent(paymentData) {
     console.log('💳 Creating Stripe payment intent:', paymentData);
     return this.post('/checkout/create-payment-intent', paymentData);
@@ -695,35 +1108,15 @@ class ApiClient {
     return this.get(`/checkout/payment-status/${paymentIntentId}`);
   }
 
-  // Multi-Booking Creation (Progressive Configuration)
   async createMultipleBookings(bookingsData) {
     console.log('📋 Creating multiple bookings from cart:', bookingsData);
     return this.post('/checkout/create-multi-bookings', bookingsData);
   }
 
-  // ✅ MESSAGES (matches your actual schema - recipientId, conversationId)
-  async getMessages(params = {}) {
-    const queryString = new URLSearchParams(params).toString();
-    return this.get(`/messages${queryString ? `?${queryString}` : ''}`);
-  }
+  // ============================================================================
+  // CONVERSATIONS & MESSAGING (Enhanced with user resolution)
+  // ============================================================================
 
-  async getMessage(id) {
-    return this.get(`/messages/${id}`);
-  }
-
-  async createMessage(data) {
-    return this.post('/messages', data);
-  }
-
-  async updateMessage(id, data) {
-    return this.put(`/messages/${id}`, data);
-  }
-
-  async deleteMessage(id) {
-    return this.delete(`/messages/${id}`);
-  }
-
-  // ✅ ENHANCED: CONVERSATIONS with user resolution 
   async getConversations(params = {}) {
     console.log('💬 Getting conversations with params:', params);
     try {
@@ -825,7 +1218,37 @@ class ApiClient {
     return this.patch(`/conversations/${conversationId}/archive`, { isArchived });
   }
 
-  // ✅ ENHANCED MESSAGES (B2B specific message types)
+  async markConversationAsRead(conversationId) {
+    console.log('✅ Marking conversation as read:', conversationId);
+    return this.post(`/conversations/${conversationId}/mark-read`);
+  }
+
+  // ============================================================================
+  // MESSAGES (matches your actual schema)
+  // ============================================================================
+
+  async getMessages(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`/messages${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getMessage(id) {
+    return this.get(`/messages/${id}`);
+  }
+
+  async createMessage(data) {
+    return this.post('/messages', data);
+  }
+
+  async updateMessage(id, data) {
+    return this.put(`/messages/${id}`, data);
+  }
+
+  async deleteMessage(id) {
+    return this.delete(`/messages/${id}`);
+  }
+
+  // ✅ B2B SPECIFIC MESSAGE TYPES
   async sendPropertyInquiry(propertyData) {
     console.log('🏢 Sending property inquiry:', propertyData);
     return this.post('/messages/property-inquiry', propertyData);
@@ -852,12 +1275,10 @@ class ApiClient {
     }
   }
 
-  async markConversationAsRead(conversationId) {
-    console.log('✅ Marking conversation as read:', conversationId);
-    return this.post(`/conversations/${conversationId}/mark-read`);
-  }
+  // ============================================================================
+  // USER LOOKUP & PROPERTY OWNER METHODS
+  // ============================================================================
 
-  // ✅ USER LOOKUP (for messaging)
   async findUsersByBusinessName(searchTerm) {
     console.log('🔍 Searching users by business name:', searchTerm);
     const params = { search: searchTerm, type: 'business' };
@@ -870,7 +1291,6 @@ class ApiClient {
     return this.get(`/users/clerk/${clerkId}`);
   }
 
-  // ✅ PROPERTY OWNER LOOKUP (specific to messaging property owners)
   async getPropertyOwner(propertyId) {
     console.log('🏢 Getting property owner for property:', propertyId);
     try {
@@ -902,7 +1322,10 @@ class ApiClient {
     }
   }
 
-  // ✅ INVOICES (matches your actual schema - with Stripe integration)
+  // ============================================================================
+  // INVOICES (matches your actual schema)
+  // ============================================================================
+
   async getInvoices(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     return this.get(`/invoices${queryString ? `?${queryString}` : ''}`);
@@ -924,7 +1347,10 @@ class ApiClient {
     return this.delete(`/invoices/${id}`);
   }
 
-  // ✅ DASHBOARD METHODS - FIXED FOR YOUR ACTUAL BACKEND
+  // ============================================================================
+  // DASHBOARD METHODS
+  // ============================================================================
+
   async getSpaceOwnerDashboard() {
     console.log('📊 Fetching space owner dashboard...');
     try {
@@ -956,7 +1382,6 @@ class ApiClient {
     }
   }
 
-  // ✅ FIXED: ADVERTISER DASHBOARD METHOD  
   async getAdvertiserDashboard() {
     console.log('📊 Fetching advertiser dashboard...');
     try {
@@ -989,7 +1414,10 @@ class ApiClient {
     }
   }
 
-  // ✅ MATERIALS & SEARCH METHODS
+  // ============================================================================
+  // MATERIALS & SEARCH
+  // ============================================================================
+
   async getMaterialsCatalog(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     console.log('📦 Fetching materials catalog...');
@@ -1018,25 +1446,10 @@ class ApiClient {
     }
   }
 
-  async searchAvailableSpaces(filters = {}) {
-    const queryString = new URLSearchParams(filters).toString();
-    console.log('🔍 Searching available spaces with filters:', filters);
-    try {
-      const response = await this.get(`/spaces/search${queryString ? `?${queryString}` : ''}`);
-      return response;
-    } catch (error) {
-      // Fallback to regular spaces endpoint
-      console.log('🔄 Fallback to regular spaces endpoint:', error.message);
-      return this.getSpaces(filters);
-    }
-  }
+  // ============================================================================
+  // ✅ ENHANCED: NOTIFICATIONS (Campaign-specific handling)
+  // ============================================================================
 
-  async createBookingWithMaterials(bookingData) {
-    console.log('📋 Creating booking with materials:', bookingData);
-    return this.post('/bookings/with-materials', bookingData);
-  }
-
-  // ✅ NOTIFICATIONS 
   async getNotifications(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     try {
@@ -1059,129 +1472,191 @@ class ApiClient {
   }
 
   async markNotificationAsRead(id) {
-    return this.patch(`/notifications/${id}/read`);
+    return this.put(`/notifications/${id}/read`);
   }
 
   async markAllNotificationsAsRead() {
-    return this.patch('/notifications/mark-all-read');
+    return this.put('/notifications/mark-all-read');
   }
 
   async createNotification(data) {
     return this.post('/notifications', data);
   }
 
-  // ✅ SEARCH
+  // ✅ NEW: CAMPAIGN-SPECIFIC NOTIFICATION METHODS
+  async createCampaignInvitationNotification(userId, campaignData, spaceData) {
+    console.log('🔔 Creating campaign invitation notification for user:', userId);
+    try {
+      const notificationData = {
+        user_id: userId,
+        type: 'CAMPAIGN_INVITATION',
+        title: 'New Campaign Request',
+        message: `${campaignData.brand_name} wants to advertise on your space "${spaceData.name}". Review and respond to their campaign invitation.`,
+        data: {
+          campaign_id: campaignData.id,
+          space_id: spaceData.id,
+          invitation_id: campaignData.invitation_id,
+          advertiser_name: campaignData.brand_name,
+          space_name: spaceData.name,
+          total_price: campaignData.totalPrice,
+          action_url: `/SpaceOwnerConfirmation/${campaignData.invitation_id}`
+        }
+      };
+
+      const response = await this.createNotification(notificationData);
+      
+      if (response.success) {
+        console.log('✅ Campaign invitation notification created');
+        // Clear notifications cache
+        this.clearCache('notifications');
+        return response;
+      } else {
+        console.error('❌ Failed to create campaign invitation notification:', response.error);
+        return response;
+      }
+    } catch (error) {
+      console.error('❌ Create campaign invitation notification error:', error);
+      return {
+        success: false,
+        error: 'Failed to create campaign invitation notification'
+      };
+    }
+  }
+
+  async createCampaignApprovedNotification(userId, campaignData, spaceData) {
+    console.log('🔔 Creating campaign approved notification for user:', userId);
+    try {
+      const notificationData = {
+        user_id: userId,
+        type: 'CAMPAIGN_APPROVED',
+        title: 'Campaign Approved!',
+        message: `Great news! Your campaign for "${spaceData.name}" has been approved. You can now proceed with booking and payment.`,
+        data: {
+          campaign_id: campaignData.id,
+          space_id: spaceData.id,
+          invitation_id: campaignData.invitation_id,
+          space_name: spaceData.name,
+          total_price: campaignData.totalPrice,
+          action_url: `/CampaignCheckout/${campaignData.invitation_id}`
+        }
+      };
+
+      const response = await this.createNotification(notificationData);
+      
+      if (response.success) {
+        console.log('✅ Campaign approved notification created');
+        this.clearCache('notifications');
+        return response;
+      } else {
+        console.error('❌ Failed to create campaign approved notification:', response.error);
+        return response;
+      }
+    } catch (error) {
+      console.error('❌ Create campaign approved notification error:', error);
+      return {
+        success: false,
+        error: 'Failed to create campaign approved notification'
+      };
+    }
+  }
+
+  async createCampaignDeniedNotification(userId, campaignData, spaceData, reason) {
+    console.log('🔔 Creating campaign denied notification for user:', userId);
+    try {
+      const notificationData = {
+        user_id: userId,
+        type: 'CAMPAIGN_DENIED',
+        title: 'Campaign Request Denied',
+        message: `Your campaign request for "${spaceData.name}" has been declined. View the space owner's feedback and consider revising your proposal.`,
+        data: {
+          campaign_id: campaignData.id,
+          space_id: spaceData.id,
+          invitation_id: campaignData.invitation_id,
+          space_name: spaceData.name,
+          denial_reason: reason,
+          action_url: `/campaigns/${campaignData.id}`
+        }
+      };
+
+      const response = await this.createNotification(notificationData);
+      
+      if (response.success) {
+        console.log('✅ Campaign denied notification created');
+        this.clearCache('notifications');
+        return response;
+      } else {
+        console.error('❌ Failed to create campaign denied notification:', response.error);
+        return response;
+      }
+    } catch (error) {
+      console.error('❌ Create campaign denied notification error:', error);
+      return {
+        success: false,
+        error: 'Failed to create campaign denied notification'
+      };
+    }
+  }
+
+  async createCampaignInfoRequestNotification(userId, campaignData, spaceData, infoRequest) {
+    console.log('🔔 Creating campaign info request notification for user:', userId);
+    try {
+      const notificationData = {
+        user_id: userId,
+        type: 'CAMPAIGN_INFO_REQUEST',
+        title: 'Additional Information Requested',
+        message: `The space owner has requested more information about your campaign for "${spaceData.name}". Please review their questions and provide additional details.`,
+        data: {
+          campaign_id: campaignData.id,
+          space_id: spaceData.id,
+          invitation_id: campaignData.invitation_id,
+          space_name: spaceData.name,
+          info_request: infoRequest,
+          action_url: `/campaigns/${campaignData.id}/respond`
+        }
+      };
+
+      const response = await this.createNotification(notificationData);
+      
+      if (response.success) {
+        console.log('✅ Campaign info request notification created');
+        this.clearCache('notifications');
+        return response;
+      } else {
+        console.error('❌ Failed to create campaign info request notification:', response.error);
+        return response;
+      }
+    } catch (error) {
+      console.error('❌ Create campaign info request notification error:', error);
+      return {
+        success: false,
+        error: 'Failed to create campaign info request notification'
+      };
+    }
+  }
+
+  // ✅ GET CAMPAIGN-SPECIFIC NOTIFICATIONS
+  async getCampaignNotifications(params = {}) {
+    console.log('🔔 Getting campaign-specific notifications');
+    return this.getNotifications({ 
+      ...params, 
+      type: 'CAMPAIGN_INVITATION,CAMPAIGN_APPROVED,CAMPAIGN_DENIED,CAMPAIGN_INFO_REQUEST' 
+    });
+  }
+
+  // ============================================================================
+  // SEARCH
+  // ============================================================================
+
   async search(query, type = 'all') {
     const params = { q: query, type };
     const queryString = new URLSearchParams(params).toString();
     return this.get(`/search?${queryString}`);
   }
 
-  // Add these methods to your existing src/api/apiClient.js file
+  // ============================================================================
+  // FILE UPLOAD
+  // ============================================================================
 
-// ✅ NEW: Intro tutorial methods
-async completeIntroTutorial() {
-  console.log('🎯 Completing intro tutorial...');
-  try {
-    const response = await this.post('/users/complete-intro');
-    
-    if (response.success) {
-      console.log('✅ Intro tutorial completed successfully');
-      // Clear any intro-related cache
-      this.clearCache('users/first-time');
-      return response;
-    } else {
-      console.error('❌ Failed to complete intro tutorial:', response.error);
-      return response;
-    }
-  } catch (error) {
-    console.error('❌ Complete intro tutorial error:', error);
-    return {
-      success: false,
-      error: 'Failed to complete intro tutorial'
-    };
-  }
-}
-
-async checkFirstTimeStatus() {
-  console.log('🔍 Checking first-time login status...');
-  try {
-    const response = await this.get('/users/first-time-status');
-    
-    if (response.success) {
-      console.log('✅ First-time status retrieved:', response.data.isFirstTime);
-      return response;
-    } else {
-      console.error('❌ Failed to check first-time status:', response.error);
-      return response;
-    }
-  } catch (error) {
-    console.error('❌ Check first-time status error:', error);
-    return {
-      success: false,
-      error: 'Failed to check first-time status',
-      data: { isFirstTime: false } // Default to false to avoid blocking
-    };
-  }
-}
-
-// ✅ DEVELOPMENT: Reset intro status (dev environment only)
-async resetIntroStatus() {
-  console.log('🔄 Resetting intro status (DEV ONLY)...');
-  try {
-    const response = await this.post('/users/reset-intro');
-    
-    if (response.success) {
-      console.log('✅ Intro status reset successfully');
-      // Clear related cache
-      this.clearCache('users/first-time');
-      this.clearCache('users/profile');
-      return response;
-    } else {
-      console.error('❌ Failed to reset intro status:', response.error);
-      return response;
-    }
-  } catch (error) {
-    console.error('❌ Reset intro status error:', error);
-    return {
-      success: false,
-      error: 'Failed to reset intro status'
-    };
-  }
-}
-
-// ✅ ENHANCED: Get user profile with intro status
-async getUserProfileWithIntro() {
-  console.log('👤 Getting user profile with intro status...');
-  try {
-    const [profileResponse, introResponse] = await Promise.all([
-      this.getUserProfile(),
-      this.checkFirstTimeStatus()
-    ]);
-    
-    if (profileResponse.success && introResponse.success) {
-      return {
-        success: true,
-        data: {
-          ...profileResponse.data,
-          isFirstTime: introResponse.data.isFirstTime,
-          lastSeenAt: introResponse.data.lastSeenAt
-        }
-      };
-    } else {
-      // Return profile data even if intro check fails
-      return profileResponse;
-    }
-  } catch (error) {
-    console.error('❌ Get user profile with intro error:', error);
-    return {
-      success: false,
-      error: 'Failed to get user profile with intro status'
-    };
-  }
-}
-
-  // ✅ FILE UPLOAD
   async uploadFile(file, type = 'general') {
     const formData = new FormData();
     formData.append('file', file);
@@ -1203,8 +1678,6 @@ async getUserProfileWithIntro() {
     return response.json();
   }
 }
-
-
 
 // ✅ CRITICAL: Export the instance as default - NO CODE AFTER THIS LINE
 export default new ApiClient();

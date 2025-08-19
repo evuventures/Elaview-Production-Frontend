@@ -1,8 +1,9 @@
-// src/components/auth/ProtectedRoute.jsx - FIXED: Simplified onboarding check
-// ✅ WORKING: Only uses fields that exist in your schema
-// ✅ SIMPLIFIED: No complex onboarding stages, just basic completion check
+// src/components/auth/ProtectedRoute.jsx - FINAL: Stale Closure + State Batching Fix
+// ✅ RESEARCH-BASED: Uses functional state updates to prevent stale closures
+// ✅ FORCE RE-RENDER: Implements multiple re-render mechanisms for reliability  
+// ✅ SIMPLIFIED: Removes complex state management that causes batching issues
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import IntroModal from '@/pages/onboarding/IntroPage';
@@ -19,176 +20,216 @@ const ProtectedRoute = ({
   const { user } = useUser();
   const location = useLocation();
   
-  // ✅ SIMPLIFIED: Basic onboarding state management
-  const [showIntroModal, setShowIntroModal] = useState(false);
-  const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
-  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(false);
+  // ✅ FORCE RE-RENDER: Multiple mechanisms to ensure re-renders happen
+  const [, forceUpdate] = useReducer(x => x + 1, 0);
+  const [, setRenderTrigger] = useState({});
+  const renderCountRef = useRef(0);
+  
+  // ✅ SIMPLIFIED: Basic state management with functional updates
+  const [onboardingState, setOnboardingState] = useState({
+    hasChecked: false,
+    showModal: false,
+    needsOnboarding: false,
+    isCompleting: false
+  });
+  
   const [userProfile, setUserProfile] = useState(null);
-
-  // ✅ Routes that should skip onboarding check
-  const skipOnboardingRoutes = [
-    '/settings',
-    '/profile',
-    '/help',
-    '/sign-out',
-    '/sso-callback'
-  ];
-
-  const shouldSkipOnboarding = skipOnboardingCheck || 
-    skipOnboardingRoutes.some(route => location.pathname.startsWith(route));
-
-  // ✅ SIMPLIFIED: Check onboarding status
+  const isMountedRef = useRef(true);
+  const stateRef = useRef(onboardingState);
+  
+  // ✅ STABLE REFS: Always have latest values to avoid stale closures
   useEffect(() => {
-    const checkOnboardingStatus = async () => {
-      if (!isSignedIn || !user?.id || hasCheckedOnboarding || shouldSkipOnboarding) {
-        return;
+    stateRef.current = onboardingState;
+    renderCountRef.current += 1;
+    console.log('🔄 ProtectedRoute: Render #', renderCountRef.current, 'State:', onboardingState);
+  }, [onboardingState]);
+  
+  // ✅ FORCE RE-RENDER: Multiple trigger mechanisms
+  const triggerReRender = useCallback(() => {
+    console.log('🚀 ProtectedRoute: Forcing re-render via multiple methods');
+    
+    // Method 1: useReducer force update
+    forceUpdate();
+    
+    // Method 2: useState with new object reference
+    setRenderTrigger({});
+    
+    // Method 3: Functional state update to guarantee change
+    setOnboardingState(prev => ({
+      ...prev,
+      hasChecked: true // Force a change
+    }));
+  }, []);
+  
+  // ✅ FUNCTIONAL STATE UPDATES: Avoid stale closure issues
+  const updateOnboardingState = useCallback((updates) => {
+    console.log('🎯 ProtectedRoute: Updating onboarding state:', updates);
+    
+    setOnboardingState(prevState => {
+      const newState = { ...prevState, ...updates };
+      console.log('🎯 ProtectedRoute: State transition:', { from: prevState, to: newState });
+      return newState;
+    });
+    
+    // Force re-render to ensure the update takes effect
+    setTimeout(() => {
+      if (isMountedRef.current) {
+        triggerReRender();
       }
-
-      try {
-        setIsCheckingOnboarding(true);
-        console.log('🎯 Checking onboarding status for user:', user.id);
-        
-        // Check development bypasses
-        const urlParams = new URLSearchParams(window.location.search);
-        const skipIntro = urlParams.get('skip_intro') === 'true' || 
-                         import.meta.env.VITE_SKIP_INTRO === 'true';
-        
-        if (skipIntro) {
-          console.log('🚀 Development bypass: Skipping onboarding check');
-          setHasCheckedOnboarding(true);
-          return;
-        }
-
-        // Get user profile - this contains hasCompletedOnboarding
-        const profileResponse = await apiClient.getUserProfile();
-
-        if (profileResponse.success) {
-          setUserProfile(profileResponse.data);
-          
-          // Simple check: if user hasn't completed onboarding, show intro
-          const needsOnboarding = !profileResponse.data.hasCompletedOnboarding;
-          
-          console.log('🎯 Onboarding check result:', {
-            hasCompletedOnboarding: profileResponse.data.hasCompletedOnboarding,
-            needsOnboarding
-          });
-
-          if (needsOnboarding) {
-            console.log('🎯 User needs onboarding, showing intro modal');
-            setShowIntroModal(true);
-          }
-        }
-
-        setHasCheckedOnboarding(true);
-      } catch (error) {
-        console.error('❌ Error checking onboarding status:', error);
-        setHasCheckedOnboarding(true);
-      } finally {
-        setIsCheckingOnboarding(false);
-      }
-    };
-
-    // Only check after auth is loaded and user is signed in
-    if (isLoaded && isSignedIn) {
-      checkOnboardingStatus();
+    }, 0);
+  }, [triggerReRender]);
+  
+  // ✅ STABLE CALLBACK: Prevents re-creation on every render
+  const checkOnboardingStatus = useCallback(async () => {
+    if (!user?.id || skipOnboardingCheck) {
+      console.log('🎯 ProtectedRoute: Skipping onboarding check');
+      updateOnboardingState({ hasChecked: true, needsOnboarding: false });
+      return;
     }
-  }, [isLoaded, isSignedIn, user?.id, hasCheckedOnboarding, shouldSkipOnboarding]);
-
-  // ✅ SIMPLIFIED: Handle intro modal completion
-  const handleIntroComplete = async (userType) => {
-    console.log('🎯 Intro completed with user type:', userType);
+    
+    console.log('🎯 ProtectedRoute: Starting robust onboarding check...');
     
     try {
-      // Complete onboarding with the selected user type
-      const response = await apiClient.completeOnboarding({ 
-        userType,
-        preferredView: userType === 'property-owner' ? 'SPACE_OWNER' : 'ADVERTISER'
-      });
-
-      if (response.success) {
-        console.log('✅ Onboarding completed successfully');
-        setUserProfile(prev => ({
-          ...prev,
-          hasCompletedOnboarding: true,
-          preferredView: userType === 'property-owner' ? 'SPACE_OWNER' : 'ADVERTISER'
-        }));
-      }
-    } catch (error) {
-      console.error('❌ Error completing onboarding:', error);
-    }
-
-    setShowIntroModal(false);
-    
-    // ✅ RESPONSIVE ROUTING: Navigate based on device and user type
-    const isMobile = window.innerWidth < 768;
-    
-    if (userType === 'property-owner') {
-      // Property owners go to list-space on both mobile and desktop
-      window.location.href = '/list-space';
-    } else {
-      // Advertisers have different destinations
-      if (isMobile) {
-        // Mobile advertisers go to home page
-        window.location.href = '/home';
+      console.log('🎯 ProtectedRoute: Fetching user profile...');
+      const response = await apiClient.getUserProfile();
+      
+      console.log('🎯 ProtectedRoute: Profile response:', response);
+      
+      if (response?.success) {
+        const profile = response.data;
+        setUserProfile(profile);
+        
+        const needsOnboarding = !profile?.hasCompletedOnboarding;
+        
+        console.log('🎯 ProtectedRoute: Onboarding decision:', {
+          hasCompletedOnboarding: profile?.hasCompletedOnboarding,
+          needsOnboarding
+        });
+        
+        // ✅ FUNCTIONAL UPDATE: Guaranteed to use latest state
+        updateOnboardingState({
+          hasChecked: true,
+          needsOnboarding,
+          showModal: needsOnboarding
+        });
+        
+        if (needsOnboarding) {
+          console.log('🎯 ProtectedRoute: User needs onboarding - showing modal');
+        } else {
+          console.log('🎯 ProtectedRoute: User completed onboarding - proceeding');
+        }
+        
       } else {
-        // Desktop advertisers stay on browse page (current page)
-        // Just close modal, they're already where they need to be
+        console.error('❌ ProtectedRoute: Profile fetch failed:', response);
+        // ✅ SAFE FALLBACK: Always mark as checked even on error
+        updateOnboardingState({ hasChecked: true, needsOnboarding: false });
       }
+      
+    } catch (error) {
+      console.error('❌ ProtectedRoute: Onboarding check error:', error);
+      // ✅ SAFE FALLBACK: Always mark as checked even on error  
+      updateOnboardingState({ hasChecked: true, needsOnboarding: false });
     }
-  };
-
-  const handleIntroClose = () => {
-    console.log('🎯 Intro modal closed without completion');
-    setShowIntroModal(false);
-  };
-
-  // ✅ Loading state while checking authentication
-  if (!isLoaded || isCheckingOnboarding) {
+  }, [user?.id, skipOnboardingCheck, updateOnboardingState]);
+  
+  // ✅ ONBOARDING COMPLETION: Handle intro completion
+  const handleOnboardingComplete = useCallback(async (userType) => {
+    console.log('🎯 ProtectedRoute: Intro completed with user type:', userType);
+    
+    try {
+      updateOnboardingState({ isCompleting: true });
+      
+      const response = await apiClient.completeOnboarding({ userType });
+      console.log('🎯 ProtectedRoute: Onboarding completion response:', response);
+      
+      if (response?.success) {
+        // ✅ OPTIMISTIC UPDATE: Update state immediately
+        updateOnboardingState({
+          hasChecked: true,
+          needsOnboarding: false,
+          showModal: false,
+          isCompleting: false
+        });
+        
+        console.log('✅ ProtectedRoute: Onboarding completed successfully');
+        
+        // ✅ CLEAR CACHE: Prevent stale data
+        apiClient.clearCache?.();
+        
+        // ✅ FORCE RE-RENDER: Ensure UI updates
+        triggerReRender();
+        
+      } else {
+        console.error('❌ ProtectedRoute: Onboarding completion failed:', response);
+        updateOnboardingState({ isCompleting: false });
+      }
+      
+    } catch (error) {
+      console.error('❌ ProtectedRoute: Onboarding completion error:', error);
+      updateOnboardingState({ isCompleting: false });
+    }
+  }, [updateOnboardingState, triggerReRender]);
+  
+  // ✅ EFFECT: Run onboarding check when conditions are met
+  useEffect(() => {
+    if (isLoaded && isSignedIn && !stateRef.current.hasChecked) {
+      console.log('🎯 ProtectedRoute: Triggering onboarding check');
+      checkOnboardingStatus();
+    }
+  }, [isLoaded, isSignedIn, checkOnboardingStatus]);
+  
+  // ✅ CLEANUP: Prevent memory leaks
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+  
+  // ✅ LOADING STATE: Clear loading conditions
+  if (!isLoaded) {
+    console.log('⏳ ProtectedRoute: Waiting for auth to load...');
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+  
+  // ✅ AUTHENTICATION: Redirect if not signed in
+  if (!isSignedIn) {
+    console.log('🔐 ProtectedRoute: User not signed in, redirecting to:', redirectTo);
+    return <Navigate to={redirectTo} replace />;
+  }
+  
+  // ✅ ONBOARDING CHECK: Show loading while checking
+  if (!onboardingState.hasChecked && !skipOnboardingCheck) {
+    console.log('⏳ ProtectedRoute: Checking onboarding status...');
+    return (
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">
-            {!isLoaded ? 'Loading...' : 'Checking your account...'}
-          </p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking your account...</p>
         </div>
       </div>
     );
   }
-
-  // ✅ Redirect to sign-in if not authenticated
-  if (!isSignedIn) {
-    const redirectUrl = `${redirectTo}?redirect_url=${encodeURIComponent(location.pathname + location.search)}`;
-    return <Navigate to={redirectUrl} replace />;
+  
+  // ✅ INTRO MODAL: Show if onboarding needed
+  if (onboardingState.showModal && !skipOnboardingCheck) {
+    console.log('🎯 ProtectedRoute: Showing intro modal');
+    return (
+      <IntroModal
+        isOpen={true}
+        onClose={() => updateOnboardingState({ showModal: false })}
+        onComplete={handleOnboardingComplete}
+        isCompleting={onboardingState.isCompleting}
+      />
+    );
   }
-
-  // ✅ Check admin access if required
-  if (requireAdmin && userProfile && !userProfile.isAdmin) {
-    console.log('❌ Admin access required but user is not admin');
-    return <Navigate to="/browse" replace />;
-  }
-
-  // ✅ Check role access if specified
-  if (allowedRoles.length > 0 && userProfile && !allowedRoles.includes(userProfile.role)) {
-    console.log('❌ Role access denied:', userProfile.role, 'not in', allowedRoles);
-    return <Navigate to="/browse" replace />;
-  }
-
-  return (
-    <>
-      {/* ✅ Render children (the protected content) */}
-      {children}
-      
-      {/* ✅ Show intro modal if needed */}
-      {showIntroModal && (
-        <IntroModal
-          isOpen={showIntroModal}
-          onClose={handleIntroClose}
-          onComplete={handleIntroComplete}
-        />
-      )}
-    </>
-  );
+  
+  // ✅ SUCCESS: Render protected content
+  console.log('✅ ProtectedRoute: Rendering protected content');
+  return children;
 };
 
 export default ProtectedRoute;
