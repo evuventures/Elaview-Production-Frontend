@@ -1,4 +1,4 @@
-/* frontend/src/index.css - Elaview Design System - Enhanced Mobile Responsive */
+/* frontend/src/index.css - Elaview Design System - Enhanced Deep Charcoal & Glassmorphism */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import 'tailwindcss/base';
 @import 'tailwindcss/components';
@@ -6,55 +6,124 @@
 
 @layer base {
   :root {
-    /* ✅ UPDATED COLOR SCHEME - Elaview Brand Colors */
+    /* ✅ ENHANCED COLOR SCHEME - Deep Charcoal & Glassmorphism Theme */
+    
+    /* Core Brand Colors */
     --color-primary: 70 104 171;     /* #4668AB - Brand Blue */
     --color-primary-50: 239 242 250; /* Light blue tint */
     --color-primary-100: 219 228 244; 
+    --color-primary-200: 199 210 239; /* Medium blue tint */
+    --color-primary-300: 159 178 224; /* Lighter blue */
+    --color-primary-400: 119 146 208; /* Medium blue */
     --color-primary-500: 70 104 171;  /* Main brand blue */
     --color-primary-600: 57 85 140;   /* Darker blue for hover */
     --color-primary-700: 45 67 111;   /* Even darker for active states */
+    --color-primary-800: 36 54 89;    /* Very dark blue */
+    --color-primary-900: 27 40 67;    /* Darkest blue */
     
-    /* Neutral Colors */
-    --color-white: 248 250 255;       /* #F8FAFF - Light Blue Background */       /* #FFFFFF - Pure White */
+    /* Deep Charcoal Theme Colors */
+    --color-charcoal: 15 23 42;       /* #0F172A - Deep Charcoal (slate-900) */
+    --color-charcoal-light: 30 41 59; /* #1E293B - Lighter charcoal (slate-800) */
+    --color-charcoal-lighter: 51 65 85; /* #334155 - Even lighter (slate-700) */
+    --color-charcoal-soft: 71 85 105;  /* #475569 - Soft charcoal (slate-600) */
+    
+    /* Light Backgrounds */
+    --color-white: 248 250 255;       /* #F8FAFF - Light Blue Background */
+    --color-pure-white: 255 255 255;  /* #FFFFFF - Pure White */
     --color-off-white: 249 250 251;   /* #F9FAFB - Off-White */
     --color-light-gray: 229 231 235;  /* #E5E7EB - Light Gray */
-    --color-gray-50: 249 250 251;     /* #F9FAFB */
-    --color-gray-100: 243 244 246;    /* Slightly darker than off-white */
-    --color-gray-200: 229 231 235;    /* #E5E7EB */
-    --color-gray-300: 209 213 219;    /* Medium gray for borders */
-    --color-gray-600: 75 85 99;       /* Dark gray for text */
-    --color-gray-900: 17 24 39;       /* Almost black for primary text */
     
-    /* Status Colors (keeping these for functionality) */
+    /* Enhanced Neutral Scale */
+    --color-gray-50: 249 250 251;     /* #F9FAFB */
+    --color-gray-100: 243 244 246;    /* #F3F4F6 */
+    --color-gray-200: 229 231 235;    /* #E5E7EB */
+    --color-gray-300: 209 213 219;    /* #D1D5DB */
+    --color-gray-400: 156 163 175;    /* #9CA3AF */
+    --color-gray-500: 107 114 128;    /* #6B7280 */
+    --color-gray-600: 75 85 99;       /* #4B5563 */
+    --color-gray-700: 55 65 81;       /* #374151 */
+    --color-gray-800: 31 41 55;       /* #1F2937 */
+    --color-gray-900: 17 24 39;       /* #111827 */
+    
+    /* Slate Scale for Deep Charcoal Theme */
+    --color-slate-50: 248 250 252;    /* #F8FAFC */
+    --color-slate-100: 241 245 249;   /* #F1F5F9 */
+    --color-slate-200: 226 232 240;   /* #E2E8F0 */
+    --color-slate-300: 203 213 225;   /* #CBD5E1 */
+    --color-slate-400: 148 163 184;   /* #94A3B8 */
+    --color-slate-500: 100 116 139;   /* #64748B */
+    --color-slate-600: 71 85 105;     /* #475569 */
+    --color-slate-700: 51 65 85;      /* #334155 */
+    --color-slate-800: 30 41 59;      /* #1E293B */
+    --color-slate-900: 15 23 42;      /* #0F172A */
+    
+    /* Light Blue Gradient Backgrounds */
+    --color-bg-light-blue: 248 250 255;    /* #F8FAFF */
+    --color-bg-blue-50: 232 242 255;       /* #E8F2FF */
+    --color-bg-blue-100: 240 248 255;      /* #F0F8FF */
+    
+    /* Status Colors */
     --color-secondary: 59 130 246;    /* Blue for secondary actions */
     --color-success: 16 185 129;      /* Green for success states */
     --color-warning: 245 158 11;      /* Amber for warnings */
     --color-error: 239 68 68;         /* Red for errors */
     
+    /* Glassmorphism Effects */
+    --glass-bg-primary: rgba(255, 255, 255, 0.25);
+    --glass-bg-secondary: rgba(255, 255, 255, 0.35);
+    --glass-bg-tertiary: rgba(255, 255, 255, 0.15);
+    --glass-border: rgba(255, 255, 255, 0.18);
+    --glass-reflection: rgba(255, 255, 255, 0.15);
+    --glass-reflection-soft: rgba(255, 255, 255, 0.05);
+    
+    /* Glassmorphism on Dark Backgrounds */
+    --glass-dark-bg-primary: rgba(255, 255, 255, 0.1);
+    --glass-dark-bg-secondary: rgba(255, 255, 255, 0.15);
+    --glass-dark-border: rgba(255, 255, 255, 0.1);
+    --glass-dark-reflection: rgba(255, 255, 255, 0.1);
+    
+    /* Enhanced Spacing */
     --spacing-xs: 0.5rem;
     --spacing-sm: 0.75rem;
     --spacing-md: 1rem;
     --spacing-lg: 1.5rem;
     --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+    --spacing-3xl: 4rem;
     
+    /* Enhanced Durations */
     --duration-fast: 150ms;
     --duration-normal: 200ms;
     --duration-slow: 300ms;
+    --duration-slower: 500ms;
 
-    /* ✅ EXISTING: Mobile-specific variables */
+    /* Mobile-specific variables */
     --mobile-nav-top-height: 64px;
     --mobile-nav-bottom-height: 80px;
     --touch-target-min: 44px;
     --touch-target-large: 48px;
 
-    /* ✅ NEW: Modal-specific variables for IntroModal integration */
+    /* Modal-specific variables */
     --mobile-modal-max-height: calc(100vh - var(--mobile-nav-top-height) - var(--mobile-nav-bottom-height) - 2rem);
     --mobile-modal-content-height: calc(100vh - var(--mobile-nav-top-height) - var(--mobile-nav-bottom-height) - 12rem);
     --mobile-modal-min-content: 200px;
     
-    /* ✅ NEW: Responsive breakpoints for modals */
+    /* Responsive breakpoints for modals */
     --modal-padding-sm: 1rem;
     --modal-padding-lg: 1.5rem;
+    
+    /* Enhanced Z-Index Scale */
+    --z-background: 1;
+    --z-glass-containers: 10;
+    --z-glass-overlays: 15;
+    --z-content: 20;
+    --z-sticky: 30;
+    --z-dropdown: 40;
+    --z-modal-backdrop: 50;
+    --z-modal-content: 55;
+    --z-notification: 60;
+    --z-toast: 70;
+    --z-tooltip: 80;
   }
   
   * {
@@ -63,24 +132,30 @@
   
   html {
     @apply font-sans antialiased;
-    /* ✅ MOBILE: Prevent horizontal scroll and fix iOS viewport issues */
+    /* Mobile: Prevent horizontal scroll and fix iOS viewport issues */
     overflow-x: hidden;
     -webkit-text-size-adjust: 100%;
   }
   
   body {
     @apply text-slate-900;
-    /* ✅ CORRECTED: Pure white background, off-white cards */
-    background-color: rgb(var(--color-white));
+    /* Enhanced background with subtle gradient */
+    background: linear-gradient(135deg, rgb(var(--color-bg-light-blue)) 0%, rgb(var(--color-bg-blue-50)) 25%, rgb(var(--color-bg-blue-100)) 50%, rgb(var(--color-bg-blue-50)) 75%, rgb(var(--color-bg-light-blue)) 100%);
     @apply selection:text-slate-900;
     selection-background-color: rgb(var(--color-primary-100));
-    /* ✅ MOBILE: Prevent horizontal scroll and ensure full height */
+    /* Mobile: Prevent horizontal scroll and ensure full height */
     overflow-x: hidden;
     min-height: 100vh;
     min-height: 100dvh; /* Dynamic viewport height for mobile browsers */
   }
 
-  /* ✅ MOBILE: Fix iOS zoom on input focus */
+  /* Dark theme body */
+  body.dark {
+    @apply text-white;
+    background: linear-gradient(135deg, rgb(var(--color-charcoal)) 0%, rgb(var(--color-charcoal-light)) 50%, rgb(var(--color-charcoal)) 100%);
+  }
+
+  /* Enhanced iOS zoom fix */
   @media screen and (-webkit-min-device-pixel-ratio: 0) {
     select,
     textarea,
@@ -102,7 +177,7 @@
     }
   }
 
-  /* ✅ MOBILE: Fix Android button styling */
+  /* Enhanced Android button styling */
   button,
   input[type="button"],
   input[type="submit"] {
@@ -113,7 +188,97 @@
 }
 
 @layer components {
-  /* ✅ MOBILE: Safe Area Support */
+  /* ✅ ENHANCED GLASSMORPHISM UTILITIES */
+  
+  /* Primary Glassmorphism Effect */
+  .glass-primary {
+    background: linear-gradient(135deg, var(--glass-bg-primary) 0%, var(--glass-bg-secondary) 50%, var(--glass-bg-primary) 100%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.12), 
+      0 4px 16px rgba(0, 0, 0, 0.08), 
+      inset 0 1px 0 rgba(255, 255, 255, 0.2), 
+      inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  /* Secondary Glassmorphism Effect */
+  .glass-secondary {
+    background: linear-gradient(135deg, var(--glass-bg-tertiary) 0%, var(--glass-bg-primary) 50%, var(--glass-bg-tertiary) 100%);
+    backdrop-filter: blur(15px) saturate(150%);
+    -webkit-backdrop-filter: blur(15px) saturate(150%);
+    border: 1px solid var(--glass-border);
+    box-shadow: 
+      0 4px 16px rgba(0, 0, 0, 0.08), 
+      0 2px 8px rgba(0, 0, 0, 0.04), 
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+
+  /* Glassmorphism for Dark Backgrounds */
+  .glass-dark {
+    background: linear-gradient(135deg, var(--glass-dark-bg-primary) 0%, var(--glass-dark-bg-secondary) 50%, var(--glass-dark-bg-primary) 100%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--glass-dark-border);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.3), 
+      0 4px 16px rgba(0, 0, 0, 0.2), 
+      inset 0 1px 0 var(--glass-dark-reflection);
+  }
+
+  /* Glass Reflection Overlay */
+  .glass-reflection {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .glass-reflection::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(180deg, var(--glass-reflection) 0%, var(--glass-reflection-soft) 50%, transparent 100%);
+    pointer-events: none;
+    z-index: var(--z-glass-overlays);
+  }
+
+  /* ✅ DEEP CHARCOAL THEME UTILITIES */
+  
+  /* Deep Charcoal Backgrounds */
+  .bg-charcoal {
+    background-color: rgb(var(--color-charcoal));
+  }
+
+  .bg-charcoal-light {
+    background-color: rgb(var(--color-charcoal-light));
+  }
+
+  .bg-charcoal-lighter {
+    background-color: rgb(var(--color-charcoal-lighter));
+  }
+
+  /* Deep Charcoal Text */
+  .text-charcoal {
+    color: rgb(var(--color-charcoal));
+  }
+
+  .text-charcoal-light {
+    color: rgb(var(--color-charcoal-light));
+  }
+
+  /* Enhanced Navigation Bar */
+  .nav-charcoal {
+    background-color: rgb(var(--color-slate-800));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  }
+
+  /* ✅ ENHANCED SAFE AREA SUPPORT */
   .mobile-safe-area {
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
@@ -135,7 +300,7 @@
     }
   }
 
-  /* ✅ MOBILE: Navigation Spacing */
+  /* ✅ ENHANCED NAVIGATION SPACING */
   .mobile-nav-top-spacing {
     padding-top: var(--mobile-nav-top-height);
   }
@@ -149,7 +314,6 @@
     padding-bottom: var(--mobile-nav-bottom-height);
   }
 
-  /* Apply mobile nav spacing only on mobile */
   @media (max-width: 767px) {
     .mobile-nav-full-spacing {
       padding-top: var(--mobile-nav-top-height);
@@ -157,7 +321,7 @@
     }
   }
 
-  /* ✅ MOBILE: Touch Targets */
+  /* ✅ ENHANCED TOUCH TARGETS */
   .touch-target {
     min-height: var(--touch-target-min);
     min-width: var(--touch-target-min);
@@ -168,16 +332,18 @@
     min-width: var(--touch-target-large);
   }
 
-  /* ✅ NEW: Modal-specific utilities for IntroModal */
+  /* ✅ ENHANCED MODAL UTILITIES */
   .mobile-modal-container {
-    @apply fixed inset-0 flex items-center justify-center z-50;
+    @apply fixed inset-0 flex items-center justify-center;
     padding: var(--modal-padding-sm);
+    z-index: var(--z-modal-backdrop);
   }
 
   .mobile-modal-content {
     @apply bg-white rounded-2xl shadow-2xl w-full overflow-hidden;
-    max-width: 32rem; /* max-w-lg equivalent */
+    max-width: 32rem;
     max-height: var(--mobile-modal-max-height);
+    z-index: var(--z-modal-content);
   }
 
   .mobile-modal-body {
@@ -186,32 +352,13 @@
     max-height: var(--mobile-modal-content-height);
   }
 
-  /* ✅ NEW: Enhanced touch targets for modals */
-  .modal-touch-button {
-    @apply touch-target min-h-[48px] min-w-[48px] flex items-center justify-center;
+  /* Enhanced modal with glassmorphism */
+  .modal-glass {
+    @apply glass-primary rounded-2xl;
+    z-index: var(--z-modal-content);
   }
 
-  .modal-nav-button {
-    @apply modal-touch-button px-4 py-3 rounded-lg font-medium text-sm;
-  }
-
-  /* ✅ NEW: Progress indicator mobile optimization */
-  .modal-progress-dots {
-    @apply flex space-x-2;
-  }
-
-  .modal-progress-dot {
-    @apply w-3 h-3 sm:w-2.5 sm:h-2.5 rounded-full transition-all duration-200;
-  }
-
-  /* ✅ NEW: Content area responsive sizing */
-  .modal-content-area {
-    @apply mobile-modal-body py-6 sm:py-8;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* ✅ MOBILE: Enhanced Scrolling */
+  /* ✅ ENHANCED SCROLLING */
   .mobile-scroll-container {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -241,7 +388,7 @@
     display: none;
   }
 
-  /* ✅ ADDED: Messages-specific mobile optimizations */
+  /* ✅ ENHANCED MESSAGES LAYOUT */
   .messages-container {
     @apply h-full max-h-screen flex overflow-hidden;
   }
@@ -265,60 +412,29 @@
   .messages-input {
     @apply flex-shrink-0;
   }
-  
-  /* Mobile keyboard handling */
-  .mobile-input-safe {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  
-  @media (max-height: 500px) and (orientation: landscape) {
-    .mobile-input-safe {
-      padding-bottom: 1rem;
-    }
-  }
-  
-  /* Enhanced touch targets for messages */
-  .message-touch-target {
-    @apply min-h-[44px] min-w-[44px];
-  }
-  
-  .message-touch-target-lg {
-    @apply min-h-[48px] min-w-[48px];
-  }
-  
-  /* Message bubble optimizations */
-  .message-bubble {
-    @apply max-w-[85%] md:max-w-[70%] lg:max-w-[60%];
-  }
-  
-  .message-bubble-mobile {
-    @apply max-w-[90%];
-  }
-  
-  /* Conversation item optimizations */
-  .conversation-item {
-    @apply h-16 md:h-20 px-3 py-2 rounded-lg transition-colors duration-200;
-  }
-  
-  .conversation-item:hover {
-    @apply bg-slate-50;
-  }
-  
-  .conversation-item.selected {
-    @apply bg-blue-50 border-blue-200;
-  }
 
-  /* Typography */
+  /* ✅ ENHANCED TYPOGRAPHY */
   .heading-1 {
     @apply text-3xl md:text-4xl font-bold text-slate-900;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
   }
 
   .heading-2 {
     @apply text-2xl md:text-3xl font-semibold text-slate-900;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
   }
 
   .heading-3 {
     @apply text-xl md:text-2xl font-semibold text-slate-900;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+  }
+
+  /* Dark theme typography */
+  .dark .heading-1,
+  .dark .heading-2,
+  .dark .heading-3 {
+    @apply text-white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   }
 
   .body-large {
@@ -341,97 +457,82 @@
     @apply text-xs text-slate-500;
   }
 
-  /* ✅ UPDATED: Buttons - Changed from teal to brand blue */
+  /* ✅ ENHANCED BUTTONS WITH GLASSMORPHISM */
   .btn-base {
     @apply inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
+  /* Primary Brand Button */
   .btn-primary {
-    @apply btn-base text-white shadow-sm;
-    background-color: rgb(70, 104, 171); /* #4668AB - Brand Blue */
+    @apply btn-base text-white shadow-lg;
+    background: linear-gradient(135deg, rgb(70, 104, 171) 0%, rgb(91, 123, 199) 100%);
+    box-shadow: 0 4px 16px rgba(70, 104, 171, 0.3);
   }
 
   .btn-primary:hover {
-    @apply shadow-md;
-    background-color: rgb(57, 85, 140); /* #39558C - Darker blue for hover */
+    @apply shadow-xl transform scale-105;
+    background: linear-gradient(135deg, rgb(57, 85, 140) 0%, rgb(70, 104, 171) 100%);
+    box-shadow: 0 8px 24px rgba(70, 104, 171, 0.4);
   }
 
   .btn-primary:active {
     @apply transform scale-95;
-    background-color: rgb(45, 67, 111); /* #2D436F - Even darker for active */
+    background: linear-gradient(135deg, rgb(45, 67, 111) 0%, rgb(57, 85, 140) 100%);
   }
 
   .btn-primary:focus {
     @apply ring-2 ring-offset-2;
-    --tw-ring-color: rgb(70, 104, 171); /* Brand blue ring */
+    --tw-ring-color: rgb(70, 104, 171);
   }
 
+  /* Glass Button */
+  .btn-glass {
+    @apply btn-base glass-secondary text-slate-700;
+    color: rgb(var(--color-slate-700));
+  }
+
+  .btn-glass:hover {
+    @apply transform scale-105;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.4) 100%);
+  }
+
+  /* Dark Glass Button */
+  .btn-glass-dark {
+    @apply btn-base glass-dark text-white;
+  }
+
+  .btn-glass-dark:hover {
+    @apply transform scale-105;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.25) 50%, rgba(255, 255, 255, 0.15) 100%);
+  }
+
+  /* Secondary Button */
   .btn-secondary {
     @apply btn-base bg-slate-100 text-slate-700 hover:bg-slate-200 focus:ring-slate-500 border border-slate-300;
-  }
-
-  .btn-secondary:focus {
-    @apply ring-2 ring-slate-500 ring-offset-2;
   }
 
   .btn-outline {
     @apply btn-base border border-slate-300 text-slate-700 hover:bg-slate-50 focus:ring-slate-500;
   }
 
-  .btn-outline:hover {
-    @apply bg-slate-50;
-  }
-
-  .btn-outline:focus {
-    @apply ring-2 ring-slate-500 ring-offset-2;
-  }
-
   .btn-ghost {
     @apply btn-base text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:ring-slate-500;
   }
 
-  .btn-ghost:focus {
-    @apply ring-2 ring-slate-500 ring-offset-2;
-  }
-
+  /* Button Sizes */
   .btn-small {
     @apply px-3 py-1.5 text-sm;
+  }
+
+  .btn-medium {
+    @apply px-4 py-2 text-sm;
   }
 
   .btn-large {
     @apply px-6 py-3 text-lg;
   }
 
-  /* ✅ NEW: Brand Blue Button Variants */
-  .btn-brand {
-    @apply btn-base text-white shadow-sm;
-    background-color: rgb(70, 104, 171); /* #4668AB */
-  }
-
-  .btn-brand:hover {
-    @apply shadow-md;
-    background-color: rgb(57, 85, 140); /* #39558C */
-  }
-
-  .btn-brand:active {
-    @apply transform scale-95;
-    background-color: rgb(45, 67, 111); /* #2D436F */
-  }
-
-  .btn-brand-outline {
-    @apply btn-base border-2;
-    color: rgb(70, 104, 171);
-    border-color: rgb(70, 104, 171);
-    background-color: transparent;
-  }
-
-  .btn-brand-outline:hover {
-    background-color: rgb(239, 246, 255); /* #EFF6FF */
-    color: rgb(57, 85, 140);
-    border-color: rgb(57, 85, 140);
-  }
-
-  /* Forms */
+  /* ✅ ENHANCED FORMS */
   .form-group {
     @apply space-y-2;
   }
@@ -441,24 +542,26 @@
   }
 
   .form-input {
-    @apply block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed;
-    --tw-ring-color: rgb(70, 104, 171); /* Brand blue for focus */
+    @apply block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed backdrop-blur-sm;
+    --tw-ring-color: rgb(70, 104, 171);
+    background: rgba(255, 255, 255, 0.8);
   }
 
   .form-input:focus {
     @apply ring-2 ring-offset-2;
-    --tw-ring-color: rgb(70, 104, 171); /* Brand blue */
+    --tw-ring-color: rgb(70, 104, 171);
     border-color: rgb(70, 104, 171);
+    background: rgba(255, 255, 255, 0.95);
+  }
+
+  /* Glass Form Input */
+  .form-input-glass {
+    @apply form-input glass-secondary border-white/20;
   }
 
   .form-select {
     @apply block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed;
-    --tw-ring-color: rgb(70, 104, 171); /* Brand blue for focus */
-  }
-
-  .form-select:focus {
     --tw-ring-color: rgb(70, 104, 171);
-    border-color: rgb(70, 104, 171);
   }
 
   .form-textarea {
@@ -469,13 +572,27 @@
     @apply text-sm text-red-600;
   }
 
-  /* Cards */
+  /* ✅ ENHANCED CARDS */
   .card {
     @apply bg-white rounded-lg border border-slate-200 shadow-sm;
   }
 
   .card-hover {
     @apply card hover:shadow-md transition-shadow duration-200;
+  }
+
+  /* Glass Card */
+  .card-glass {
+    @apply glass-primary rounded-xl border-white/20;
+  }
+
+  .card-glass-hover {
+    @apply card-glass hover:shadow-xl transition-all duration-300 hover:scale-[1.02];
+  }
+
+  /* Dark Glass Card */
+  .card-glass-dark {
+    @apply glass-dark rounded-xl border-white/10;
   }
 
   .card-compact {
@@ -490,9 +607,9 @@
     @apply p-8;
   }
 
-  /* Property Listings */
+  /* ✅ ENHANCED PROPERTY LISTINGS */
   .property-listing {
-    @apply card-hover overflow-hidden;
+    @apply card-glass-hover overflow-hidden;
   }
 
   .property-image {
@@ -513,7 +630,7 @@
 
   .property-price {
     @apply text-xl font-bold;
-    color: rgb(70, 104, 171); /* Brand blue for prices */
+    color: rgb(70, 104, 171);
   }
 
   .property-status {
@@ -536,145 +653,36 @@
     @apply bg-red-100 text-red-800;
   }
 
-  /* Campaign Cards */
-  .campaign-card {
-    @apply card-hover;
+  /* ✅ ENHANCED LOADING STATES */
+  .loading-spinner {
+    @apply animate-spin rounded-full border-2 border-slate-200;
+    border-top-color: rgb(70, 104, 171);
   }
 
-  .campaign-header {
-    @apply flex items-center justify-between mb-4;
+  .loading-spinner-lg {
+    @apply w-8 h-8 border-3;
   }
 
-  .campaign-title {
-    @apply text-lg font-semibold text-slate-900;
+  /* Enhanced Loading Spinner with Glassmorphism */
+  .loading-spinner-glass {
+    @apply loading-spinner;
+    background: conic-gradient(from 0deg, rgba(70, 104, 171, 0) 0%, rgb(70, 104, 171) 100%);
+    border: 3px solid rgba(70, 104, 171, 0.2);
+    border-top-color: rgb(70, 104, 171);
   }
 
-  .campaign-status {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  /* ✅ ENHANCED FOCUS STATES */
+  .focus-visible-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+    --tw-ring-color: rgb(70, 104, 171);
   }
 
-  .campaign-status.active {
-    @apply bg-green-100 text-green-800;
-  }
-
-  .campaign-status.paused {
-    @apply bg-yellow-100 text-yellow-800;
-  }
-
-  .campaign-status.draft {
-    @apply bg-slate-100 text-slate-800;
-  }
-
-  .campaign-status.completed {
-    @apply bg-blue-100 text-blue-800;
-  }
-
-  .campaign-metrics {
-    @apply grid grid-cols-2 gap-4 mt-4;
-  }
-
-  .metric-item {
-    @apply text-center;
-  }
-
-  .metric-value {
-    @apply text-2xl font-bold text-slate-900;
-  }
-
-  .metric-label {
-    @apply text-sm text-slate-600;
-  }
-
-  /* Upload Areas */
-  .upload-area {
-    @apply border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-slate-400 transition-colors duration-200;
-  }
-
-  .upload-area:hover {
-    @apply border-slate-400;
-  }
-
-  .upload-area.dragover {
-    @apply border-blue-500 bg-blue-50;
-    border-color: rgb(70, 104, 171);
-    background-color: rgb(239, 246, 255);
-  }
-
-  /* Creative Grid */
-  .creative-grid {
-    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4;
-  }
-
-  .creative-item {
-    @apply relative rounded-lg overflow-hidden cursor-pointer transition-transform duration-200 hover:scale-105;
-  }
-
-  .creative-item:hover {
-    @apply shadow-lg;
-  }
-
-  .creative-item.selected {
+  .focus-visible-ring:focus-visible {
     @apply ring-2 ring-offset-2;
     --tw-ring-color: rgb(70, 104, 171);
   }
 
-  /* Dashboard Layout */
-  .dashboard-layout {
-    @apply grid grid-cols-1 lg:grid-cols-4 gap-6;
-  }
-
-  .dashboard-sidebar {
-    @apply lg:col-span-1;
-  }
-
-  .dashboard-main {
-    @apply lg:col-span-3;
-  }
-
-  /* Property Grid */
-  .property-grid {
-    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4;
-  }
-
-  .mobile-grid-1 {
-    @apply grid grid-cols-1 gap-3;
-  }
-
-  .mobile-grid-2 {
-    @apply grid grid-cols-2 gap-3;
-  }
-
-  .mobile-grid-responsive {
-    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4;
-  }
-
-  /* ✅ MOBILE: Container utilities */
-  .mobile-container {
-    @apply px-3 sm:px-4 lg:px-6;
-  }
-
-  .mobile-container-full {
-    @apply px-4 sm:px-6 py-4 sm:py-6;
-  }
-  
-  /* Responsive Display */
-  .mobile-nav {
-    @apply md:hidden;
-  }
-  
-  .desktop-nav {
-    @apply hidden md:flex;
-  }
-  
-  .responsive-table {
-    @apply hidden lg:table;
-  }
-  
-  .mobile-card-list {
-    @apply lg:hidden space-y-3 sm:space-y-4;
-  }
-
-  /* ✅ MOBILE: Enhanced responsive utilities */
+  /* ✅ ENHANCED RESPONSIVE UTILITIES */
   .hide-mobile {
     @apply hidden md:block;
   }
@@ -685,68 +693,28 @@
 
   .mobile-full-height {
     min-height: 100vh;
-    min-height: 100dvh; /* Dynamic viewport height for mobile browsers */
+    min-height: 100dvh;
   }
 
-  /* ✅ MOBILE: Modal and overlay utilities */
-  .mobile-modal {
-    @apply w-full max-w-full max-h-full m-0 p-4 rounded-none;
+  /* ✅ ENHANCED CONTAINER UTILITIES */
+  .mobile-container {
+    @apply px-3 sm:px-4 lg:px-6;
   }
 
-  @media (min-width: 640px) {
-    .mobile-modal {
-      @apply max-w-md max-h-[90vh] mx-auto rounded-xl p-6;
-    }
+  .mobile-container-full {
+    @apply px-4 sm:px-6 py-4 sm:py-6;
   }
 
-  .mobile-overlay {
-    @apply fixed inset-0 bg-black/50 z-50;
+  /* ✅ ENHANCED TEXT UTILITIES */
+  .text-shadow-soft {
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
   }
 
-  .mobile-drawer {
-    @apply fixed bottom-0 left-0 right-0 bg-white rounded-t-xl z-50 max-h-[80vh] overflow-y-auto;
-    padding-bottom: env(safe-area-inset-bottom);
+  .text-shadow-dark {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   }
 
-  /* ✅ MOBILE: Text utilities */
-  .mobile-text-responsive {
-    @apply text-sm sm:text-base;
-  }
-
-  .mobile-text-small {
-    @apply text-xs sm:text-sm;
-  }
-
-  .mobile-text-large {
-    @apply text-base sm:text-lg;
-  }
-
-  /* ✅ MOBILE: Spacing utilities */
-  .mobile-space-xs {
-    @apply space-y-2 sm:space-y-3;
-  }
-
-  .mobile-space-sm {
-    @apply space-y-3 sm:space-y-4;
-  }
-
-  .mobile-space-md {
-    @apply space-y-4 sm:space-y-6;
-  }
-
-  .mobile-gap-xs {
-    @apply gap-2 sm:gap-3;
-  }
-
-  .mobile-gap-sm {
-    @apply gap-3 sm:gap-4;
-  }
-
-  .mobile-gap-md {
-    @apply gap-4 sm:gap-6;
-  }
-  
-  /* Animations - Optimized for mobile performance */
+  /* ✅ ENHANCED ANIMATIONS */
   .stagger-in {
     animation: staggerIn 0.3s ease-out forwards;
   }
@@ -774,6 +742,27 @@
     animation: shake 0.5s ease-in-out;
   }
 
+  /* Glass Effect Animation */
+  .glass-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .glass-shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.6s ease;
+  }
+
+  .glass-shimmer:hover::after {
+    left: 100%;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -791,29 +780,13 @@
       animation: none;
       opacity: 1;
     }
+
+    .glass-shimmer::after {
+      display: none;
+    }
   }
 
-  /* Loading States */
-  .loading-spinner {
-    @apply animate-spin rounded-full border-2 border-slate-200;
-    border-top-color: rgb(70, 104, 171); /* Brand blue spinner */
-  }
-
-  .loading-spinner-lg {
-    @apply w-8 h-8 border-3;
-  }
-
-  /* Skeleton Loading */
-  .skeleton {
-    @apply animate-pulse bg-slate-200 rounded;
-  }
-
-  /* Dividers */
-  .divider {
-    @apply border-t border-slate-200 my-4;
-  }
-
-  /* Badges */
+  /* ✅ ENHANCED BADGES */
   .mobile-badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
@@ -826,34 +799,29 @@
     @apply px-3 py-1 text-sm;
   }
 
-  /* Focus States */
-  .focus-visible-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
-    --tw-ring-color: rgb(70, 104, 171); /* Brand blue focus */
+  /* Glass Badge */
+  .badge-glass {
+    @apply mobile-badge glass-secondary text-slate-700 border-white/20;
   }
 
-  .focus-visible-ring:focus-visible {
-    @apply ring-2 ring-offset-2;
-    --tw-ring-color: rgb(70, 104, 171);
+  /* ✅ ENHANCED DIVIDERS */
+  .divider {
+    @apply border-t border-slate-200 my-4;
   }
 
-  /* Mobile List Items */
-  .mobile-list-item {
-    @apply flex items-center justify-between p-4 hover:bg-slate-50 transition-colors duration-200;
+  .divider-glass {
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    @apply my-4;
   }
 
-  .mobile-list-item:active {
-    @apply bg-slate-100;
-  }
-
-  /* ✅ NEW: Mobile-specific modal responsive adjustments */
+  /* ✅ ENHANCED MOBILE OPTIMIZATIONS */
   @media (max-width: 767px) {
     .mobile-modal-container {
       padding: 0.75rem;
     }
     
     .mobile-modal-content {
-      border-radius: 1rem; /* Smaller radius on mobile */
+      border-radius: 1rem;
     }
     
     .modal-content-area {
@@ -862,7 +830,6 @@
     }
   }
 
-  /* ✅ NEW: Ultra-small screen optimizations */
   @media (max-width: 374px) {
     .mobile-modal-container {
       padding: 0.5rem;
@@ -872,9 +839,16 @@
       padding-left: 1rem;
       padding-right: 1rem;
     }
+
+    .mobile-container {
+      @apply px-2;
+    }
+
+    .btn-base {
+      @apply text-sm px-3 py-2;
+    }
   }
 
-  /* ✅ NEW: Landscape mobile optimization for modals */
   @media (max-height: 500px) and (orientation: landscape) {
     .mobile-modal-content {
       max-height: calc(100vh - 2rem);
@@ -885,9 +859,15 @@
       padding-top: 1rem;
       padding-bottom: 1rem;
     }
+
+    .mobile-nav-full-spacing {
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+    }
   }
 }
 
+/* ✅ ENHANCED KEYFRAMES */
 @keyframes staggerIn {
   from {
     opacity: 0;
@@ -914,49 +894,17 @@
   75% { transform: translateX(5px); }
 }
 
-/* ✅ NEW: Safe area integration for modals */
+@keyframes glassShimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* ✅ ENHANCED SAFE AREA INTEGRATION */
 @supports (padding: max(0px)) {
   .mobile-modal-container {
     padding-top: max(0.75rem, env(safe-area-inset-top));
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
     padding-left: max(0.75rem, env(safe-area-inset-left));
     padding-right: max(0.75rem, env(safe-area-inset-right));
-  }
-}
-
-/* ✅ MOBILE: Extra small screens */
-@media (max-width: 374px) {
-  .mobile-container {
-    @apply px-2;
-  }
-
-  .btn-base {
-    @apply text-sm px-3 py-2;
-  }
-}
-
-/* ✅ MOBILE: Small screens */
-@media (min-width: 375px) and (max-width: 424px) {
-  .property-grid {
-    @apply grid-cols-1;
-  }
-}
-
-/* ✅ MOBILE: Tablet screens */
-@media (min-width: 768px) and (max-width: 1023px) {
-  .property-grid {
-    @apply grid-cols-2;
-  }
-
-  .dashboard-layout {
-    @apply grid-cols-1;
-  }
-}
-
-/* ✅ MOBILE: Landscape orientation on small screens */
-@media (max-height: 500px) and (orientation: landscape) {
-  .mobile-nav-full-spacing {
-    padding-top: 1rem;
-    padding-bottom: 1rem;
   }
 }

@@ -381,7 +381,7 @@ const IntroModal = ({ isOpen, onClose, onComplete }) => {
         <>
           {/* ✅ CRITICAL: Full-screen backdrop with highest z-index */}
           <motion.div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000]"
+            className="fixed mx-auto inset-0 bg-black/50 backdrop-blur-sm z-[10000]"
             style={{
               // ✅ Ensure truly full viewport coverage
               top: 0,

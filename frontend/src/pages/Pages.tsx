@@ -1,3 +1,4 @@
+// src/pages/Pages.tsx - UPDATED with Mobile Home Page routing
 import Layout from "../components/layout/Layout.tsx";
 import Landing from "./landing/LandingPage.jsx";
 import CheckoutPage from "./checkout/CheckoutPage.jsx";
@@ -29,6 +30,9 @@ import MobileDashboard from "./dashboard/mobile/MobileDashboard.jsx";
 import MobileSpaces from "./dashboard/mobile/MobileSpaces.jsx";
 import MobileBookings from "./dashboard/mobile/MobileBookings.jsx";
 
+// ✅ NEW: Mobile Home Page Import
+import MobileHomePage from "./home/MobileHomePage.jsx";
+
 // Admin page imports
 import UserManagement from "./admin/UserManagement.tsx";
 import PropertyApprovals from "./admin/PropertyApprovals.tsx";
@@ -44,10 +48,11 @@ import MinimalTestMap from "@/dev/debug/MinimalTestMap.tsx";
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation, useParams } from 'react-router-dom';
 import { useEffect } from 'react';
 
-// ✅ UPDATED: Removed IntroPage from PAGES object
+// ✅ UPDATED: Added MobileHomePage to PAGES object
 const PAGES = {
     Landing: Landing,
     Browse: Map,
+    Home: MobileHomePage,  // ✅ NEW: Mobile home page
     Messages: Messages,
     CheckoutPage: CheckoutPage,
     CampaignCheckout: CampaignCheckout,
@@ -139,7 +144,16 @@ function PagesContent() {
             {/* ✅ STANDALONE PAGES - NO LAYOUT */}
             <Route path="/learn-more" element={<LearnMore />} />
             
-            {/* ✅ PUBLIC ROUTES - Standard Protection (Intro modal handled in BrowsePage) */}
+            {/* ✅ NEW: MOBILE HOME PAGE - Onboarding handles routing here */}
+            <Route path="/home" element={
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="home-protected">
+                    <Layout currentPageName="Home" key="home-page">
+                        <MobileHomePage key="home-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
+            
+            {/* ✅ PUBLIC ROUTES - Onboarding check handled in ProtectedRoute */}
             <Route path="/browse" element={
                 <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="browse-protected">
                     <Layout currentPageName="Browse" key="browse-page">
@@ -154,7 +168,7 @@ function PagesContent() {
                 </Layout>
             } />
             
-            {/* ✅ PROTECTED ROUTES - Standard Protection */}
+            {/* ✅ PROTECTED ROUTES - Standard Protection with onboarding */}
             <Route path="/dashboard" element={
                 <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="dashboard-protected">
                     <Layout currentPageName="Dashboard" key="dashboard-page">
@@ -179,8 +193,9 @@ function PagesContent() {
                 </ProtectedRoute>
             } />
             
+            {/* ✅ PROFILE & SETTINGS - Skip onboarding check since these are management pages */}
             <Route path="/profile" element={
-                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="profile-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipOnboardingCheck={true} key="profile-protected">
                     <Layout currentPageName="Profile" key="profile-page">
                         <Profile key="profile-component" />
                     </Layout>
@@ -188,7 +203,7 @@ function PagesContent() {
             } />
             
             <Route path="/settings" element={
-                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="settings-protected">
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" skipOnboardingCheck={true} key="settings-protected">
                     <Layout currentPageName="Settings" key="settings-page">
                         <Settings key="settings-component" />
                     </Layout>
@@ -247,7 +262,7 @@ function PagesContent() {
                 </ProtectedRoute>
             } />
             
-            {/* ✅ List Space route - No special intro handling needed */}
+            {/* ✅ List Space route - No special onboarding handling needed */}
             <Route path="/list-space" element={
                 <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="list-space-protected">
                     <CreateListingWizard key="list-space-component" />
@@ -308,7 +323,7 @@ function PagesContent() {
             
             {/* ✅ ADMIN ROUTES - Using regular ProtectedRoute with admin requirement */}
             <Route path="/admin" element={
-                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" key="admin-protected">
+                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" skipOnboardingCheck={true} key="admin-protected">
                     <Layout currentPageName="Admin" key="admin-page">
                         <Admin key="admin-component" />
                     </Layout>
@@ -316,7 +331,7 @@ function PagesContent() {
             } />
             
             <Route path="/admin/users" element={
-                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" key="admin-users-protected">
+                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" skipOnboardingCheck={true} key="admin-users-protected">
                     <Layout currentPageName="User Management" key="admin-users-page">
                         <UserManagement key="admin-users-component" />
                     </Layout>
@@ -324,7 +339,7 @@ function PagesContent() {
             } />
             
             <Route path="/admin/properties" element={
-                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" key="admin-properties-protected">
+                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" skipOnboardingCheck={true} key="admin-properties-protected">
                     <Layout currentPageName="Property Approvals" key="admin-properties-page">
                         <PropertyApprovals key="admin-properties-component" />
                     </Layout>
@@ -332,7 +347,7 @@ function PagesContent() {
             } />
             
             <Route path="/admin/bookings" element={
-                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" key="admin-bookings-protected">
+                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" skipOnboardingCheck={true} key="admin-bookings-protected">
                     <Layout currentPageName="Booking Oversight" key="admin-bookings-page">
                         <BookingOversight key="admin-bookings-component" />
                     </Layout>
@@ -340,7 +355,7 @@ function PagesContent() {
             } />
 
             <Route path="/admin/materials/catalog" element={
-                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" key="admin-materials-catalog-protected">
+                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" skipOnboardingCheck={true} key="admin-materials-catalog-protected">
                     <Layout currentPageName="Material Catalog" key="admin-materials-catalog-page">
                         <MaterialCatalogManagement key="admin-materials-catalog-component" />
                     </Layout>
@@ -348,7 +363,7 @@ function PagesContent() {
             } />
 
             <Route path="/admin/materials/orders" element={
-                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" key="admin-materials-orders-protected">
+                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" skipOnboardingCheck={true} key="admin-materials-orders-protected">
                     <Layout currentPageName="Material Orders" key="admin-materials-orders-page">
                         <MaterialOrderProcessing key="admin-materials-orders-component" />
                     </Layout>
@@ -356,7 +371,7 @@ function PagesContent() {
             } />
 
             <Route path="/admin/clients/onboard" element={
-                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" key="admin-clients-onboard-protected">
+                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" skipOnboardingCheck={true} key="admin-clients-onboard-protected">
                     <Layout currentPageName="Client Onboarding" key="admin-clients-onboard-page">
                         <ClientOnboardingSystem key="admin-clients-onboard-component" />
                     </Layout>
@@ -364,7 +379,7 @@ function PagesContent() {
             } />
             
             <Route path="/data-seeder" element={
-                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" key="data-seeder-protected">
+                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" skipOnboardingCheck={true} key="data-seeder-protected">
                     <Layout currentPageName="DataSeeder" key="data-seeder-page">
                         <DataSeeder key="data-seeder-component" />
                     </Layout>

@@ -1,16 +1,22 @@
-// Advertiser Dashboard - Enhanced with Glassmorphism & Edge-to-Edge Mobile Design
-// ✅ EDGE-TO-EDGE: Native mobile layout with zero container padding on mobile
-// ✅ GLASSMORPHISM: Premium glass containers with immersive edge-to-edge experience
-// ✅ NAVIGATION AWARE: Respects navbar height calculations
-// ✅ CONDENSED LAYOUT: Optimized line items to fit within available height
-// ✅ BUSINESS CONTEXT: Tailored for B2B campaign management needs
+// Advertiser Dashboard - REAL DATA VERSION
+// ✅ REAL DATA: Fetches actual data from your backend API
+// ✅ CAMPAIGN REFRESH: Shows newly created campaigns immediately
+// ✅ ERROR HANDLING: Proper error states and fallbacks
+// ✅ LOADING STATES: Real loading indicators
+// ✅ AUTO REFRESH: Refreshes data when returning from campaign creation
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
 import {
   Calendar, TrendingUp, Eye, MessageCircle, ChevronRight,
   DollarSign, Clock, MapPin, User, Receipt, Plus, ArrowUp, ArrowDown,
-  Target, Activity, BarChart3, AlertTriangle, Zap, CheckCircle, Bell, Loader2
+  Target, Activity, BarChart3, AlertTriangle, Zap, CheckCircle, Bell, Loader2,
+  RefreshCw
 } from 'lucide-react';
+
+// ✅ REAL DATA: Import your actual API client
+import apiClient from '../../../api/apiClient';
 
 // ✅ GLASSMORPHISM: Enhanced Z-Index Scale for glass layering
 const Z_INDEX = {
@@ -91,204 +97,314 @@ const EnterpriseLoader = ({
   );
 };
 
-// Types
+// ✅ REAL DATA: Updated Types to match your actual API responses
 interface DashboardStats {
   activeCampaigns: number;
   completedCampaigns: number;
-  needsAttention: number;
-  totalImpressions: number;
+  totalSpent: number;
+  pendingMaterials: number;
+  totalImpressions?: number;
+  needsAttention?: number;
 }
 
 interface Campaign {
   id: string;
   name: string;
-  startDate: string;
-  budget: number;
-  spent: number;
-  status: 'complete' | 'pending' | 'processing' | 'in transit' | 'arrived' | 'live';
-}
-
-interface RecentMessage {
-  id: string;
-  sender: string;
-  avatar: string;
-  preview: string;
-  timestamp: string;
-  isRead: boolean;
-  priority: 'high' | 'normal';
+  title?: string;
+  startDate?: string;
+  start_date?: string;
+  budget?: number;
+  total_budget?: number;
+  totalSpent?: number;
+  spent?: number;
+  status: string;
+  isActive?: boolean;
+  currency?: string;
+  brand_name?: string;
+  createdAt?: string;
 }
 
 interface Invoice {
   id: string;
-  campaignName: string;
+  invoiceNumber?: string;
+  campaignId?: string;
+  campaign?: { name: string };
   amount: number;
   dueDate: string;
-  status: 'paid' | 'pending' | 'overdue';
+  status: string;
+  description?: string;
+  currency?: string;
+}
+
+interface RecentActivity {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  timestamp: string;
+  priority: 'high' | 'normal';
+  isRead: boolean;
 }
 
 export default function SidebarAdvertiserDashboard() {
+  const navigate = useNavigate();
+  const { user } = useUser();
+  const [searchParams] = useSearchParams();
+  
+  // ✅ REAL DATA: State management for real data
   const [activeTab, setActiveTab] = useState('campaigns');
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Simulated user for demo
-  const user = { id: 'demo-user-123', firstName: 'Jane', lastName: 'Smith' };
-  const userLoaded = true;
-
-  // Enhanced data states
+  
+  // ✅ REAL DATA: States for actual API data
   const [stats, setStats] = useState<DashboardStats>({
-    activeCampaigns: 25,
-    completedCampaigns: 120,
-    needsAttention: 3,
-    totalImpressions: 5680
+    activeCampaigns: 0,
+    completedCampaigns: 0,
+    totalSpent: 0,
+    pendingMaterials: 0,
+    totalImpressions: 0,
+    needsAttention: 0
   });
-
+  
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<string>('');
 
-  const [recentMessages, setRecentMessages] = useState<RecentMessage[]>([
-    {
-      id: '1',
-      sender: 'Campaign Manager',
-      avatar: '👨‍💼',
-      preview: 'Holiday campaign performance exceeded expectations. Consider scaling budget.',
-      timestamp: '2h ago',
-      isRead: false,
-      priority: 'high'
-    },
-    {
-      id: '2',
-      sender: 'System Alert', 
-      avatar: '🔔',
-      preview: 'Daily budget limit reached for Product Launch campaign.',
-      timestamp: '4h ago',
-      isRead: false,
-      priority: 'high'
-    },
-    {
-      id: '3',
-      sender: 'Analytics Team',
-      avatar: '📊', 
-      preview: 'Weekly performance report is ready for review.',
-      timestamp: '1d ago',
-      isRead: true,
-      priority: 'normal'
+  // ✅ CAMPAIGN REFRESH: Check for campaign creation success
+  useEffect(() => {
+    const created = searchParams.get('created');
+    const tab = searchParams.get('tab');
+    
+    if (created === 'true') {
+      console.log('🎉 Campaign creation detected - showing success and refreshing data');
+      if (tab) {
+        setActiveTab(tab);
+      }
+      // Force refresh data
+      fetchAllData(true);
+      
+      // Clear URL params after processing
+      navigate('/advertise', { replace: true });
     }
-  ]);
+  }, [searchParams, navigate]);
 
-  // ✅ EDGE-TO-EDGE: Enhanced console logging for mobile native experience
-  useEffect(() => {
-    console.log('🎨 ADVERTISER DASHBOARD GLASSMORPHISM: Native mobile styling applied', {
-      navigationHeights: NAVIGATION_HEIGHTS,
-      containerPadding: CONTAINER_PADDING,
-      calculatedValues: CSS_VALUES,
-      glassmorphismOptimizations: [
-        'EDGE-TO-EDGE: Mobile containers extend to screen edges',
-        'FLOATING GLASS: Premium glass containers with backdrop blur',
-        'NAVIGATION AWARE: Respects navbar height calculations',
-        'CONDENSED LAYOUT: Optimized KPI line items for height constraints',
-        'BRAND CONSISTENCY: Matches messages page styling patterns',
-        'RESPONSIVE DESIGN: Desktop preserves premium spacing'
-      ],
-      timestamp: new Date().toISOString()
-    });
-  }, []);
-
-  // ✅ SIMPLE LOADING SIMULATION
-  useEffect(() => {
-    console.log('🎨 SIDEBAR ADVERTISER DASHBOARD: Loading simulation starting', {
-      userLoaded,
-      userId: user?.id,
-      loadingAnimationType: 'EnterpriseLoader with 3-second branded animation',
-      timestamp: new Date().toISOString()
-    });
-
-    if (userLoaded && user?.id) {
-      const timer = setTimeout(() => {
-        setIsLoading(false);
+  // ✅ REAL DATA: Fetch dashboard stats
+  const fetchDashboardStats = async () => {
+    try {
+      console.log('📊 Fetching advertiser dashboard stats...');
+      const response = await apiClient.getAdvertiserDashboard();
+      
+      if (response.success && response.data) {
+        const { stats: apiStats } = response.data;
         
-        // Set mock campaign data
-        setCampaigns([
-          {
-            id: '1',
-            name: 'Holiday Season Campaign',
-            startDate: '2025-01-15',
-            budget: 15000,
-            spent: 8500,
-            status: 'live'
-          },
-          {
-            id: '2',
-            name: 'Brand Awareness Drive',
-            startDate: '2025-01-10',
-            budget: 8000,
-            spent: 6200,
-            status: 'live'
-          },
-          {
-            id: '3',
-            name: 'Product Launch Beta',
-            startDate: '2025-01-20',
-            budget: 12000,
-            spent: 3200,
-            status: 'processing'
-          },
-          {
-            id: '4',
-            name: 'Summer Promotion',
-            startDate: '2025-01-22',
-            budget: 5000,
-            spent: 0,
-            status: 'pending'
-          },
-          {
-            id: '5',
-            name: 'Q1 Brand Campaign',
-            startDate: '2025-01-05',
-            budget: 20000,
-            spent: 20000,
-            status: 'complete'
-          }
-        ]);
-
-        // Set mock invoice data
-        setInvoices([
-          {
-            id: '1',
-            campaignName: 'Summer Billboard Campaign',
-            amount: 2500,
-            dueDate: '2025-01-15',
-            status: 'pending'
-          },
-          {
-            id: '2', 
-            campaignName: 'Downtown Digital Display',
-            amount: 1800,
-            dueDate: '2025-01-20',
-            status: 'paid'
-          },
-          {
-            id: '3',
-            campaignName: 'Highway Banner Ad',
-            amount: 3200,
-            dueDate: '2025-01-10',
-            status: 'overdue'
-          }
-        ]);
-
-        console.log('✅ SIDEBAR ADVERTISER DASHBOARD: Loading complete', {
-          result: 'Consistent branded loading animation displayed',
-          timestamp: new Date().toISOString()
+        setStats({
+          activeCampaigns: apiStats.activeCampaigns || 0,
+          completedCampaigns: apiStats.completedCampaigns || 0,
+          totalSpent: apiStats.totalSpent || 0,
+          pendingMaterials: apiStats.pendingMaterials || 0,
+          totalImpressions: apiStats.totalImpressions || 0,
+          needsAttention: apiStats.needsAttention || 0
         });
-      }, 2000);
-
-      return () => clearTimeout(timer);
-    } else if (userLoaded && !user) {
-      setError('Please sign in to view your dashboard');
-      setIsLoading(false);
+        
+        console.log('✅ Dashboard stats loaded:', apiStats);
+      } else {
+        console.error('❌ Failed to fetch dashboard stats:', response.error);
+      }
+    } catch (error) {
+      console.error('❌ Dashboard stats error:', error);
     }
-  }, [userLoaded, user?.id]);
+  };
+
+  // ✅ REAL DATA: Fetch campaigns
+  const fetchCampaigns = async () => {
+    try {
+      console.log('📊 Fetching campaigns...');
+      const response = await apiClient.getCampaigns({ limit: 10 });
+      
+      if (response.success && response.data) {
+        setCampaigns(response.data);
+        console.log('✅ Campaigns loaded:', response.data.length, 'campaigns');
+      } else {
+        console.error('❌ Failed to fetch campaigns:', response.error);
+        setCampaigns([]);
+      }
+    } catch (error) {
+      console.error('❌ Campaigns fetch error:', error);
+      setCampaigns([]);
+    }
+  };
+
+  // ✅ REAL DATA: Fetch invoices
+  const fetchInvoices = async () => {
+    try {
+      console.log('📊 Fetching invoices...');
+      const response = await apiClient.getInvoices({ limit: 5 });
+      
+      if (response.success && response.data) {
+        setInvoices(response.data);
+        console.log('✅ Invoices loaded:', response.data.length, 'invoices');
+      } else {
+        console.error('❌ Failed to fetch invoices:', response.error);
+        setInvoices([]);
+      }
+    } catch (error) {
+      console.error('❌ Invoices fetch error:', error);
+      setInvoices([]);
+    }
+  };
+
+  // ✅ REAL DATA: Fetch recent activity (messages/notifications)
+  const fetchRecentActivity = async () => {
+    try {
+      console.log('📊 Fetching recent activity...');
+      
+      // Try to get notifications first
+      const notificationsResponse = await apiClient.getNotifications({ limit: 5 });
+      
+      if (notificationsResponse.success && notificationsResponse.data?.notifications) {
+        const activities = notificationsResponse.data.notifications.map((notif: any) => ({
+          id: notif.id,
+          type: notif.type || 'notification',
+          title: notif.title,
+          description: notif.message,
+          timestamp: formatTimestamp(notif.created_at),
+          priority: notif.type === 'urgent' ? 'high' : 'normal',
+          isRead: notif.is_read
+        }));
+        
+        setRecentActivity(activities);
+        console.log('✅ Recent activity loaded:', activities.length, 'items');
+      } else {
+        // Fallback: create activity from recent campaigns
+        const recentCampaigns = campaigns.slice(0, 3);
+        const activities = recentCampaigns.map((campaign, index) => ({
+          id: `campaign-${campaign.id}`,
+          type: 'campaign',
+          title: 'Campaign Update',
+          description: `${campaign.name} is ${campaign.status.toLowerCase()}`,
+          timestamp: formatTimestamp(campaign.createdAt || new Date().toISOString()),
+          priority: 'normal' as const,
+          isRead: true
+        }));
+        
+        setRecentActivity(activities);
+        console.log('✅ Recent activity (fallback) loaded:', activities.length, 'items');
+      }
+    } catch (error) {
+      console.error('❌ Recent activity fetch error:', error);
+      setRecentActivity([]);
+    }
+  };
+
+  // ✅ UTILITY: Format timestamp
+  const formatTimestamp = (timestamp: string | undefined): string => {
+    if (!timestamp) return 'Recently';
+    
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffHours < 1) return 'Just now';
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return date.toLocaleDateString();
+  };
+
+  // ✅ REAL DATA: Fetch all data
+  const fetchAllData = async (force = false) => {
+    if (force) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+    
+    setError(null);
+    
+    try {
+      console.log('🔄 Fetching all dashboard data...');
+      
+      // Fetch all data in parallel for better performance
+      await Promise.all([
+        fetchDashboardStats(),
+        fetchCampaigns(),
+        fetchInvoices()
+      ]);
+      
+      // Fetch activity after campaigns are loaded (for fallback)
+      await fetchRecentActivity();
+      
+      setLastUpdated(new Date().toISOString());
+      console.log('✅ All dashboard data loaded successfully');
+      
+    } catch (error) {
+      console.error('❌ Error fetching dashboard data:', error);
+      setError('Failed to load dashboard data. Please try again.');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  // ✅ REAL DATA: Initial data load
+  useEffect(() => {
+    if (user?.id) {
+      console.log('🎯 User authenticated, loading dashboard data...');
+      fetchAllData();
+    }
+  }, [user?.id]);
+
+  // ✅ REFRESH: Manual refresh function
+  const handleRefresh = () => {
+    console.log('🔄 Manual refresh triggered');
+    fetchAllData(true);
+  };
+
+  // ✅ REAL DATA: Format currency
+  const formatCurrency = (amount: number | undefined, currency = 'USD'): string => {
+    if (amount === undefined || amount === null) return '$0';
+    
+    const symbols: { [key: string]: string } = {
+      USD: '$', EUR: '€', GBP: '£', CAD: 'C$', AUD: 'A$'
+    };
+    
+    const symbol = symbols[currency] || '$';
+    return `${symbol}${amount.toLocaleString()}`;
+  };
+
+  // ✅ REAL DATA: Get campaign progress
+  const getCampaignProgress = (campaign: Campaign) => {
+    const spent = campaign.totalSpent || campaign.spent || 0;
+    const budget = campaign.total_budget || campaign.budget || 1;
+    return Math.min(Math.round((spent / budget) * 100), 100);
+  };
+
+  // ✅ REAL DATA: Get campaign status color
+  const getStatusColor = (status: string) => {
+    const statusLower = status.toLowerCase();
+    
+    if (['active', 'live', 'approved'].includes(statusLower)) {
+      return 'bg-emerald-100 text-emerald-700';
+    }
+    if (['completed', 'complete'].includes(statusLower)) {
+      return 'bg-blue-100 text-blue-700';
+    }
+    if (['draft', 'planning'].includes(statusLower)) {
+      return 'bg-gray-100 text-gray-700';
+    }
+    if (['pending', 'pending_approval'].includes(statusLower)) {
+      return 'bg-yellow-100 text-yellow-700';
+    }
+    if (['paused', 'cancelled'].includes(statusLower)) {
+      return 'bg-red-100 text-red-700';
+    }
+    
+    return 'bg-gray-100 text-gray-700';
+  };
 
   // ✅ CONDENSED KPI LINE ITEM - Optimized for height constraints
   const KPILineItem = ({ 
@@ -333,7 +449,7 @@ export default function SidebarAdvertiserDashboard() {
     </div>
   );
 
-  // ✅ COMPACT CAMPAIGN TABLE with glassmorphism
+  // ✅ REAL DATA: Enhanced Campaign Table with real data
   const EnhancedCampaignTable = () => (
     <div 
       className="rounded-2xl overflow-hidden relative"
@@ -364,11 +480,21 @@ export default function SidebarAdvertiserDashboard() {
           }}
         >
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-bold text-gray-900" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>
-              Campaign Performance
-            </h3>
+            <div className="flex items-center">
+              <h3 className="text-lg font-bold text-gray-900 mr-4" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>
+                Campaign Performance
+              </h3>
+              {isRefreshing && (
+                <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
+              )}
+            </div>
+            
             <button
-              onClick={() => console.log('Navigation: /create-campaign')}
+              type="button"
+              onClick={() => {
+                console.log('🎯 Navigating to /create-campaign');
+                navigate('/create-campaign');
+              }}
               className="inline-flex items-center px-4 py-2 text-sm font-bold text-white rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-300 relative overflow-hidden"
               style={{ 
                 background: 'linear-gradient(135deg, #4668AB 0%, #5B7BC7 100%)',
@@ -388,86 +514,115 @@ export default function SidebarAdvertiserDashboard() {
         </div>
         
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead 
-              style={{
-                background: 'linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(248, 250, 252, 0.9) 100%)',
-                backdropFilter: 'blur(10px)'
-              }}
-            >
-              <tr>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Campaign</th>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Budget Progress</th>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Status</th>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {campaigns.map((campaign, index) => (
-                <tr 
-                  key={campaign.id} 
-                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150"
-                >
-                  <td className="py-3 px-6">
-                    <div>
-                      <div className="font-semibold text-gray-900 text-sm">
-                        {campaign.name}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">{campaign.startDate}</div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-6">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-semibold text-gray-900">
-                          ${campaign.spent.toLocaleString()}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          / ${campaign.budget.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="h-2 rounded-full transition-all duration-500"
-                          style={{ 
-                            width: `${(campaign.spent / campaign.budget) * 100}%`,
-                            background: 'linear-gradient(90deg, #4668AB 0%, #5B7BC7 100%)'
-                          }}
-                        ></div>
-                      </div>
-                      <div className="text-xs text-gray-600">
-                        {Math.round((campaign.spent / campaign.budget) * 100)}% utilized
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-6">
-                    <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                      campaign.status === 'live' ? 'bg-emerald-100 text-emerald-700' :
-                      campaign.status === 'complete' ? 'bg-blue-100 text-blue-700' :
-                      campaign.status === 'processing' ? 'bg-yellow-100 text-yellow-700' :
-                      campaign.status === 'pending' ? 'bg-orange-100 text-orange-700' :
-                      campaign.status === 'in transit' ? 'bg-purple-100 text-purple-700' :
-                      campaign.status === 'arrived' ? 'bg-indigo-100 text-indigo-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                    </span>
-                  </td>
-                  <td className="py-3 px-6">
-                    <button className="text-blue-600 hover:text-blue-800 font-medium text-xs hover:underline transition-colors">
-                      View Details
-                    </button>
-                  </td>
+          {campaigns.length === 0 ? (
+            <div className="text-center py-12">
+              <Target className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No campaigns yet</h3>
+              <p className="text-gray-500 mb-4">Create your first campaign to start advertising</p>
+              <button
+                onClick={() => navigate('/create-campaign')}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-lg"
+                style={{ backgroundColor: '#4668AB' }}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create Campaign
+              </button>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead 
+                style={{
+                  background: 'linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(248, 250, 252, 0.9) 100%)',
+                  backdropFilter: 'blur(10px)'
+                }}
+              >
+                <tr>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Campaign</th>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Budget Progress</th>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Status</th>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {campaigns.map((campaign) => {
+                  const progress = getCampaignProgress(campaign);
+                  const spent = campaign.totalSpent || campaign.spent || 0;
+                  const budget = campaign.total_budget || campaign.budget || 0;
+                  const startDate = campaign.start_date || campaign.startDate;
+                  
+                  return (
+                    <tr 
+                      key={campaign.id} 
+                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150"
+                    >
+                      <td className="py-3 px-6">
+                        <div>
+                          <div className="font-semibold text-gray-900 text-sm">
+                            {campaign.title || campaign.name}
+                          </div>
+                          {campaign.brand_name && (
+                            <div className="text-xs text-gray-500 mt-0.5">{campaign.brand_name}</div>
+                          )}
+                          {startDate && (
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {new Date(startDate).toLocaleDateString()}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-6">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-semibold text-gray-900">
+                              {formatCurrency(spent, campaign.currency)}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              / {formatCurrency(budget, campaign.currency)}
+                            </span>
+                          </div>
+                          {budget > 0 && (
+                            <>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="h-2 rounded-full transition-all duration-500"
+                                  style={{ 
+                                    width: `${progress}%`,
+                                    background: 'linear-gradient(90deg, #4668AB 0%, #5B7BC7 100%)'
+                                  }}
+                                ></div>
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                {progress}% utilized
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-6">
+                        <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(campaign.status)}`}>
+                          {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-6">
+                        <button 
+                          onClick={() => navigate(`/campaigns/${campaign.id}`)}
+                          className="text-blue-600 hover:text-blue-800 font-medium text-xs hover:underline transition-colors"
+                        >
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
   );
 
-  // ✅ COMPACT INVOICE TABLE with glassmorphism
+  // ✅ REAL DATA: Enhanced Invoice Table with real data
   const EnhancedInvoiceTable = () => (
     <div 
       className="rounded-2xl overflow-hidden relative"
@@ -503,49 +658,64 @@ export default function SidebarAdvertiserDashboard() {
         </div>
         
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead 
-              style={{
-                background: 'linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(248, 250, 252, 0.9) 100%)',
-                backdropFilter: 'blur(10px)'
-              }}
-            >
-              <tr>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Campaign</th>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Amount</th>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Due Date</th>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Status</th>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((invoice) => (
-                <tr key={invoice.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150">
-                  <td className="py-3 px-6 font-semibold text-gray-900 text-sm">
-                    {invoice.campaignName}
-                  </td>
-                  <td className="py-3 px-6">
-                    <span className="font-bold text-lg text-gray-900">${invoice.amount.toLocaleString()}</span>
-                  </td>
-                  <td className="py-3 px-6 text-gray-600 text-sm">{invoice.dueDate}</td>
-                  <td className="py-3 px-6">
-                    <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                      invoice.status === 'paid' ? 'bg-emerald-100 text-emerald-700' :
-                      invoice.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                    </span>
-                  </td>
-                  <td className="py-3 px-6">
-                    <button className="text-blue-600 hover:text-blue-800 font-medium text-xs hover:underline transition-colors">
-                      Pay Now
-                    </button>
-                  </td>
+          {invoices.length === 0 ? (
+            <div className="text-center py-12">
+              <Receipt className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No invoices yet</h3>
+              <p className="text-gray-500">Invoices will appear here after campaign bookings</p>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead 
+                style={{
+                  background: 'linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(248, 250, 252, 0.9) 100%)',
+                  backdropFilter: 'blur(10px)'
+                }}
+              >
+                <tr>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Invoice</th>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Amount</th>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Due Date</th>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Status</th>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {invoices.map((invoice) => (
+                  <tr key={invoice.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150">
+                    <td className="py-3 px-6">
+                      <div>
+                        <div className="font-semibold text-gray-900 text-sm">
+                          {invoice.invoiceNumber || `Invoice #${invoice.id.slice(0, 8)}`}
+                        </div>
+                        {invoice.description && (
+                          <div className="text-xs text-gray-500 mt-0.5">{invoice.description}</div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-6">
+                      <span className="font-bold text-lg text-gray-900">
+                        {formatCurrency(invoice.amount, invoice.currency)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-6 text-gray-600 text-sm">
+                      {new Date(invoice.dueDate).toLocaleDateString()}
+                    </td>
+                    <td className="py-3 px-6">
+                      <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(invoice.status)}`}>
+                        {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-6">
+                      <button className="text-blue-600 hover:text-blue-800 font-medium text-xs hover:underline transition-colors">
+                        {invoice.status.toLowerCase() === 'paid' ? 'View' : 'Pay Now'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
@@ -568,7 +738,6 @@ export default function SidebarAdvertiserDashboard() {
           background: 'linear-gradient(135deg, #F8FAFF 0%, #E8F2FF 50%, #F0F8FF 100%)'
         }}
       >
-        {/* Enhanced background pattern */}
         <div 
           className="absolute inset-0 opacity-30"
           style={{
@@ -600,7 +769,7 @@ export default function SidebarAdvertiserDashboard() {
               <EnterpriseLoader 
                 size="xl"
                 theme="brand"
-                message="Loading advertiser dashboard..."
+                message="Loading your dashboard..."
                 showMessage={true}
                 centered={true}
               />
@@ -660,7 +829,7 @@ export default function SidebarAdvertiserDashboard() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Connection Error</h3>
               <p className="text-red-600 mb-4">{error}</p>
               <button
-                onClick={() => window.location.reload()}
+                onClick={() => fetchAllData()}
                 className="px-6 py-3 rounded-lg text-white font-bold hover:opacity-90 transition-all duration-300 relative overflow-hidden"
                 style={{ 
                   background: 'linear-gradient(135deg, #667EEA 0%, #764BA2 100%)',
@@ -729,7 +898,6 @@ export default function SidebarAdvertiserDashboard() {
           .glassmorphism-sidebar {
             height: calc(100vh - ${CSS_VALUES.MOBILE_TOTAL_PADDING}px) !important;
             max-height: calc(100vh - ${CSS_VALUES.MOBILE_TOTAL_PADDING}px) !important;
-            /* ✅ EDGE-TO-EDGE: Mobile containers extend to edges */
             border-radius: 0 !important;
             border-left: none !important;
             border-right: none !important;
@@ -737,25 +905,21 @@ export default function SidebarAdvertiserDashboard() {
           .glassmorphism-main {
             height: calc(100vh - ${CSS_VALUES.MOBILE_TOTAL_PADDING}px) !important;
             max-height: calc(100vh - ${CSS_VALUES.MOBILE_TOTAL_PADDING}px) !important;
-            /* ✅ EDGE-TO-EDGE: Mobile containers extend to edges */
             border-radius: 0 !important;
             border-left: none !important;
             border-right: none !important;
           }
           
-          /* ✅ EDGE-TO-EDGE: Remove spacing between containers on mobile */
           .dashboard-container > div {
             margin-left: 0 !important;
             margin-right: 0 !important;
           }
         }
         
-        /* ✅ CRITICAL: Prevent any scrolling */
         .dashboard-container, .glassmorphism-sidebar, .glassmorphism-main {
           overflow: hidden !important;
         }
         
-        /* ✅ EDGE-TO-EDGE: Loading states respect the same patterns */
         .dashboard-loading-state {
           padding: ${CONTAINER_PADDING.DESKTOP}px !important;
         }
@@ -799,87 +963,109 @@ export default function SidebarAdvertiserDashboard() {
 
         <div className="flex flex-col relative h-full overflow-y-auto" style={{ zIndex: Z_INDEX.CONTENT }}>
           <div className="p-4">
-            {/* ✅ CONDENSED KPI METRICS SECTION */}
+            {/* ✅ REAL DATA: Performance Metrics */}
             <div className="mb-4">
-              <h2 className="text-sm font-bold text-gray-900 mb-2 flex items-center">
-                <BarChart3 className="w-4 h-4 mr-2" style={{ color: '#4668AB' }} />
-                Performance Metrics
-              </h2>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-sm font-bold text-gray-900 flex items-center">
+                  <BarChart3 className="w-4 h-4 mr-2" style={{ color: '#4668AB' }} />
+                  Performance Metrics
+                </h2>
+                <button
+                  onClick={handleRefresh}
+                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                  disabled={isRefreshing}
+                >
+                  <RefreshCw className={`w-3 h-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+              </div>
               <div className="space-y-0.5">
                 <KPILineItem
                   title="Active Campaigns"
                   value={stats.activeCampaigns}
-                  change="+2"
-                  trend="up"
                   icon={Calendar}
                 />
                 <KPILineItem
                   title="Completed Campaigns"
                   value={stats.completedCampaigns}
-                  change="+5"
-                  trend="up"
                   icon={CheckCircle}
                 />
                 <KPILineItem
-                  title="Needs Attention"
-                  value={stats.needsAttention}
-                  change="+1"
-                  trend="up"
-                  icon={AlertTriangle}
-                  highlighted={stats.needsAttention > 0}
+                  title="Total Spent"
+                  value={formatCurrency(stats.totalSpent)}
+                  icon={DollarSign}
                 />
                 <KPILineItem
-                  title="Total Impressions"
-                  value={stats.totalImpressions}
-                  icon={Eye}
+                  title="Pending Materials"
+                  value={stats.pendingMaterials}
+                  icon={Clock}
+                  highlighted={stats.pendingMaterials > 0}
                 />
               </div>
             </div>
 
-            {/* ✅ CONDENSED RECENT ACTIVITY SECTION */}
+            {/* ✅ REAL DATA: Recent Activity */}
             <div>
               <h2 className="text-sm font-bold text-gray-900 mb-2 flex items-center">
                 <Activity className="w-4 h-4 mr-2" style={{ color: '#4668AB' }} />
                 Recent Activity
               </h2>
               <div className="space-y-2">
-                {recentMessages.map((message, index) => (
-                  <div 
-                    key={message.id}
-                    className="rounded-lg p-2.5 hover:shadow-sm transition-all duration-200 cursor-pointer relative border"
-                    style={{ 
-                      background: message.priority === 'high' ? 'rgba(254, 243, 242, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-                      borderColor: message.priority === 'high' ? 'rgba(252, 165, 165, 0.5)' : 'rgba(226, 232, 240, 0.5)',
-                      backdropFilter: 'blur(10px)'
-                    }}
-                  >
-                    {message.priority === 'high' && !message.isRead && (
-                      <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-                    )}
-                    
-                    <div className="flex items-start space-x-2">
-                      <div className="text-sm flex-shrink-0">
-                        {message.avatar}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-0.5">
-                          <p className="text-xs font-semibold text-gray-900 truncate">{message.sender}</p>
-                          <p className="text-xs text-gray-500">{message.timestamp}</p>
+                {recentActivity.length === 0 ? (
+                  <div className="text-center py-4">
+                    <Activity className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-xs text-gray-500">No recent activity</p>
+                  </div>
+                ) : (
+                  recentActivity.slice(0, 3).map((activity) => (
+                    <div 
+                      key={activity.id}
+                      className="rounded-lg p-2.5 hover:shadow-sm transition-all duration-200 cursor-pointer relative border"
+                      style={{ 
+                        background: activity.priority === 'high' ? 'rgba(254, 243, 242, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                        borderColor: activity.priority === 'high' ? 'rgba(252, 165, 165, 0.5)' : 'rgba(226, 232, 240, 0.5)',
+                        backdropFilter: 'blur(10px)'
+                      }}
+                    >
+                      {activity.priority === 'high' && !activity.isRead && (
+                        <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                      )}
+                      
+                      <div className="flex items-start space-x-2">
+                        <div className="text-sm flex-shrink-0">
+                          {activity.type === 'campaign' ? '📊' : 
+                           activity.type === 'notification' ? '🔔' : '📋'}
                         </div>
-                        <p className="text-xs text-gray-700 line-clamp-2">{message.preview}</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <p className="text-xs font-semibold text-gray-900 truncate">{activity.title}</p>
+                            <p className="text-xs text-gray-500">{activity.timestamp}</p>
+                          </div>
+                          <p className="text-xs text-gray-700 line-clamp-2">{activity.description}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
                 
                 <button 
                   className="w-full text-center py-1.5 text-xs font-semibold rounded-lg transition-colors hover:bg-blue-50"
                   style={{ color: '#4668AB' }}
+                  onClick={() => navigate('/notifications')}
                 >
                   View All Activity
                 </button>
               </div>
             </div>
+
+            {/* ✅ REAL DATA: Last Updated */}
+            {lastUpdated && (
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                <p className="text-xs text-gray-500 text-center">
+                  Last updated: {formatTimestamp(lastUpdated)}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -932,7 +1118,7 @@ export default function SidebarAdvertiserDashboard() {
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                   >
-                    Campaigns
+                    Campaigns ({campaigns.length})
                   </button>
                   <button
                     onClick={() => setActiveTab('invoices')}
@@ -942,7 +1128,7 @@ export default function SidebarAdvertiserDashboard() {
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                   >
-                    Invoices
+                    Invoices ({invoices.length})
                   </button>
                 </nav>
               </div>

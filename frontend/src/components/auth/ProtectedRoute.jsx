@@ -1,148 +1,194 @@
-// src/components/auth/ProtectedRoute.jsx
+// src/components/auth/ProtectedRoute.jsx - FIXED: Simplified onboarding check
+// ✅ WORKING: Only uses fields that exist in your schema
+// ✅ SIMPLIFIED: No complex onboarding stages, just basic completion check
+
 import React, { useState, useEffect } from 'react';
-import { useAuth, useUser } from '@clerk/clerk-react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent } from '@/components/ui/card';
+import { useAuth, useUser } from '@clerk/clerk-react';
+import IntroModal from '@/pages/onboarding/IntroPage';
 import apiClient from '@/api/apiClient';
 
-/**
- * Enhanced ProtectedRoute component that handles authentication and authorization
- * Note: Intro tutorial logic has been moved to the BrowsePage as a modal
- * @param {Object} props
- * @param {React.ReactNode} props.children - The component to render if authorized
- * @param {boolean} props.requireAdmin - Whether admin access is required
- * @param {string[]} props.allowedRoles - Specific roles that are allowed (optional)
- * @param {string} props.redirectTo - Where to redirect if not authenticated (default: /sign-in)
- */
 const ProtectedRoute = ({ 
   children, 
   requireAdmin = false, 
   allowedRoles = [], 
-  redirectTo = '/sign-in'
+  redirectTo = '/sign-in',
+  skipOnboardingCheck = false
 }) => {
   const { isSignedIn, isLoaded } = useAuth();
   const { user } = useUser();
   const location = useLocation();
   
-  const [isCheckingAdmin, setIsCheckingAdmin] = useState(requireAdmin);
-  const [isAdmin, setIsAdmin] = useState(false);
+  // ✅ SIMPLIFIED: Basic onboarding state management
+  const [showIntroModal, setShowIntroModal] = useState(false);
+  const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
+  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
 
-  // ✅ Check admin status
+  // ✅ Routes that should skip onboarding check
+  const skipOnboardingRoutes = [
+    '/settings',
+    '/profile',
+    '/help',
+    '/sign-out',
+    '/sso-callback'
+  ];
+
+  const shouldSkipOnboarding = skipOnboardingCheck || 
+    skipOnboardingRoutes.some(route => location.pathname.startsWith(route));
+
+  // ✅ SIMPLIFIED: Check onboarding status
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (requireAdmin && isSignedIn && user) {
-        try {
-          console.log('🔐 Checking admin status for protected route...');
-          const response = await apiClient.getUserProfile();
-          
-          if (response.success) {
-            const adminStatus = response.data.isAdmin || response.isAdmin || false;
-            console.log('🔐 Admin status:', adminStatus);
-            setIsAdmin(adminStatus);
-          }
-        } catch (error) {
-          console.error('❌ Failed to check admin status:', error);
-          setIsAdmin(false);
-        } finally {
-          setIsCheckingAdmin(false);
+    const checkOnboardingStatus = async () => {
+      if (!isSignedIn || !user?.id || hasCheckedOnboarding || shouldSkipOnboarding) {
+        return;
+      }
+
+      try {
+        setIsCheckingOnboarding(true);
+        console.log('🎯 Checking onboarding status for user:', user.id);
+        
+        // Check development bypasses
+        const urlParams = new URLSearchParams(window.location.search);
+        const skipIntro = urlParams.get('skip_intro') === 'true' || 
+                         import.meta.env.VITE_SKIP_INTRO === 'true';
+        
+        if (skipIntro) {
+          console.log('🚀 Development bypass: Skipping onboarding check');
+          setHasCheckedOnboarding(true);
+          return;
         }
-      } else {
-        setIsCheckingAdmin(false);
+
+        // Get user profile - this contains hasCompletedOnboarding
+        const profileResponse = await apiClient.getUserProfile();
+
+        if (profileResponse.success) {
+          setUserProfile(profileResponse.data);
+          
+          // Simple check: if user hasn't completed onboarding, show intro
+          const needsOnboarding = !profileResponse.data.hasCompletedOnboarding;
+          
+          console.log('🎯 Onboarding check result:', {
+            hasCompletedOnboarding: profileResponse.data.hasCompletedOnboarding,
+            needsOnboarding
+          });
+
+          if (needsOnboarding) {
+            console.log('🎯 User needs onboarding, showing intro modal');
+            setShowIntroModal(true);
+          }
+        }
+
+        setHasCheckedOnboarding(true);
+      } catch (error) {
+        console.error('❌ Error checking onboarding status:', error);
+        setHasCheckedOnboarding(true);
+      } finally {
+        setIsCheckingOnboarding(false);
       }
     };
 
-    if (isLoaded) {
-      checkAdminStatus();
+    // Only check after auth is loaded and user is signed in
+    if (isLoaded && isSignedIn) {
+      checkOnboardingStatus();
     }
-  }, [isLoaded, isSignedIn, user, requireAdmin]);
+  }, [isLoaded, isSignedIn, user?.id, hasCheckedOnboarding, shouldSkipOnboarding]);
 
-  // Show loading state while checking
-  if (!isLoaded || isCheckingAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-96">
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-              <div className="text-center text-sm text-muted-foreground">
-                {isCheckingAdmin ? 'Verifying access...' : 'Loading...'}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Redirect to sign-in if not authenticated
-  if (!isSignedIn) {
-    const returnUrl = location.pathname + location.search;
-    return <Navigate to={`${redirectTo}?redirect_url=${encodeURIComponent(returnUrl)}`} replace />;
-  }
-
-  // Check admin requirement
-  if (requireAdmin && !isAdmin) {
-    console.log('🚫 Admin access denied - user is not admin');
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-96">
-          <CardContent className="p-6 text-center">
-            <h2 className="text-xl font-semibold text-destructive mb-2">
-              Access Denied
-            </h2>
-            <p className="text-muted-foreground mb-4">
-              You don't have permission to access this page. Admin access is required.
-            </p>
-            <button 
-              onClick={() => window.history.back()}
-              className="text-primary hover:underline"
-            >
-              Go Back
-            </button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Check specific role requirements
-  if (allowedRoles.length > 0) {
-    const userRole = user?.publicMetadata?.role || user?.privateMetadata?.role || 'USER';
-    const hasAllowedRole = allowedRoles.includes(userRole);
+  // ✅ SIMPLIFIED: Handle intro modal completion
+  const handleIntroComplete = async (userType) => {
+    console.log('🎯 Intro completed with user type:', userType);
     
-    if (!hasAllowedRole) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <Card className="w-96">
-            <CardContent className="p-6 text-center">
-              <h2 className="text-xl font-semibold text-destructive mb-2">
-                Access Denied
-              </h2>
-              <p className="text-muted-foreground mb-4">
-                You don't have the required role to access this page.
-              </p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Required roles: {allowedRoles.join(', ')}
-              </p>
-              <button 
-                onClick={() => window.history.back()}
-                className="text-primary hover:underline"
-              >
-                Go Back
-              </button>
-            </CardContent>
-          </Card>
-        </div>
-      );
+    try {
+      // Complete onboarding with the selected user type
+      const response = await apiClient.completeOnboarding({ 
+        userType,
+        preferredView: userType === 'property-owner' ? 'SPACE_OWNER' : 'ADVERTISER'
+      });
+
+      if (response.success) {
+        console.log('✅ Onboarding completed successfully');
+        setUserProfile(prev => ({
+          ...prev,
+          hasCompletedOnboarding: true,
+          preferredView: userType === 'property-owner' ? 'SPACE_OWNER' : 'ADVERTISER'
+        }));
+      }
+    } catch (error) {
+      console.error('❌ Error completing onboarding:', error);
     }
+
+    setShowIntroModal(false);
+    
+    // ✅ RESPONSIVE ROUTING: Navigate based on device and user type
+    const isMobile = window.innerWidth < 768;
+    
+    if (userType === 'property-owner') {
+      // Property owners go to list-space on both mobile and desktop
+      window.location.href = '/list-space';
+    } else {
+      // Advertisers have different destinations
+      if (isMobile) {
+        // Mobile advertisers go to home page
+        window.location.href = '/home';
+      } else {
+        // Desktop advertisers stay on browse page (current page)
+        // Just close modal, they're already where they need to be
+      }
+    }
+  };
+
+  const handleIntroClose = () => {
+    console.log('🎯 Intro modal closed without completion');
+    setShowIntroModal(false);
+  };
+
+  // ✅ Loading state while checking authentication
+  if (!isLoaded || isCheckingOnboarding) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">
+            {!isLoaded ? 'Loading...' : 'Checking your account...'}
+          </p>
+        </div>
+      </div>
+    );
   }
 
-  // User is authenticated and authorized, render the protected content
-  console.log('✅ Access granted - rendering protected content');
-  return children;
+  // ✅ Redirect to sign-in if not authenticated
+  if (!isSignedIn) {
+    const redirectUrl = `${redirectTo}?redirect_url=${encodeURIComponent(location.pathname + location.search)}`;
+    return <Navigate to={redirectUrl} replace />;
+  }
+
+  // ✅ Check admin access if required
+  if (requireAdmin && userProfile && !userProfile.isAdmin) {
+    console.log('❌ Admin access required but user is not admin');
+    return <Navigate to="/browse" replace />;
+  }
+
+  // ✅ Check role access if specified
+  if (allowedRoles.length > 0 && userProfile && !allowedRoles.includes(userProfile.role)) {
+    console.log('❌ Role access denied:', userProfile.role, 'not in', allowedRoles);
+    return <Navigate to="/browse" replace />;
+  }
+
+  return (
+    <>
+      {/* ✅ Render children (the protected content) */}
+      {children}
+      
+      {/* ✅ Show intro modal if needed */}
+      {showIntroModal && (
+        <IntroModal
+          isOpen={showIntroModal}
+          onClose={handleIntroClose}
+          onComplete={handleIntroComplete}
+        />
+      )}
+    </>
+  );
 };
 
 export default ProtectedRoute;

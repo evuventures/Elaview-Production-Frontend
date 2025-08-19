@@ -1,18 +1,23 @@
-// Space Owner Dashboard - Enhanced with Glassmorphism & Edge-to-Edge Mobile Design
-// ✅ EDGE-TO-EDGE: Native mobile layout with zero container padding on mobile
-// ✅ GLASSMORPHISM: Premium glass containers with immersive edge-to-edge experience
-// ✅ NAVIGATION AWARE: Respects navbar height calculations
-// ✅ CONDENSED LAYOUT: Optimized line items to fit within available height
-// ✅ BUSINESS CONTEXT: Tailored for B2B space management needs
+// Space Owner Dashboard - REAL DATA VERSION
+// ✅ REAL DATA: Fetches actual data from your backend API
+// ✅ SPACES FIRST: Spaces tab is now default and first in order
+// ✅ ERROR HANDLING: Proper error states and fallbacks
+// ✅ LOADING STATES: Real loading indicators
+// ✅ AUTO REFRESH: Refreshes data when returning from space creation
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
 import {
   Plus, Building2, Calendar, Package, Camera,
   DollarSign, Clock, CheckCircle, AlertCircle,
   Eye, Upload, ChevronRight, MapPin, FileText,
   Download, Truck, Navigation, Star, TrendingUp, X,
-  BarChart3, Activity, ArrowUp, ArrowDown, Loader2
+  BarChart3, Activity, ArrowUp, ArrowDown, Loader2, RefreshCw
 } from 'lucide-react';
+
+// ✅ REAL DATA: Import your actual API client
+import apiClient from '../../../api/apiClient.js';
 
 // ✅ GLASSMORPHISM: Enhanced Z-Index Scale for glass layering
 const Z_INDEX = {
@@ -93,207 +98,383 @@ const EnterpriseLoader = ({
   );
 };
 
+// ✅ REAL DATA: Updated Types to match your actual API responses
+interface DashboardStats {
+  totalRevenue: number;
+  activeListings: number;
+  pendingInstalls: number;
+  completedBookings: number;
+  totalBookings?: number;
+}
+
+interface Space {
+  id: string;
+  name: string;
+  title?: string;
+  type?: string;
+  spaceType?: string;
+  dimensions?: any;
+  baseRate?: number;
+  pricing?: any;
+  status: string;
+  isActive?: boolean;
+  currency?: string;
+  city?: string;
+  country?: string;
+  features?: any;
+  images?: any;
+  createdAt?: string;
+  property?: {
+    id: string;
+    title: string;
+    city: string;
+  };
+}
+
+interface Booking {
+  id: string;
+  bookerId: string;
+  booker?: {
+    firstName?: string;
+    lastName?: string;
+    businessName?: string;
+  };
+  users?: {
+    firstName?: string;
+    lastName?: string;
+    businessName?: string;
+  };
+  advertiserName?: string;
+  spaceName?: string;
+  space?: Space;
+  property?: {
+    title: string;
+  };
+  startDate: string;
+  endDate: string;
+  totalAmount: number;
+  status: string;
+  currency?: string;
+  createdAt?: string;
+}
+
+interface RecentActivity {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  timestamp: string;
+  priority: 'high' | 'normal';
+  isRead: boolean;
+}
+
 export default function SpaceOwnerDashboardMVP() {
-  const [activeTab, setActiveTab] = useState('bookings');
-  const [expandedBooking, setExpandedBooking] = useState(null);
+  const navigate = useNavigate();
+  const { user } = useUser();
+  const [searchParams] = useSearchParams();
+  
+  // ✅ SPACES FIRST: Changed default tab to 'spaces'
+  const [activeTab, setActiveTab] = useState('spaces');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   
-  // Simulated user for demo
-  const user = { id: 'demo-user-123', firstName: 'John', lastName: 'Doe' };
-  const userLoaded = true;
-  
-  // Real data states
-  const [stats, setStats] = useState({
+  // ✅ REAL DATA: States for actual API data
+  const [stats, setStats] = useState<DashboardStats>({
     totalRevenue: 0,
     activeListings: 0,
     pendingInstalls: 0,
-    completedBookings: 0
+    completedBookings: 0,
+    totalBookings: 0
   });
-  const [bookings, setBookings] = useState([]);
-  const [listings, setListings] = useState([]);
-  const [installations, setInstallations] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  
+  const [spaces, setSpaces] = useState<Space[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<string>('');
 
-  // Mock recent messages for the sidebar
-  const [recentMessages] = useState([
-    {
-      id: '1',
-      sender: 'System Alert',
-      avatar: '🔔',
-      preview: 'New booking request for Downtown Billboard received.',
-      timestamp: '1h ago',
-      isRead: false,
-      priority: 'high'
-    },
-    {
-      id: '2',
-      sender: 'Campaign Manager',
-      avatar: '👨‍💼',
-      preview: 'Materials shipped for Holiday Campaign installation.',
-      timestamp: '3h ago',
-      isRead: false,
-      priority: 'normal'
-    },
-    {
-      id: '3',
-      sender: 'Payment System',
-      avatar: '💳',
-      preview: 'Monthly revenue payment of $2,450 processed successfully.',
-      timestamp: '1d ago',
-      isRead: true,
-      priority: 'normal'
-    },
-    {
-      id: '4',
-      sender: 'Analytics Team',
-      avatar: '📊',
-      preview: 'Your space performance report for January is ready.',
-      timestamp: '2d ago',
-      isRead: true,
-      priority: 'normal'
+  // ✅ SPACE CREATION: Check for space creation success
+  useEffect(() => {
+    const created = searchParams.get('created');
+    const tab = searchParams.get('tab');
+    
+    if (created === 'true') {
+      console.log('🎉 Space creation detected - showing success and refreshing data');
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 5000);
+      
+      if (tab) {
+        setActiveTab(tab);
+      }
+      // Force refresh data
+      fetchAllData(true);
+      
+      // Clear URL params after processing
+      navigate('/space-owner', { replace: true });
     }
-  ]);
+  }, [searchParams, navigate]);
 
-  // ✅ EDGE-TO-EDGE: Enhanced console logging for mobile native experience
-  useEffect(() => {
-    console.log('🎨 SPACE OWNER DASHBOARD GLASSMORPHISM: Native mobile styling applied', {
-      navigationHeights: NAVIGATION_HEIGHTS,
-      containerPadding: CONTAINER_PADDING,
-      calculatedValues: CSS_VALUES,
-      glassmorphismOptimizations: [
-        'EDGE-TO-EDGE: Mobile containers extend to screen edges',
-        'FLOATING GLASS: Premium glass containers with backdrop blur',
-        'NAVIGATION AWARE: Respects navbar height calculations',
-        'CONDENSED LAYOUT: Optimized KPI line items for height constraints',
-        'BRAND CONSISTENCY: Matches messages page styling patterns',
-        'RESPONSIVE DESIGN: Desktop preserves premium spacing'
-      ],
-      timestamp: new Date().toISOString()
-    });
-  }, []);
-
-  // Handle success message simulation
-  useEffect(() => {
-    // Simulate success message for demo
-    setShowSuccessMessage(true);
-    setTimeout(() => {
-      setShowSuccessMessage(false);
-    }, 5000);
-  }, []);
-
-  // Simulate data loading
-  useEffect(() => {
-    console.log('👤 User loaded:', userLoaded, 'User ID:', user?.id);
-    if (userLoaded && user?.id) {
-      fetchDashboardData();
-    } else if (userLoaded && !user) {
-      console.error('❌ User not authenticated');
-      setError('Please sign in to view your dashboard');
-      setIsLoading(false);
+  // ✅ REAL DATA: Fetch dashboard stats
+  const fetchDashboardStats = async () => {
+    try {
+      console.log('📊 Fetching space owner dashboard stats...');
+      const response = await apiClient.getSpaceOwnerDashboard();
+      
+      if (response.success && response.data) {
+        const { stats: apiStats } = response.data;
+        
+        setStats({
+          totalRevenue: apiStats.totalRevenue || 0,
+          activeListings: apiStats.activeListings || 0,
+          pendingInstalls: apiStats.pendingInstalls || 0,
+          completedBookings: apiStats.completedBookings || 0,
+          totalBookings: apiStats.totalBookings || 0
+        });
+        
+        console.log('✅ Dashboard stats loaded:', apiStats);
+      } else {
+        console.error('❌ Failed to fetch dashboard stats:', response.error);
+      }
+    } catch (error) {
+      console.error('❌ Dashboard stats error:', error);
     }
-  }, [userLoaded, user?.id]);
+  };
 
-  const fetchDashboardData = async () => {
-    setIsLoading(true);
+  // ✅ REAL DATA: Fetch spaces
+  const fetchSpaces = async () => {
+    try {
+      console.log('🏢 Fetching spaces...');
+      
+      // Try spaces endpoint first
+      let response = await apiClient.getSpaces({ limit: 10 });
+      
+      // If spaces endpoint fails, try properties endpoint as fallback
+      if (!response.success) {
+        console.log('🔄 Falling back to properties endpoint...');
+        response = await apiClient.getProperties({ limit: 10 });
+      }
+      
+      if (response.success && response.data) {
+        setSpaces(response.data);
+        console.log('✅ Spaces loaded:', response.data.length, 'spaces');
+      } else {
+        console.error('❌ Failed to fetch spaces:', response.error);
+        setSpaces([]);
+      }
+    } catch (error) {
+      console.error('❌ Spaces fetch error:', error);
+      setSpaces([]);
+    }
+  };
+
+  // ✅ REAL DATA: Fetch bookings
+  const fetchBookings = async () => {
+    try {
+      console.log('📅 Fetching bookings...');
+      const response = await apiClient.getBookings({ limit: 10 });
+      
+      if (response.success && response.data) {
+        setBookings(response.data);
+        console.log('✅ Bookings loaded:', response.data.length, 'bookings');
+      } else {
+        console.error('❌ Failed to fetch bookings:', response.error);
+        setBookings([]);
+      }
+    } catch (error) {
+      console.error('❌ Bookings fetch error:', error);
+      setBookings([]);
+    }
+  };
+
+  // ✅ REAL DATA: Fetch recent activity (messages/notifications)
+  const fetchRecentActivity = async () => {
+    try {
+      console.log('📊 Fetching recent activity...');
+      
+      // Try to get notifications first
+      const notificationsResponse = await apiClient.getNotifications({ limit: 5 });
+      
+      if (notificationsResponse.success && notificationsResponse.data?.notifications) {
+        const activities = notificationsResponse.data.notifications.map((notif: any) => ({
+          id: notif.id,
+          type: notif.type || 'notification',
+          title: notif.title,
+          description: notif.message,
+          timestamp: formatTimestamp(notif.created_at),
+          priority: notif.type === 'urgent' ? 'high' : 'normal',
+          isRead: notif.is_read
+        }));
+        
+        setRecentActivity(activities);
+        console.log('✅ Recent activity loaded:', activities.length, 'items');
+      } else {
+        // Fallback: create activity from recent bookings
+        const recentBookings = bookings.slice(0, 3);
+        const activities = recentBookings.map((booking, index) => ({
+          id: `booking-${booking.id}`,
+          type: 'booking',
+          title: 'Booking Update',
+          description: `New booking from ${getBookerName(booking)} is ${booking.status.toLowerCase()}`,
+          timestamp: formatTimestamp(booking.createdAt || new Date().toISOString()),
+          priority: 'normal' as const,
+          isRead: true
+        }));
+        
+        setRecentActivity(activities);
+        console.log('✅ Recent activity (fallback) loaded:', activities.length, 'items');
+      }
+    } catch (error) {
+      console.error('❌ Recent activity fetch error:', error);
+      setRecentActivity([]);
+    }
+  };
+
+  // ✅ UTILITY: Format timestamp
+  const formatTimestamp = (timestamp: string | undefined): string => {
+    if (!timestamp) return 'Recently';
+    
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffHours < 1) return 'Just now';
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return date.toLocaleDateString();
+  };
+
+  // ✅ UTILITY: Get booker name
+  const getBookerName = (booking: Booking): string => {
+    if (booking.advertiserName) return booking.advertiserName;
+    if (booking.booker?.businessName) return booking.booker.businessName;
+    if (booking.users?.businessName) return booking.users.businessName;
+    if (booking.booker?.firstName && booking.booker?.lastName) {
+      return `${booking.booker.firstName} ${booking.booker.lastName}`;
+    }
+    if (booking.users?.firstName && booking.users?.lastName) {
+      return `${booking.users.firstName} ${booking.users.lastName}`;
+    }
+    return 'Advertiser';
+  };
+
+  // ✅ UTILITY: Get space name
+  const getSpaceName = (booking: Booking): string => {
+    if (booking.spaceName) return booking.spaceName;
+    if (booking.space?.name) return booking.space.name;
+    if (booking.space?.title) return booking.space.title;
+    if (booking.property?.title) return booking.property.title;
+    return 'Advertising Space';
+  };
+
+  // ✅ REAL DATA: Fetch all data
+  const fetchAllData = async (force = false) => {
+    if (force) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+    
     setError(null);
     
     try {
-      console.log('🔄 Simulating dashboard data fetch for user:', user.id);
+      console.log('🔄 Fetching all space owner dashboard data...');
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock successful response
-      console.log('✅ Dashboard data received (simulated)');
-      setStats({
-        totalRevenue: 2450,
-        activeListings: 3,
-        pendingInstalls: 2,
-        completedBookings: 15
-      });
-      
-      // Mock bookings data
-      setBookings([
-        {
-          id: '1',
-          advertiserName: 'Tech Startup Inc.',
-          spaceName: 'Downtown Billboard #1',
-          startDate: '2025-01-15',
-          endDate: '2025-02-15',
-          totalAmount: 3200,
-          status: 'pending_install'
-        },
-        {
-          id: '2',
-          advertiserName: 'Fashion Brand Co.',
-          spaceName: 'Mall Display Screen',
-          startDate: '2025-01-10',
-          endDate: '2025-01-31',
-          totalAmount: 1800,
-          status: 'active'
-        },
-        {
-          id: '3',
-          advertiserName: 'Local Restaurant',
-          spaceName: 'Street Banner Location',
-          startDate: '2025-01-20',
-          endDate: '2025-02-20',
-          totalAmount: 950,
-          status: 'materials_shipped'
-        }
+      // Fetch all data in parallel for better performance
+      await Promise.all([
+        fetchDashboardStats(),
+        fetchSpaces(),
+        fetchBookings()
       ]);
       
-      // Mock listings data
-      setListings([
-        {
-          id: '1',
-          name: 'Downtown Billboard #1',
-          type: 'Billboard',
-          dimensions: '14x48 ft',
-          price: 1200,
-          status: 'active',
-          verificationBadge: true
-        },
-        {
-          id: '2',
-          name: 'Mall Display Screen',
-          type: 'Digital Display',
-          dimensions: '6x4 ft',
-          price: 800,
-          status: 'active',
-          verificationBadge: true
-        },
-        {
-          id: '3',
-          name: 'Street Banner Location',
-          type: 'Banner',
-          dimensions: '3x8 ft',
-          price: 350,
-          status: 'active',
-          verificationBadge: false
-        }
-      ]);
+      // Fetch activity after bookings are loaded (for fallback)
+      await fetchRecentActivity();
       
-    } catch (err) {
-      console.error('❌ Dashboard error (simulated):', err);
+      setLastUpdated(new Date().toISOString());
+      console.log('✅ All space owner dashboard data loaded successfully');
+      
+    } catch (error) {
+      console.error('❌ Error fetching space owner dashboard data:', error);
       setError('Failed to load dashboard data. Please try again.');
-      
-      // Fallback data
-      setStats({
-        totalRevenue: 2450,
-        activeListings: 3,
-        pendingInstalls: 2,
-        completedBookings: 15
-      });
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  // ✅ REAL DATA: Initial data load
+  useEffect(() => {
+    if (user?.id) {
+      console.log('🎯 User authenticated, loading space owner dashboard data...');
+      fetchAllData();
+    }
+  }, [user?.id]);
+
+  // ✅ REFRESH: Manual refresh function
+  const handleRefresh = () => {
+    console.log('🔄 Manual refresh triggered');
+    fetchAllData(true);
+  };
+
+  // ✅ REAL DATA: Format currency
+  const formatCurrency = (amount: number | undefined, currency = 'USD'): string => {
+    if (amount === undefined || amount === null) return '$0';
+    
+    const symbols: { [key: string]: string } = {
+      USD: '$', EUR: '€', GBP: '£', CAD: 'C$', AUD: 'A$'
+    };
+    
+    const symbol = symbols[currency] || '$';
+    return `${symbol}${amount.toLocaleString()}`;
+  };
+
+  // ✅ REAL DATA: Get space status color
+  const getStatusColor = (status: string, isActive?: boolean) => {
+    if (!isActive) {
+      return 'bg-gray-100 text-gray-700';
+    }
+    
+    const statusLower = status.toLowerCase();
+    
+    if (['active', 'approved', 'published'].includes(statusLower)) {
+      return 'bg-emerald-100 text-emerald-700';
+    }
+    if (['pending', 'draft', 'under_review'].includes(statusLower)) {
+      return 'bg-yellow-100 text-yellow-700';
+    }
+    if (['rejected', 'suspended'].includes(statusLower)) {
+      return 'bg-red-100 text-red-700';
+    }
+    
+    return 'bg-gray-100 text-gray-700';
+  };
+
+  // ✅ REAL DATA: Get booking status color
+  const getBookingStatusColor = (status: string) => {
+    const statusLower = status.toLowerCase();
+    
+    if (['confirmed', 'active', 'live'].includes(statusLower)) {
+      return 'bg-emerald-100 text-emerald-700';
+    }
+    if (['pending', 'pending_install'].includes(statusLower)) {
+      return 'bg-yellow-100 text-yellow-700';
+    }
+    if (['completed', 'finished'].includes(statusLower)) {
+      return 'bg-blue-100 text-blue-700';
+    }
+    if (['cancelled', 'rejected'].includes(statusLower)) {
+      return 'bg-red-100 text-red-700';
+    }
+    
+    return 'bg-gray-100 text-gray-700';
   };
 
   // Calculate derived stats
   const totalPendingRevenue = bookings
-    .filter(b => b.status === 'pending_install')
+    .filter(b => ['pending', 'confirmed'].includes(b.status.toLowerCase()))
     .reduce((sum, b) => sum + (b.totalAmount || 0), 0);
 
   // ✅ CONDENSED KPI LINE ITEM - Optimized for height constraints
@@ -306,6 +487,15 @@ export default function SpaceOwnerDashboardMVP() {
     highlighted = false,
     prefix = '',
     suffix = ''
+  }: {
+    title: string;
+    value: number | string;
+    change?: string;
+    trend?: 'up' | 'down';
+    icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+    highlighted?: boolean;
+    prefix?: string;
+    suffix?: string;
   }) => (
     <div className={`flex items-center justify-between py-1.5 ${highlighted ? 'text-red-600' : 'text-gray-700'}`}>
       <div className="flex items-center space-x-2">
@@ -330,117 +520,172 @@ export default function SpaceOwnerDashboardMVP() {
     </div>
   );
 
-  // ✅ COMPACT Booking Card for Table-like Display
-  const BookingCard = ({ booking }) => {
-    const getStatusBadge = (status) => {
-      const badges = {
-        'pending_install': {
-          color: 'bg-yellow-100 text-yellow-700',
-          icon: Clock,
-          text: 'Awaiting Installation'
-        },
-        'active': {
-          color: 'bg-green-100 text-green-700',
-          icon: CheckCircle,
-          text: 'Campaign Active'
-        },
-        'materials_shipped': {
-          color: 'bg-blue-100 text-blue-700',
-          icon: Truck,
-          text: 'Materials In Transit'
-        }
-      };
-      
-      const badge = badges[status] || badges['active'];
-      return (
-        <span className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full ${badge.color}`}>
-          <badge.icon className="w-3 h-3 mr-1" />
-          {badge.text}
-        </span>
-      );
-    };
+  // ✅ REAL DATA: Enhanced Spaces Table with real data
+  const EnhancedSpacesTable = () => (
+    <div 
+      className="rounded-2xl overflow-hidden relative"
+      style={{
+        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.25) 100%)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        border: '1px solid rgba(255, 255, 255, 0.18)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(255, 255, 255, 0.05)'
+      }}
+    >
+      {/* Glass reflection overlay */}
+      <div 
+        className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-t-2xl"
+        style={{
+          background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%)',
+          zIndex: Z_INDEX.GLASS_OVERLAYS
+        }}
+      />
 
-    return (
-      <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150">
-        <td className="py-3 px-6">
-          <div>
-            <div className="font-semibold text-gray-900 text-sm">
-              {booking.advertiserName || 'Advertiser Name'}
+      <div className="relative" style={{ zIndex: Z_INDEX.CONTENT }}>
+        <div 
+          className="px-6 py-4 border-b relative"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.4) 100%)',
+            backdropFilter: 'blur(15px) saturate(150%)',
+            borderBottomColor: 'rgba(255, 255, 255, 0.15)'
+          }}
+        >
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <h3 className="text-lg font-bold text-gray-900 mr-4" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>
+                Your Ad Spaces
+              </h3>
+              {isRefreshing && (
+                <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
+              )}
             </div>
-            <div className="text-xs text-gray-500 mt-1 flex items-center">
-              <MapPin className="w-3 h-3 mr-1" />
-              {booking.spaceName || 'Space Name'}
-            </div>
+            
+            <button 
+              type="button"
+              onClick={() => {
+                console.log('🎯 Navigating to /list-space');
+                navigate('/list-space');
+              }}
+              className="inline-flex items-center px-4 py-2 text-sm font-bold text-white rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-300 relative overflow-hidden"
+              style={{ 
+                background: 'linear-gradient(135deg, #4668AB 0%, #5B7BC7 100%)',
+                boxShadow: '0 4px 12px rgba(70, 104, 171, 0.2)'
+              }}
+            >
+              <div 
+                className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-lg"
+                style={{
+                  background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%)'
+                }}
+              />
+              <Plus className="w-4 h-4 mr-2 relative z-10" />
+              <span className="relative z-10">Add Space</span>
+            </button>
           </div>
-        </td>
-        <td className="py-3 px-6">
-          <div className="text-sm">
-            <div className="font-semibold text-gray-900">
-              {booking.startDate && booking.endDate 
-                ? `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}`
-                : 'N/A'}
+        </div>
+        
+        <div className="overflow-x-auto">
+          {spaces.length === 0 ? (
+            <div className="text-center py-12">
+              <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No spaces listed</h3>
+              <p className="text-gray-500 mb-4">Start earning by listing your available advertising spaces</p>
+              <button
+                onClick={() => navigate('/list-space')}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-lg"
+                style={{ backgroundColor: '#4668AB' }}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                List Your First Space
+              </button>
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {typeof booking.totalAmount === 'number' ? `$${booking.totalAmount.toLocaleString()} revenue` : 'N/A'}
-            </div>
-          </div>
-        </td>
-        <td className="py-3 px-6">
-          {getStatusBadge(booking.status || 'active')}
-        </td>
-        <td className="py-3 px-6">
-          <button className="text-blue-600 hover:text-blue-800 font-medium text-xs hover:underline transition-colors">
-            View Details
-          </button>
-        </td>
-      </tr>
-    );
-  };
+          ) : (
+            <table className="w-full">
+              <thead 
+                style={{
+                  background: 'linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(248, 250, 252, 0.9) 100%)',
+                  backdropFilter: 'blur(10px)'
+                }}
+              >
+                <tr>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Space Details</th>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Location & Type</th>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Pricing</th>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Status</th>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {spaces.map((space) => {
+                  const dimensions = space.dimensions ? 
+                    (typeof space.dimensions === 'string' ? space.dimensions : JSON.stringify(space.dimensions)) : 
+                    'N/A';
+                  const price = space.baseRate || (space.pricing?.baseRate) || 0;
+                  
+                  return (
+                    <tr 
+                      key={space.id} 
+                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150"
+                    >
+                      <td className="py-3 px-6">
+                        <div className="flex items-center">
+                          <div className="flex-1">
+                            <div className="font-semibold text-gray-900 text-sm flex items-center">
+                              {space.title || space.name}
+                              {space.isActive && (
+                                <CheckCircle className="w-3 h-3 text-green-600 ml-2" />
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {space.type || space.spaceType || 'Space'}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-6">
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-900 flex items-center">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {space.city || space.property?.city || 'N/A'}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {dimensions}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-6">
+                        <div className="text-sm">
+                          <div className="font-semibold text-gray-900">
+                            {formatCurrency(price, space.currency)}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">per month</div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-6">
+                        <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(space.status, space.isActive)}`}>
+                          {space.isActive ? 'Active' : (space.status || 'Inactive')}
+                        </span>
+                      </td>
+                      <td className="py-3 px-6">
+                        <button 
+                          onClick={() => navigate(`/spaces/${space.id}/edit`)}
+                          className="text-blue-600 hover:text-blue-800 font-medium text-xs hover:underline transition-colors"
+                        >
+                          Edit Space
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
-  // ✅ COMPACT Listing Card for Table-like Display
-  const ListingCard = ({ listing }) => {
-    return (
-      <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150">
-        <td className="py-3 px-6">
-          <div className="flex items-center">
-            <div className="flex-1">
-              <div className="font-semibold text-gray-900 text-sm flex items-center">
-                {listing.name || 'Listing Name'}
-                {listing.verificationBadge && (
-                  <CheckCircle className="w-3 h-3 text-green-600 ml-2" />
-                )}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">{listing.type || 'Type'}</div>
-            </div>
-          </div>
-        </td>
-        <td className="py-3 px-6">
-          <div className="text-sm">
-            <div className="font-semibold text-gray-900">
-              {listing.dimensions || 'N/A'}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {typeof listing.price === 'number' ? `$${listing.price}/month` : 'N/A'}
-            </div>
-          </div>
-        </td>
-        <td className="py-3 px-6">
-          <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-            listing.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-          }`}>
-            {listing.status === 'active' ? 'Active' : listing.status || 'N/A'}
-          </span>
-        </td>
-        <td className="py-3 px-6">
-          <button className="text-blue-600 hover:text-blue-800 font-medium text-xs hover:underline transition-colors">
-            Edit Listing
-          </button>
-        </td>
-      </tr>
-    );
-  };
-
-  // ✅ ENHANCED BOOKINGS TABLE with glassmorphism
+  // ✅ REAL DATA: Enhanced Bookings Table with real data
   const EnhancedBookingsTable = () => (
     <div 
       className="rounded-2xl overflow-hidden relative"
@@ -475,177 +720,92 @@ export default function SpaceOwnerDashboardMVP() {
               Active & Pending Bookings
             </h3>
             <span className="text-sm text-gray-600" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)'}}>
-              ${totalPendingRevenue.toLocaleString()} pending revenue
+              {formatCurrency(totalPendingRevenue)} pending revenue
             </span>
           </div>
         </div>
         
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead 
-              style={{
-                background: 'linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(248, 250, 252, 0.9) 100%)',
-                backdropFilter: 'blur(10px)'
-              }}
-            >
-              <tr>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Booking Details</th>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Campaign Period</th>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Status</th>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bookings.length > 0 ? (
-                bookings.map(booking => (
-                  <BookingCard key={booking.id} booking={booking} />
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="4" className="py-8 text-center">
-                    <div className="flex flex-col items-center">
-                      <Calendar className="w-12 h-12 text-gray-400 mb-3" />
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>
-                        No bookings yet
-                      </h3>
-                      <p className="text-gray-600 mb-4" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)'}}>
-                        Once advertisers book your spaces, you'll see them here.
-                      </p>
-                      <button 
-                        onClick={() => console.log('Navigation: View Your Listings')}
-                        className="text-white px-4 py-2 rounded-lg hover:opacity-90 inline-flex items-center text-sm transition-all duration-300 relative overflow-hidden"
-                        style={{ 
-                          background: 'linear-gradient(135deg, #4668AB 0%, #5B7BC7 100%)',
-                          boxShadow: '0 4px 16px rgba(70, 104, 171, 0.3)'
-                        }}
-                      >
-                        <div 
-                          className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-lg"
-                          style={{
-                            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%)'
-                          }}
-                        />
-                        View Your Listings
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ✅ ENHANCED LISTINGS TABLE with glassmorphism
-  const EnhancedListingsTable = () => (
-    <div 
-      className="rounded-2xl overflow-hidden relative"
-      style={{
-        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.25) 100%)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        border: '1px solid rgba(255, 255, 255, 0.18)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(255, 255, 255, 0.05)'
-      }}
-    >
-      {/* Glass reflection overlay */}
-      <div 
-        className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-t-2xl"
-        style={{
-          background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%)',
-          zIndex: Z_INDEX.GLASS_OVERLAYS
-        }}
-      />
-
-      <div className="relative" style={{ zIndex: Z_INDEX.CONTENT }}>
-        <div 
-          className="px-6 py-4 border-b relative"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.4) 100%)',
-            backdropFilter: 'blur(15px) saturate(150%)',
-            borderBottomColor: 'rgba(255, 255, 255, 0.15)'
-          }}
-        >
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-bold text-gray-900" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>
-              Your Ad Spaces
-            </h3>
-            <button 
-              onClick={() => console.log('Navigation: /list-space')}
-              className="inline-flex items-center px-4 py-2 text-sm font-bold text-white rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-300 relative overflow-hidden"
-              style={{ 
-                background: 'linear-gradient(135deg, #4668AB 0%, #5B7BC7 100%)',
-                boxShadow: '0 4px 12px rgba(70, 104, 171, 0.2)'
-              }}
-            >
-              <div 
-                className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-lg"
+          {bookings.length === 0 ? (
+            <div className="text-center py-12">
+              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings yet</h3>
+              <p className="text-gray-500 mb-4">Once advertisers book your spaces, you'll see them here</p>
+              <button 
+                onClick={() => navigate('/list-space')}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-lg"
+                style={{ backgroundColor: '#4668AB' }}
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                View Your Spaces
+              </button>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead 
                 style={{
-                  background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%)'
+                  background: 'linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(248, 250, 252, 0.9) 100%)',
+                  backdropFilter: 'blur(10px)'
                 }}
-              />
-              <Plus className="w-4 h-4 mr-2 relative z-10" />
-              <span className="relative z-10">Add Space</span>
-            </button>
-          </div>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead 
-              style={{
-                background: 'linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(248, 250, 252, 0.9) 100%)',
-                backdropFilter: 'blur(10px)'
-              }}
-            >
-              <tr>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Space Details</th>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Dimensions & Price</th>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Status</th>
-                <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {listings.length > 0 ? (
-                listings.map(listing => (
-                  <ListingCard key={listing.id} listing={listing} />
-                ))
-              ) : (
+              >
                 <tr>
-                  <td colSpan="4" className="py-8 text-center">
-                    <div className="flex flex-col items-center">
-                      <Building2 className="w-12 h-12 text-gray-400 mb-3" />
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>
-                        No spaces listed
-                      </h3>
-                      <p className="text-gray-600 mb-4" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)'}}>
-                        Start earning by listing your available advertising spaces.
-                      </p>
-                      <button 
-                        onClick={() => console.log('Navigation: /list-space')}
-                        className="text-white px-4 py-2 rounded-lg hover:opacity-90 inline-flex items-center text-sm transition-all duration-300 relative overflow-hidden"
-                        style={{ 
-                          background: 'linear-gradient(135deg, #4668AB 0%, #5B7BC7 100%)',
-                          boxShadow: '0 4px 16px rgba(70, 104, 171, 0.3)'
-                        }}
-                      >
-                        <div 
-                          className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-lg"
-                          style={{
-                            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%)'
-                          }}
-                        />
-                        <Plus className="w-4 h-4 mr-2 relative z-10" />
-                        <span className="relative z-10">List Your First Space</span>
-                      </button>
-                    </div>
-                  </td>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Booking Details</th>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Campaign Period</th>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Revenue</th>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Status</th>
+                  <th className="text-left py-3 px-6 font-semibold text-gray-800 text-xs uppercase tracking-wide">Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {bookings.map((booking) => (
+                  <tr 
+                    key={booking.id} 
+                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150"
+                  >
+                    <td className="py-3 px-6">
+                      <div>
+                        <div className="font-semibold text-gray-900 text-sm">
+                          {getBookerName(booking)}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 flex items-center">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          {getSpaceName(booking)}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-6">
+                      <div className="text-sm">
+                        <div className="font-medium text-gray-900">
+                          {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {Math.ceil((new Date(booking.endDate).getTime() - new Date(booking.startDate).getTime()) / (1000 * 60 * 60 * 24))} days
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-6">
+                      <div className="font-bold text-lg text-gray-900">
+                        {formatCurrency(booking.totalAmount, booking.currency)}
+                      </div>
+                    </td>
+                    <td className="py-3 px-6">
+                      <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getBookingStatusColor(booking.status)}`}>
+                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1).replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="py-3 px-6">
+                      <button 
+                        onClick={() => navigate(`/bookings/${booking.id}`)}
+                        className="text-blue-600 hover:text-blue-800 font-medium text-xs hover:underline transition-colors"
+                      >
+                        View Details
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
@@ -668,7 +828,6 @@ export default function SpaceOwnerDashboardMVP() {
           background: 'linear-gradient(135deg, #F8FAFF 0%, #E8F2FF 50%, #F0F8FF 100%)'
         }}
       >
-        {/* Enhanced background pattern */}
         <div 
           className="absolute inset-0 opacity-30"
           style={{
@@ -700,7 +859,7 @@ export default function SpaceOwnerDashboardMVP() {
               <EnterpriseLoader 
                 size="xl"
                 theme="brand"
-                message="Loading space owner dashboard..."
+                message="Loading your dashboard..."
                 showMessage={true}
                 centered={true}
               />
@@ -760,7 +919,7 @@ export default function SpaceOwnerDashboardMVP() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Connection Error</h3>
               <p className="text-red-600 mb-4">{error}</p>
               <button
-                onClick={fetchDashboardData}
+                onClick={() => fetchAllData()}
                 className="px-6 py-3 rounded-lg text-white font-bold hover:opacity-90 transition-all duration-300 relative overflow-hidden"
                 style={{ 
                   background: 'linear-gradient(135deg, #667EEA 0%, #764BA2 100%)',
@@ -802,7 +961,6 @@ export default function SpaceOwnerDashboardMVP() {
 
       {/* ✅ EDGE-TO-EDGE: Mobile goes full-width, desktop maintains premium spacing */}
       <style>{`
-        /* ✅ EDGE-TO-EDGE: Desktop layout with premium spacing */
         @media (min-width: 768px) {
           .dashboard-container {
             padding: ${CONTAINER_PADDING.DESKTOP}px;
@@ -819,7 +977,6 @@ export default function SpaceOwnerDashboardMVP() {
           }
         }
         
-        /* ✅ EDGE-TO-EDGE: Mobile native edge-to-edge layout */
         @media (max-width: 767px) {
           .dashboard-container {
             padding: ${CONTAINER_PADDING.MOBILE}px;
@@ -829,7 +986,6 @@ export default function SpaceOwnerDashboardMVP() {
           .glassmorphism-sidebar {
             height: calc(100vh - ${CSS_VALUES.MOBILE_TOTAL_PADDING}px) !important;
             max-height: calc(100vh - ${CSS_VALUES.MOBILE_TOTAL_PADDING}px) !important;
-            /* ✅ EDGE-TO-EDGE: Mobile containers extend to edges */
             border-radius: 0 !important;
             border-left: none !important;
             border-right: none !important;
@@ -837,25 +993,21 @@ export default function SpaceOwnerDashboardMVP() {
           .glassmorphism-main {
             height: calc(100vh - ${CSS_VALUES.MOBILE_TOTAL_PADDING}px) !important;
             max-height: calc(100vh - ${CSS_VALUES.MOBILE_TOTAL_PADDING}px) !important;
-            /* ✅ EDGE-TO-EDGE: Mobile containers extend to edges */
             border-radius: 0 !important;
             border-left: none !important;
             border-right: none !important;
           }
           
-          /* ✅ EDGE-TO-EDGE: Remove spacing between containers on mobile */
           .dashboard-container > div {
             margin-left: 0 !important;
             margin-right: 0 !important;
           }
         }
         
-        /* ✅ CRITICAL: Prevent any scrolling */
         .dashboard-container, .glassmorphism-sidebar, .glassmorphism-main {
           overflow: hidden !important;
         }
         
-        /* ✅ EDGE-TO-EDGE: Loading states respect the same patterns */
         .dashboard-loading-state {
           padding: ${CONTAINER_PADDING.DESKTOP}px !important;
         }
@@ -890,8 +1042,8 @@ export default function SpaceOwnerDashboardMVP() {
             <div className="flex items-center">
               <CheckCircle className="w-5 h-5 text-green-600 mr-3 flex-shrink-0" />
               <div>
-                <p className="text-green-800 font-medium text-sm">Listing Created Successfully!</p>
-                <p className="text-green-700 text-xs mt-1">Your property and spaces are under review.</p>
+                <p className="text-green-800 font-medium text-sm">Space Created Successfully!</p>
+                <p className="text-green-700 text-xs mt-1">Your space is now listed and available for booking.</p>
               </div>
               <button 
                 onClick={() => setShowSuccessMessage(false)}
@@ -927,90 +1079,109 @@ export default function SpaceOwnerDashboardMVP() {
 
         <div className="flex flex-col relative h-full overflow-y-auto" style={{ zIndex: Z_INDEX.CONTENT }}>
           <div className="p-4">
-            {/* ✅ CONDENSED KPI METRICS SECTION */}
+            {/* ✅ REAL DATA: Performance Metrics */}
             <div className="mb-4">
-              <h2 className="text-sm font-bold text-gray-900 mb-2 flex items-center">
-                <BarChart3 className="w-4 h-4 mr-2" style={{ color: '#4668AB' }} />
-                Performance Metrics
-              </h2>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-sm font-bold text-gray-900 flex items-center">
+                  <BarChart3 className="w-4 h-4 mr-2" style={{ color: '#4668AB' }} />
+                  Performance Metrics
+                </h2>
+                <button
+                  onClick={handleRefresh}
+                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                  disabled={isRefreshing}
+                >
+                  <RefreshCw className={`w-3 h-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+              </div>
               <div className="space-y-0.5">
                 <KPILineItem
                   title="Total Revenue"
-                  value={stats.totalRevenue}
-                  change="+15%"
-                  trend="up"
+                  value={formatCurrency(stats.totalRevenue)}
                   icon={DollarSign}
-                  prefix="$"
                 />
                 <KPILineItem
                   title="Active Spaces"
                   value={stats.activeListings}
-                  change="+1"
-                  trend="up"
                   icon={Building2}
                 />
                 <KPILineItem
                   title="Pending Installs"
                   value={stats.pendingInstalls}
-                  change="+2"
-                  trend="up"
                   icon={Clock}
                   highlighted={stats.pendingInstalls > 0}
                 />
                 <KPILineItem
                   title="Completed Bookings"
                   value={stats.completedBookings}
-                  change="+3"
-                  trend="up"
                   icon={CheckCircle}
                 />
               </div>
             </div>
 
-            {/* ✅ CONDENSED RECENT MESSAGES SECTION */}
+            {/* ✅ REAL DATA: Recent Activity */}
             <div>
               <h2 className="text-sm font-bold text-gray-900 mb-2 flex items-center">
                 <Activity className="w-4 h-4 mr-2" style={{ color: '#4668AB' }} />
-                Recent Messages
+                Recent Activity
               </h2>
               <div className="space-y-2">
-                {recentMessages.map((message, index) => (
-                  <div 
-                    key={message.id}
-                    className="rounded-lg p-2.5 hover:shadow-sm transition-all duration-200 cursor-pointer relative border"
-                    style={{ 
-                      background: message.priority === 'high' ? 'rgba(254, 243, 242, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-                      borderColor: message.priority === 'high' ? 'rgba(252, 165, 165, 0.5)' : 'rgba(226, 232, 240, 0.5)',
-                      backdropFilter: 'blur(10px)'
-                    }}
-                  >
-                    {message.priority === 'high' && !message.isRead && (
-                      <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-                    )}
-                    
-                    <div className="flex items-start space-x-2">
-                      <div className="text-sm flex-shrink-0">
-                        {message.avatar}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-0.5">
-                          <p className="text-xs font-semibold text-gray-900 truncate">{message.sender}</p>
-                          <p className="text-xs text-gray-500">{message.timestamp}</p>
+                {recentActivity.length === 0 ? (
+                  <div className="text-center py-4">
+                    <Activity className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-xs text-gray-500">No recent activity</p>
+                  </div>
+                ) : (
+                  recentActivity.slice(0, 3).map((activity) => (
+                    <div 
+                      key={activity.id}
+                      className="rounded-lg p-2.5 hover:shadow-sm transition-all duration-200 cursor-pointer relative border"
+                      style={{ 
+                        background: activity.priority === 'high' ? 'rgba(254, 243, 242, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                        borderColor: activity.priority === 'high' ? 'rgba(252, 165, 165, 0.5)' : 'rgba(226, 232, 240, 0.5)',
+                        backdropFilter: 'blur(10px)'
+                      }}
+                    >
+                      {activity.priority === 'high' && !activity.isRead && (
+                        <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                      )}
+                      
+                      <div className="flex items-start space-x-2">
+                        <div className="text-sm flex-shrink-0">
+                          {activity.type === 'booking' ? '📅' : 
+                           activity.type === 'notification' ? '🔔' : '🏢'}
                         </div>
-                        <p className="text-xs text-gray-700 line-clamp-2">{message.preview}</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <p className="text-xs font-semibold text-gray-900 truncate">{activity.title}</p>
+                            <p className="text-xs text-gray-500">{activity.timestamp}</p>
+                          </div>
+                          <p className="text-xs text-gray-700 line-clamp-2">{activity.description}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
                 
                 <button 
                   className="w-full text-center py-1.5 text-xs font-semibold rounded-lg transition-colors hover:bg-blue-50"
                   style={{ color: '#4668AB' }}
+                  onClick={() => navigate('/notifications')}
                 >
-                  View All Messages
+                  View All Activity
                 </button>
               </div>
             </div>
+
+            {/* ✅ REAL DATA: Last Updated */}
+            {lastUpdated && (
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                <p className="text-xs text-gray-500 text-center">
+                  Last updated: {formatTimestamp(lastUpdated)}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1051,10 +1222,20 @@ export default function SpaceOwnerDashboardMVP() {
               Space Management
             </h1>
 
-            {/* ✅ TAB NAVIGATION */}
+            {/* ✅ SPACES FIRST: Changed tab order and navigation */}
             <div className="mt-4">
               <div className="border-b border-gray-200">
                 <nav className="flex space-x-8">
+                  <button
+                    onClick={() => setActiveTab('spaces')}
+                    className={`py-3 px-2 text-sm font-semibold border-b-2 transition-all duration-200 ${
+                      activeTab === 'spaces'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Spaces ({spaces.length})
+                  </button>
                   <button
                     onClick={() => setActiveTab('bookings')}
                     className={`py-3 px-2 text-sm font-semibold border-b-2 transition-all duration-200 ${
@@ -1063,26 +1244,16 @@ export default function SpaceOwnerDashboardMVP() {
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                   >
-                    Bookings
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('listings')}
-                    className={`py-3 px-2 text-sm font-semibold border-b-2 transition-all duration-200 ${
-                      activeTab === 'listings'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    My Spaces
+                    Bookings ({bookings.length})
                   </button>
                 </nav>
               </div>
             </div>
           </div>
 
-          {/* ✅ TAB CONTENT */}
+          {/* ✅ TAB CONTENT - SPACES FIRST */}
           <div className="flex-1 p-6 overflow-y-auto">
-            {activeTab === 'bookings' ? <EnhancedBookingsTable /> : <EnhancedListingsTable />}
+            {activeTab === 'spaces' ? <EnhancedSpacesTable /> : <EnhancedBookingsTable />}
           </div>
         </div>
       </div>
