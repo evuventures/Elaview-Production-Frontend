@@ -1,9 +1,7 @@
 // src/pages/TEMPUserJourney/AdvertiserConfirmationPage.tsx
-// ✅ COMPREHENSIVE: Campaign confirmation page for advertisers
-// ✅ VERIFICATION: Console logs throughout for testing and debugging
-// ✅ ERROR HANDLING: Proper loading states and error boundaries
-// ✅ RESPONSIVE: Mobile-first design with clean UX
-// ✅ BUSINESS LOGIC: Campaign creation and space owner notification
+// ✅ ENHANCED: Better error handling and detailed debugging information
+// ✅ COMPREHENSIVE: All existing functionality preserved
+// ✅ DEBUGGING: Detailed error display for troubleshooting
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -17,7 +15,7 @@ import {
   ArrowLeft, CheckCircle2, Calendar, MapPin, Building2, 
   DollarSign, Clock, Target, Users, AlertCircle, Loader2,
   ChevronRight, Sparkles, Send, Eye, Edit3, Package,
-  TrendingUp, BarChart3, Zap
+  TrendingUp, BarChart3, Zap, Copy, RefreshCw
 } from "lucide-react";
 import apiClient from '@/api/apiClient';
 
@@ -57,6 +55,22 @@ interface CampaignInvitation {
   endDate: string;
 }
 
+// ✅ NEW: Enhanced error details interface
+interface ErrorDetails {
+  message: string;
+  details?: any;
+  status?: number;
+  endpoint?: string;
+  requestData?: any;
+  validationErrors?: Array<{
+    field: string;
+    message: string;
+    value?: any;
+    expected?: any;
+  }>;
+  timestamp?: string;
+}
+
 // Format currency helper
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-US', {
@@ -77,6 +91,120 @@ const formatDate = (dateString: string) => {
   });
 };
 
+// ✅ NEW: Error display component
+const ErrorDetailsComponent = ({ errorDetails, onRetry, onCopyDetails }: {
+  errorDetails: ErrorDetails;
+  onRetry?: () => void;
+  onCopyDetails?: () => void;
+}) => {
+  const [showFullDetails, setShowFullDetails] = useState(false);
+
+  return (
+    <Card className="border-red-200 bg-red-50">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-red-900">
+          <AlertCircle className="w-5 h-5" />
+          Campaign Invitation Failed
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Main error message */}
+        <div className="bg-white rounded p-3 border-l-4 border-l-red-400">
+          <p className="font-medium text-red-900 mb-1">Error Message:</p>
+          <p className="text-red-800">{errorDetails.message}</p>
+          {errorDetails.status && (
+            <p className="text-sm text-red-600 mt-1">
+              HTTP Status: {errorDetails.status}
+              {errorDetails.endpoint && ` (${errorDetails.endpoint})`}
+            </p>
+          )}
+        </div>
+
+        {/* Validation errors */}
+        {errorDetails.validationErrors && errorDetails.validationErrors.length > 0 && (
+          <div className="bg-amber-50 rounded p-3 border border-amber-200">
+            <p className="font-medium text-amber-900 mb-2">Validation Issues:</p>
+            <div className="space-y-1">
+              {errorDetails.validationErrors.map((error, index) => (
+                <div key={index} className="text-sm">
+                  <span className="font-medium text-amber-800">{error.field}:</span>
+                  <span className="text-amber-700 ml-1">{error.message}</span>
+                  {error.value && (
+                    <span className="text-amber-600 ml-1">(received: {JSON.stringify(error.value)})</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          {onRetry && (
+            <Button onClick={onRetry} variant="outline" size="sm">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try Again
+            </Button>
+          )}
+          <Button
+            onClick={() => setShowFullDetails(!showFullDetails)}
+            variant="outline"
+            size="sm"
+          >
+            {showFullDetails ? 'Hide' : 'Show'} Technical Details
+          </Button>
+          {onCopyDetails && (
+            <Button onClick={onCopyDetails} variant="outline" size="sm">
+              <Copy className="w-4 h-4 mr-2" />
+              Copy Error Info
+            </Button>
+          )}
+        </div>
+
+        {/* Full technical details */}
+        {showFullDetails && (
+          <div className="bg-slate-100 rounded p-3 text-xs font-mono">
+            <p className="font-bold mb-2">Technical Details:</p>
+            <div className="whitespace-pre-wrap text-slate-700">
+              {JSON.stringify({
+                message: errorDetails.message,
+                status: errorDetails.status,
+                endpoint: errorDetails.endpoint,
+                timestamp: errorDetails.timestamp,
+                details: errorDetails.details,
+                validationErrors: errorDetails.validationErrors,
+                ...(process.env.NODE_ENV === 'development' && {
+                  requestData: errorDetails.requestData
+                })
+              }, null, 2)}
+            </div>
+          </div>
+        )}
+
+        {/* Helpful suggestions */}
+        <div className="bg-blue-50 rounded p-3 border border-blue-200">
+          <p className="font-medium text-blue-900 mb-1">What to check:</p>
+          <div className="text-blue-800 text-sm space-y-1">
+            <p>• Verify your campaign and space selections are valid</p>
+            <p>• Check that your user account has proper permissions</p>
+            <p>• Ensure the space is available for your selected dates</p>
+            <p>• Try refreshing the page and selecting again</p>
+            {errorDetails.status === 403 && (
+              <p className="font-medium text-blue-900">• Permission error: You may not own this campaign</p>
+            )}
+            {errorDetails.status === 404 && (
+              <p className="font-medium text-blue-900">• Not found: Campaign or space may no longer exist</p>
+            )}
+            {errorDetails.status === 409 && (
+              <p className="font-medium text-blue-900">• Conflict: An invitation may already exist for this combination</p>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 export default function AdvertiserConfirmationPage() {
   const navigate = useNavigate();
   const { user } = useUser();
@@ -86,6 +214,7 @@ export default function AdvertiserConfirmationPage() {
   const [selectedCampaign, setSelectedCampaign] = useState<SelectedCampaign | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<ErrorDetails | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
   const [confirmationSuccess, setConfirmationSuccess] = useState(false);
   
@@ -135,6 +264,21 @@ export default function AdvertiserConfirmationPage() {
       console.log('✅ Parsed space data:', spaceData);
       console.log('✅ Parsed campaign data:', campaignData);
       
+      // ✅ ENHANCED: Validate the parsed data structure
+      if (!spaceData.id || !spaceData.name || !spaceData.propertyId) {
+        console.error('❌ Invalid space data structure:', spaceData);
+        setError('Invalid space data. Please go back and select a space again.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!campaignData.id || !campaignData.brand_name) {
+        console.error('❌ Invalid campaign data structure:', campaignData);
+        setError('Invalid campaign data. Please go back and select a campaign again.');
+        setIsLoading(false);
+        return;
+      }
+      
       setSelectedSpace(spaceData);
       setSelectedCampaign(campaignData);
       setIsLoading(false);
@@ -142,15 +286,28 @@ export default function AdvertiserConfirmationPage() {
     } catch (error) {
       console.error('❌ Error initializing page:', error);
       setError('Failed to load confirmation data. Please try again.');
+      setErrorDetails({
+        message: 'Failed to parse stored data',
+        details: error instanceof Error ? error.message : 'Unknown parsing error'
+      });
       setIsLoading(false);
     }
   };
 
-  // Handle campaign confirmation
+  // ✅ ENHANCED: Handle campaign confirmation with detailed error handling
   const handleConfirmCampaign = async () => {
     if (!selectedSpace || !selectedCampaign || !user?.id) {
       console.error('❌ Missing required data for confirmation');
       setError('Missing required data. Please try again.');
+      setErrorDetails({
+        message: 'Missing required data for campaign confirmation',
+        details: {
+          hasSelectedSpace: !!selectedSpace,
+          hasSelectedCampaign: !!selectedCampaign,
+          hasUserId: !!user?.id,
+          userId: user?.id
+        }
+      });
       return;
     }
 
@@ -158,32 +315,90 @@ export default function AdvertiserConfirmationPage() {
     if (!agreedToTerms || !agreedToContent || !agreedToAccuracy) {
       console.error('❌ Legal agreements not completed');
       setError('Please complete all required agreements before proceeding.');
+      setErrorDetails({
+        message: 'Legal agreements not completed',
+        details: {
+          agreedToTerms,
+          agreedToContent,
+          agreedToAccuracy
+        }
+      });
       return;
     }
 
     console.log('🚀 Starting campaign confirmation process...');
     setIsConfirming(true);
     setError(null);
+    setErrorDetails(null);
 
     try {
+      // ✅ ENHANCED: Comprehensive data validation before sending
+      console.log('🔍 Validating invitation data before sending...');
+      
+      // Validate required fields
+      const requiredFields = {
+        campaignId: selectedCampaign.id,
+        spaceId: selectedSpace.id,
+        propertyId: selectedSpace.propertyId,
+        totalPrice: selectedSpace.totalPrice,
+        duration: selectedSpace.duration,
+        startDate: selectedSpace.dates.start,
+        endDate: selectedSpace.dates.end,
+        message: `${selectedCampaign.brand_name} would like to advertise on your space "${selectedSpace.name}" for ${selectedSpace.duration} days.`
+      };
+
+      console.log('📋 Required fields check:');
+      for (const [field, value] of Object.entries(requiredFields)) {
+        const isValid = value !== undefined && value !== null && value !== '';
+        console.log(`  ${field}: ${isValid ? '✅' : '❌'} (${typeof value}) = ${value}`);
+        
+        if (!isValid) {
+          throw new Error(`Missing or invalid required field: ${field}`);
+        }
+      }
+
+      // Validate numeric fields
+      if (typeof selectedSpace.totalPrice !== 'number' || selectedSpace.totalPrice <= 0) {
+        throw new Error(`Invalid total price: ${selectedSpace.totalPrice} (must be a positive number)`);
+      }
+      
+      if (typeof selectedSpace.duration !== 'number' || selectedSpace.duration <= 0 || !Number.isInteger(selectedSpace.duration)) {
+        throw new Error(`Invalid duration: ${selectedSpace.duration} (must be a positive integer)`);
+      }
+
+      // Validate date fields
+      const startDate = new Date(selectedSpace.dates.start);
+      const endDate = new Date(selectedSpace.dates.end);
+      
+      if (isNaN(startDate.getTime())) {
+        throw new Error(`Invalid start date: ${selectedSpace.dates.start}`);
+      }
+      if (isNaN(endDate.getTime())) {
+        throw new Error(`Invalid end date: ${selectedSpace.dates.end}`);
+      }
+      if (endDate <= startDate) {
+        throw new Error(`End date must be after start date: ${selectedSpace.dates.start} -> ${selectedSpace.dates.end}`);
+      }
+
+      console.log('✅ All validation checks passed');
+
       // ✅ VERIFICATION: Log the data we're about to send
       const invitationData: CampaignInvitation = {
         campaignId: selectedCampaign.id,
         spaceId: selectedSpace.id,
         propertyId: selectedSpace.propertyId,
         spaceOwnerId: 'owner_to_be_fetched', // Will be fetched by backend
-        message: `${selectedCampaign.brand_name} would like to advertise on your space "${selectedSpace.name}" for ${selectedSpace.duration} days.`,
+        message: requiredFields.message,
         totalPrice: selectedSpace.totalPrice,
         duration: selectedSpace.duration,
         startDate: selectedSpace.dates.start,
         endDate: selectedSpace.dates.end
       };
 
-      console.log('📋 Campaign invitation data:', invitationData);
+      console.log('📋 Campaign invitation data being sent:');
+      console.log(JSON.stringify(invitationData, null, 2));
 
-      // ✅ API CALL: Create campaign invitation
-      console.log('📡 Sending campaign invitation...');
-      const response = await apiClient.post('/campaigns/create-invitation', {
+      const requestPayload = {
         ...invitationData,
         advertiserId: user.id,
         campaignDetails: {
@@ -194,9 +409,17 @@ export default function AdvertiserConfirmationPage() {
           budget: selectedCampaign.budget,
           target_demographics: selectedCampaign.target_demographics
         }
-      });
+      };
 
-      console.log('📊 Campaign invitation response:', response);
+      console.log('📋 Complete request payload:');
+      console.log(JSON.stringify(requestPayload, null, 2));
+
+      // ✅ API CALL: Create campaign invitation with enhanced error handling
+      console.log('📡 Sending campaign invitation...');
+      const response = await apiClient.post('/campaigns/create-invitation', requestPayload);
+
+      console.log('📊 Campaign invitation response:');
+      console.log(JSON.stringify(response, null, 2));
 
       if (response.success) {
         console.log('✅ Campaign invitation created successfully');
@@ -218,15 +441,71 @@ export default function AdvertiserConfirmationPage() {
         }, 3000);
 
       } else {
-        throw new Error(response.error || 'Failed to create campaign invitation');
+        throw new Error(response.error || response.message || 'Failed to create campaign invitation');
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Campaign confirmation failed:', error);
-      setError(`Failed to confirm campaign: ${error.message}`);
+      
+      // ✅ ENHANCED: Extract detailed error information
+      const errorMessage = error.message || 'An unexpected error occurred';
+      let detailedErrorInfo: ErrorDetails = {
+        message: errorMessage,
+        timestamp: new Date().toISOString()
+      };
+
+      // If this is an API error with enhanced details
+      if (error.response) {
+        detailedErrorInfo = {
+          message: error.response.message || error.response.error || errorMessage,
+          details: error.response.details || error.response,
+          status: error.status,
+          endpoint: error.endpoint,
+          requestData: error.requestData,
+          validationErrors: error.response.details?.errors || [],
+          timestamp: error.response.timestamp || new Date().toISOString()
+        };
+      }
+
+      console.error('❌ Detailed error information:', detailedErrorInfo);
+
+      setError(errorMessage);
+      setErrorDetails(detailedErrorInfo);
     } finally {
       setIsConfirming(false);
     }
+  };
+
+  // ✅ NEW: Copy error details to clipboard
+  const handleCopyErrorDetails = async () => {
+    if (!errorDetails) return;
+    
+    try {
+      const errorText = JSON.stringify({
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        url: window.location.href,
+        userId: user?.id,
+        ...errorDetails
+      }, null, 2);
+      
+      await navigator.clipboard.writeText(errorText);
+      console.log('✅ Error details copied to clipboard');
+      
+      // You could show a toast notification here
+      alert('Error details copied to clipboard!');
+    } catch (error) {
+      console.error('❌ Failed to copy error details:', error);
+      alert('Failed to copy error details');
+    }
+  };
+
+  // ✅ NEW: Retry function
+  const handleRetry = () => {
+    console.log('🔄 Retrying campaign confirmation...');
+    setError(null);
+    setErrorDetails(null);
+    handleConfirmCampaign();
   };
 
   // Handle going back
@@ -253,23 +532,56 @@ export default function AdvertiserConfirmationPage() {
     );
   }
 
-  // Error state
-  if (error) {
+  // Error state - now with enhanced error display
+  if (error && !isConfirming) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-slate-900 mb-2">Something went wrong</h2>
-          <p className="text-slate-600 mb-4">{error}</p>
-          <div className="flex gap-3 justify-center">
-            <Button onClick={handleGoBack} variant="outline">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Go Back
-            </Button>
-            <Button onClick={handleGoToDashboard}>
-              Dashboard
-            </Button>
+      <div className="min-h-screen bg-slate-50">
+        {/* Header */}
+        <div className="bg-white border-b border-slate-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handleGoBack}
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5 text-slate-600" />
+                </button>
+                <div>
+                  <h1 className="text-lg font-semibold text-slate-900">Campaign Error</h1>
+                  <p className="text-sm text-slate-500">There was an issue with your campaign invitation</p>
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Enhanced error display */}
+          {errorDetails ? (
+            <ErrorDetailsComponent
+              errorDetails={errorDetails}
+              onRetry={selectedSpace && selectedCampaign ? handleRetry : undefined}
+              onCopyDetails={handleCopyErrorDetails}
+            />
+          ) : (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="p-6 text-center">
+                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-slate-900 mb-2">Something went wrong</h2>
+                <p className="text-slate-600 mb-4">{error}</p>
+                <div className="flex gap-3 justify-center">
+                  <Button onClick={handleGoBack} variant="outline">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Go Back
+                  </Button>
+                  <Button onClick={handleGoToDashboard}>
+                    Dashboard
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     );

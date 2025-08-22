@@ -1,18 +1,184 @@
 // src/components/notifications/NotificationDropdown.jsx
-// ✅ OPTIMIZED: Accept notifications as props, no auto-fetching to prevent duplicate API calls
+// ✅ UPDATED: Added campaign invitation support alongside existing booking notifications
+// ✅ COMPREHENSIVE: Handles both booking requests and campaign invitations
+// ✅ VERIFICATION: Console logs throughout for testing and debugging
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bell, Loader2, Check, Building2, Clock, MessageSquare,
-  CheckCircle, XCircle, DollarSign, Calendar, User
+  CheckCircle, XCircle, DollarSign, Calendar, User, Target,
+  Eye, ThumbsUp, ThumbsDown, MapPin, Sparkles
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import apiClient from '@/api/apiClient';
 
-// Booking notification component for property owners
+// ✅ NEW: Campaign invitation notification component
+const CampaignInvitationCard = ({ notification, onAction }) => {
+  const navigate = useNavigate();
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  console.log('🎯 Rendering campaign invitation notification:', notification);
+
+  // Parse notification data - campaign invitations store data in the 'data' field
+  const campaignData = notification.data || {};
+  const {
+    campaign_id,
+    space_id,
+    invitation_id,
+    advertiser_name,
+    space_name,
+    total_price,
+    action_url
+  } = campaignData;
+
+  console.log('📋 Campaign notification data:', campaignData);
+
+  // Format currency
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount || 0);
+  };
+
+  // Handle view campaign invitation
+  const handleViewCampaign = async (e) => {
+    e.stopPropagation();
+    try {
+      setIsProcessing(true);
+      console.log('👁️ Viewing campaign invitation:', invitation_id);
+      
+      // Mark notification as read
+      await apiClient.markNotificationAsRead(notification.id);
+      console.log('✅ Notification marked as read');
+      
+      // Navigate to space owner confirmation page
+      const targetUrl = action_url || `/SpaceOwnerConfirmation/${invitation_id}`;
+      console.log('🧭 Navigating to:', targetUrl);
+      navigate(targetUrl);
+      
+      // Callback to refresh notifications
+      if (onAction) onAction('viewed');
+      
+    } catch (error) {
+      console.error('❌ Failed to view campaign invitation:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle quick approve (optional - you can remove this if you want users to go to the full page)
+  const handleQuickApprove = async (e) => {
+    e.stopPropagation();
+    try {
+      setIsProcessing(true);
+      console.log('✅ Quick approving campaign invitation:', invitation_id);
+      
+      const result = await apiClient.approveCampaignInvitation(
+        invitation_id, 
+        'Campaign approved! You can now proceed with booking.'
+      );
+      
+      if (result.success) {
+        await apiClient.markNotificationAsRead(notification.id);
+        if (onAction) onAction('approved');
+        console.log('✅ Campaign approved successfully');
+      }
+    } catch (error) {
+      console.error('❌ Failed to approve campaign:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div className="p-4 border-l-4 border-l-blue-400 bg-blue-50 hover:bg-blue-100 transition-colors">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Target className="w-4 h-4 text-blue-600" />
+          <span className="font-semibold text-blue-900 text-sm">Campaign Request</span>
+          <Badge className="bg-blue-200 text-blue-800 text-xs">
+            Pending Review
+          </Badge>
+        </div>
+        <span className="text-xs text-gray-500">
+          {formatDistanceToNow(new Date(notification.created_at || notification.createdAt), { addSuffix: true })}
+        </span>
+      </div>
+
+      {/* Campaign Info */}
+      <div className="mb-3">
+        <p className="font-medium text-gray-900 text-sm mb-1">
+          <span className="text-blue-600">{advertiser_name}</span> is interested in booking your space
+        </p>
+        <div className="text-xs text-gray-600 space-y-1">
+          <div className="flex items-center gap-1">
+            <MapPin className="w-3 h-3" />
+            <span className="font-medium">{space_name}</span>
+          </div>
+          {total_price && (
+            <div className="flex items-center gap-1">
+              <DollarSign className="w-3 h-3" />
+              <span className="font-semibold text-green-600">
+                {formatCurrency(total_price)} campaign value
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Message Preview */}
+      <div className="mb-3 p-2 bg-white/50 rounded text-xs text-gray-700">
+        {notification.message}
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-2">
+        <Button
+          onClick={handleViewCampaign}
+          disabled={isProcessing}
+          size="sm"
+          className="bg-blue-600 hover:bg-blue-700 text-white text-xs py-1 px-3 flex-1"
+        >
+          {isProcessing ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <>
+              <Eye className="w-3 h-3 mr-1" />
+              View Details
+            </>
+          )}
+        </Button>
+        
+        {/* Optional: Quick approve button - you can remove this if you want users to always go to the full page */}
+        <Button
+          onClick={handleQuickApprove}
+          disabled={isProcessing}
+          size="sm"
+          className="bg-green-600 hover:bg-green-700 text-white text-xs py-1 px-3"
+        >
+          {isProcessing ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <>
+              <ThumbsUp className="w-3 h-3 mr-1" />
+              Approve
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+// ✅ EXISTING: Booking notification component (unchanged)
 const BookingNotificationCard = ({ notification, onAction }) => {
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -32,13 +198,8 @@ const BookingNotificationCard = ({ notification, onAction }) => {
       const result = await apiClient.approveBooking(messageData.bookingId);
       
       if (result.success) {
-        // Mark notification as read
         await apiClient.markNotificationAsRead(notification.id);
-        
-        // Callback to refresh notifications
         if (onAction) onAction('approved');
-        
-        // Show success
         alert('✅ Booking approved! The advertiser has been notified.');
       }
     } catch (error) {
@@ -59,7 +220,6 @@ const BookingNotificationCard = ({ notification, onAction }) => {
       
       if (result.success) {
         await apiClient.markNotificationAsRead(notification.id);
-        
         if (onAction) onAction('declined');
         alert('❌ Booking declined. The advertiser has been notified.');
         setShowDeclineForm(false);
@@ -203,9 +363,24 @@ const BookingNotificationCard = ({ notification, onAction }) => {
   );
 };
 
-// Standard notification card
+// ✅ UPDATED: Standard notification card with better campaign support
 const StandardNotificationCard = ({ notification, onClick }) => {
   const getNotificationIcon = (notification) => {
+    // Handle campaign notifications
+    if (notification.type === 'CAMPAIGN_INVITATION') {
+      return <Target className="w-4 h-4 text-blue-600" />;
+    }
+    if (notification.type === 'CAMPAIGN_APPROVED') {
+      return <CheckCircle className="w-4 h-4 text-green-600" />;
+    }
+    if (notification.type === 'CAMPAIGN_DENIED') {
+      return <XCircle className="w-4 h-4 text-red-600" />;
+    }
+    if (notification.type === 'CAMPAIGN_INFO_REQUEST') {
+      return <MessageSquare className="w-4 h-4 text-orange-600" />;
+    }
+
+    // Handle other notification types
     const messageData = notification.messageData ? JSON.parse(notification.messageData) : {};
     
     switch (messageData.action) {
@@ -237,7 +412,7 @@ const StandardNotificationCard = ({ notification, onClick }) => {
             {notification.content || notification.message || 'You have a new notification'}
           </p>
           <p className="text-xs text-slate-500 mt-2">
-            {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+            {formatDistanceToNow(new Date(notification.created_at || notification.createdAt), { addSuffix: true })}
           </p>
         </div>
       </div>
@@ -245,7 +420,7 @@ const StandardNotificationCard = ({ notification, onClick }) => {
   );
 };
 
-// ✅ OPTIMIZED: Main notification dropdown component - accepts data as props
+// ✅ UPDATED: Main notification dropdown component with campaign invitation support
 const NotificationDropdown = ({ 
   isOpen, 
   onClose, 
@@ -256,20 +431,47 @@ const NotificationDropdown = ({
 }) => {
   const navigate = useNavigate();
 
+  console.log('🔔 NotificationDropdown rendered with:', {
+    isOpen,
+    notificationCount,
+    notificationsLength: notifications.length,
+    isLoading
+  });
+
   // Handle standard notification click
   const handleNotificationClick = async (notification) => {
     try {
+      console.log('🔔 Handling notification click:', notification);
+
+      // For campaign notifications, handle special routing
+      if (notification.type === 'CAMPAIGN_INVITATION' && notification.data?.action_url) {
+        console.log('🎯 Handling campaign invitation notification');
+        await apiClient.markNotificationAsRead(notification.id);
+        onClose();
+        navigate(notification.data.action_url);
+        if (onNotificationAction) onNotificationAction('viewed');
+        return;
+      }
+
+      // For other campaign notifications
+      if (notification.type?.startsWith('CAMPAIGN_')) {
+        console.log('🎯 Handling campaign-related notification');
+        await apiClient.markNotificationAsRead(notification.id);
+        onClose();
+        
+        const actionUrl = notification.data?.action_url || '/advertise';
+        navigate(actionUrl);
+        if (onNotificationAction) onNotificationAction('viewed');
+        return;
+      }
+
+      // For other notifications, try the standard flow
       const result = await apiClient.handleNotificationClick(notification);
       
       if (result.success) {
-        // Close dropdown and navigate
         onClose();
         navigate(result.actionUrl);
-        
-        // Notify parent of the action
-        if (onNotificationAction) {
-          onNotificationAction('clicked');
-        }
+        if (onNotificationAction) onNotificationAction('clicked');
       }
     } catch (error) {
       console.error('❌ Failed to handle notification click:', error);
@@ -280,9 +482,17 @@ const NotificationDropdown = ({
     }
   };
 
+  // Handle campaign invitation action
+  const handleCampaignAction = (action) => {
+    console.log('🎯 Campaign action:', action);
+    if (onNotificationAction) {
+      onNotificationAction(action);
+    }
+  };
+
   // Handle booking action
   const handleBookingAction = (action) => {
-    // Callback to parent to refresh data
+    console.log('📅 Booking action:', action);
     if (onNotificationAction) {
       onNotificationAction(action);
     }
@@ -293,7 +503,6 @@ const NotificationDropdown = ({
     try {
       await apiClient.markAllNotificationsAsRead();
       
-      // Notify parent to update state
       if (onNotificationAction) {
         onNotificationAction('mark_all_read');
       }
@@ -302,7 +511,6 @@ const NotificationDropdown = ({
     } catch (error) {
       console.error('❌ Failed to mark all as read:', error);
       
-      // Still notify parent and close on error
       if (onNotificationAction) {
         onNotificationAction('mark_all_read');
       }
@@ -323,13 +531,13 @@ const NotificationDropdown = ({
         className="fixed top-16 right-4 w-96 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden z-[999999]"
       >
         {/* Header */}
-        <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-teal-50 to-slate-50">
+        <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-slate-50">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-slate-900">Notifications</h3>
             {notificationCount > 0 && (
               <button
                 onClick={handleMarkAllAsRead}
-                className="text-xs text-teal-600 hover:text-teal-700 font-medium"
+                className="text-xs text-blue-600 hover:text-blue-700 font-medium"
               >
                 Mark all read
               </button>
@@ -346,7 +554,7 @@ const NotificationDropdown = ({
         <div className="max-h-96 overflow-y-auto">
           {isLoading ? (
             <div className="p-6 text-center">
-              <Loader2 className="w-6 h-6 animate-spin text-teal-500 mx-auto mb-2" />
+              <Loader2 className="w-6 h-6 animate-spin text-blue-500 mx-auto mb-2" />
               <p className="text-sm text-slate-500">Loading notifications...</p>
             </div>
           ) : notifications.length === 0 ? (
@@ -357,7 +565,20 @@ const NotificationDropdown = ({
             </div>
           ) : (
             notifications.map(notification => {
-              // Check if this is a booking request notification
+              console.log('🔔 Rendering notification:', notification.type, notification);
+
+              // ✅ NEW: Handle campaign invitation notifications
+              if (notification.type === 'CAMPAIGN_INVITATION') {
+                return (
+                  <CampaignInvitationCard
+                    key={notification.id}
+                    notification={notification}
+                    onAction={handleCampaignAction}
+                  />
+                );
+              }
+
+              // ✅ EXISTING: Handle booking request notifications
               const messageData = notification.messageData ? JSON.parse(notification.messageData) : {};
               const isBookingRequest = messageData.action === 'booking_request';
               
@@ -371,6 +592,7 @@ const NotificationDropdown = ({
                 );
               }
               
+              // ✅ DEFAULT: Handle all other notifications
               return (
                 <StandardNotificationCard
                   key={notification.id}
@@ -389,7 +611,7 @@ const NotificationDropdown = ({
               onClose();
               navigate('/messages');
             }}
-            className="block w-full text-center text-sm text-teal-600 hover:text-teal-700 font-medium"
+            className="block w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium"
           >
             View all messages
           </button>

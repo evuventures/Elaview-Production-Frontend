@@ -1,7 +1,8 @@
-// Enhanced Navigation - Deep Charcoal Version (#0F172A)
+// Enhanced Navigation - Deep Charcoal Version (#0F172A) with Home Link
 // ✅ FIXED: Resolved infinite re-render loop in notification fetching
 // ✅ OPTIMIZED: Proper useCallback dependencies and memoization
 // ✅ ADDED: Console logs for debugging and verification
+// ✅ NEW: Home page navigation link added
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
@@ -9,7 +10,7 @@ import {
   User, ChevronDown, Bell, Settings, LogOut,
   Building2, Calendar, MessageSquare, Map, LayoutDashboard,
   MapPin, Calendar as CalendarIcon, Mail, UserCircle, Shield,
-  HelpCircle, LogIn, Clock, Loader2, Check, Search
+  HelpCircle, LogIn, Clock, Loader2, Check, Search, Home // ✅ NEW: Home icon
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -67,10 +68,25 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
     timestamp: new Date().toISOString()
   });
 
-  // ✅ UPDATED: Navigation items with proper Space Owner items
+  // ✅ UPDATED: Navigation items with Home link added
   const navigationItems = useMemo(() => {
+    const baseItems = [
+      {
+        title: 'Home',
+        url: '/home',
+        icon: Home,
+        badge: 0,
+        showAlways: true // ✅ NEW: Show for both authenticated and unauthenticated users
+      }
+    ];
+
+    if (!isSignedIn) {
+      return baseItems;
+    }
+
     if (viewMode === 'seller') {
       return [
+        ...baseItems,
         {
           title: 'Property Hub',
           url: '/dashboard',
@@ -92,6 +108,7 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
       ];
     } else {
       return [
+        ...baseItems,
         {
           title: 'Advertiser Hub',
           url: '/advertise',
@@ -112,7 +129,7 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
         }
       ];
     }
-  }, [viewMode, pendingInvoices, unreadCount, actionItemsCount]);
+  }, [viewMode, pendingInvoices, unreadCount, actionItemsCount, isSignedIn]);
 
   // ✅ CRITICAL FIX: Stabilized fetchNotificationCount without problematic dependencies
   const fetchNotificationCount = useCallback(async (force = false) => {
@@ -431,53 +448,35 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
               />
             </Link>
 
-            {/* Navigation - Only show for authenticated users */}
-            {isSignedIn && (
-              <nav className="hidden lg:flex items-center gap-1">
-                {navigationItems.map((item) => {
-                  const isActive = location.pathname === item.url;
-                  return (
-                    <Link
-                      key={item.title}
-                      to={item.url}
-                      className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        isActive
-                          ? 'text-white bg-white/10 shadow-lg backdrop-blur-sm'
-                          : 'text-white/70 hover:text-white hover:bg-white/5'
-                      }`}
-                    >
-                      <item.icon className="w-4 h-4" />
-                      <span className="hidden xl:inline">{item.title}</span>
-                      {item.badge > 0 && (
-                        <Badge className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[16px] h-4 flex items-center justify-center shadow-sm">
-                          {formatBadgeCount(item.badge)}
-                        </Badge>
-                      )}
-                      {/* Active indicator */}
-                      {isActive && (
-                        <motion.div
-                          layoutId="activeIndicator"
-                          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-white rounded-full shadow-sm"
-                          transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                        />
-                      )}
-                    </Link>
-                  );
-                })}
+            {/* Navigation - Show Home always, other items only for authenticated users */}
+            <nav className="hidden lg:flex items-center gap-1">
+              {navigationItems.map((item) => {
+                const isActive = location.pathname === item.url;
                 
-                {/* Admin Dashboard Link */}
-                {isAdmin && (
+                // ✅ NEW: Show Home for everyone, other items only for signed in users
+                if (!item.showAlways && !isSignedIn) {
+                  return null;
+                }
+                
+                return (
                   <Link
-                    to="/admin"
+                    key={item.title}
+                    to={item.url}
                     className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      location.pathname.startsWith('/admin')
-                        ? 'text-white bg-purple-500/20 shadow-lg backdrop-blur-sm'
-                        : 'text-purple-300 hover:text-purple-200 hover:bg-purple-500/10'
+                      isActive
+                        ? 'text-white bg-white/10 shadow-lg backdrop-blur-sm'
+                        : 'text-white/70 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <Shield className="w-4 h-4" />
-                    <span className="hidden xl:inline">Admin</span>
-                    {location.pathname.startsWith('/admin') && (
+                    <item.icon className="w-4 h-4" />
+                    <span className="hidden xl:inline">{item.title}</span>
+                    {item.badge > 0 && (
+                      <Badge className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[16px] h-4 flex items-center justify-center shadow-sm">
+                        {formatBadgeCount(item.badge)}
+                      </Badge>
+                    )}
+                    {/* Active indicator */}
+                    {isActive && (
                       <motion.div
                         layoutId="activeIndicator"
                         className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-white rounded-full shadow-sm"
@@ -485,9 +484,31 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
                       />
                     )}
                   </Link>
-                )}
-              </nav>
-            )}
+                );
+              })}
+              
+              {/* Admin Dashboard Link */}
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    location.pathname.startsWith('/admin')
+                      ? 'text-white bg-purple-500/20 shadow-lg backdrop-blur-sm'
+                      : 'text-purple-300 hover:text-purple-200 hover:bg-purple-500/10'
+                  }`}
+                >
+                  <Shield className="w-4 h-4" />
+                  <span className="hidden xl:inline">Admin</span>
+                  {location.pathname.startsWith('/admin') && (
+                    <motion.div
+                      layoutId="activeIndicator"
+                      className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-white rounded-full shadow-sm"
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                </Link>
+              )}
+            </nav>
           </div>
 
           {/* Right Section: View Mode Toggle + Actions + User */}
@@ -511,7 +532,7 @@ const DesktopTopNavV2_DeepCharcoal = React.memo(({
               </div>
             )}
 
-            {/* Notification Bell Button */}
+            {/* Notification Bell Button - Only show for signed in users */}
             {isSignedIn && (
               <div className="relative">
                 <Button
