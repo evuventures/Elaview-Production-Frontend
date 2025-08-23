@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, useUser, useClerk } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
 import apiClient from '@/api/apiClient';
-import VideoLoader from '@/components/ui/VideoLoader';
+import { PageLoader } from '@/components/ui/LoadingAnimation';
 
 // Import your navigation components
 import DesktopTopNavV2 from './nested/DesktopTopNavV2';
@@ -246,16 +246,7 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
     console.log('⏳ Layout: Showing main loading state');
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <VideoLoader 
-            size="xl"
-            theme="brand"
-            message={`Loading ${isSpaceOwnerPage ? 'space owner' : 'advertiser'} dashboard...`}
-            showMessage={true}
-            centered={true}
-            containerClassName="mb-4"
-          />
-        </div>
+        <PageLoader message={`Loading ${isSpaceOwnerPage ? 'space owner' : 'advertiser'} dashboard...`} />
       </div>
     );
   }
@@ -296,14 +287,16 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
         {typeof DesktopTopNavV2 !== 'undefined' && (
           <div className="hidden lg:block relative z-[9999]">
             <DesktopTopNavV2
-              unreadCount={unreadCount} 
-              pendingInvoices={pendingInvoices} 
-              actionItemsCount={actionItemsCount} 
-              currentUser={currentUser}
-              viewMode={viewMode}
-              onViewModeChange={handleViewModeChange}
-              isAdmin={isAdmin}
-              canSwitchModes={true}
+              {...{
+                unreadCount, 
+                pendingInvoices, 
+                actionItemsCount, 
+                currentUser,
+                viewMode,
+                onViewModeChange: handleViewModeChange,
+                isAdmin,
+                canSwitchModes: true
+              } as any}
             />
           </div>
         )}
@@ -370,14 +363,16 @@ export default function Layout({ children, currentPageName }: LayoutProps) {
       {typeof DesktopTopNavV2 !== 'undefined' ? (
         <div className="hidden lg:block relative z-[9999]">
           <DesktopTopNavV2
-            unreadCount={unreadCount} 
-            pendingInvoices={pendingInvoices} 
-            actionItemsCount={actionItemsCount} 
-            currentUser={currentUser}
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-            isAdmin={isAdmin}
-            canSwitchModes={true}
+            {...{
+              unreadCount, 
+              pendingInvoices, 
+              actionItemsCount, 
+              currentUser,
+              viewMode,
+              onViewModeChange: handleViewModeChange,
+              isAdmin,
+              canSwitchModes: true
+            } as any}
           />
         </div>
       ) : (

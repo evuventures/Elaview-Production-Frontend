@@ -1,7 +1,9 @@
 // src/pages/browse/components/SpaceDetailsModal.jsx
-// ✅ REDESIGNED: More condensed and UX-friendly with left image layout
-// ✅ NEW: Book Now redirects to CampaignSelection flow
-// ✅ ADJUSTED: Accounts for 56px navbar height (h-14 Tailwind class = 3.5rem = 56px)
+// ✅ COMPACT CALENDAR: Smaller, more space-efficient design
+// ✅ REDUCED: Padding, spacing, and calendar cell sizes
+// ✅ OPTIMIZED: For better space utilization
+// ✅ MOVED: Visibility score to top right of main image
+// ✅ REMOVED: Redundant selected dates display from calendar section
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,16 +11,15 @@ import { useNavigate } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import { Button } from "@/components/ui/button";
 import { 
-  X, ShoppingCart, Plus, CheckCircle, Star, MapPin, Users, TrendingUp, Eye,
-  Calendar, Heart, Calculator, ChevronRight, Package, Clock, DollarSign,
-  Building2, Info, AlertCircle, MessageSquare, Send, ChevronLeft, ChevronDown,
-  Maximize2, FileText, BarChart3, Verified, Timer, Shield
+  X, ShoppingCart, CheckCircle, Star, MapPin, Users, TrendingUp, Eye,
+  Calendar, Heart, ChevronRight, ChevronLeft, Clock, DollarSign,
+  Building2, Info, AlertCircle, MessageSquare, Send, 
+  Maximize2, Timer, Shield, HelpCircle
 } from "lucide-react";
 import { getAreaName, getNumericPrice } from '../utils/areaHelpers';
 import apiClient from '@/api/apiClient';
 
 // Navbar height constant - matches the h-14 Tailwind class used in your navigation
-// h-14 = 3.5rem = 56px
 const NAVBAR_HEIGHT = '56px';
 
 export default function SpaceDetailsModal({ 
@@ -28,64 +29,61 @@ export default function SpaceDetailsModal({
   setDetailsExpanded,
   isInCart,
   addToCart,
-  handleBookingNavigation,
-  setShowROICalculator
+  handleBookingNavigation
 }) {
   const navigate = useNavigate();
   const { user: currentUser } = useUser();
   
   // State Management
-  const [duration, setDuration] = useState(30);
   const [selectedDates, setSelectedDates] = useState({
-    start: new Date().toISOString().split('T')[0],
-    end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    start: null,
+    end: null
   });
-  const [expandedSection, setExpandedSection] = useState(''); // 'analytics' or 'pricing'
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [showVisibilityInfo, setShowVisibilityInfo] = useState(false);
   
   // Message Owner state
   const [isMessageLoading, setIsMessageLoading] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageContent, setMessageContent] = useState('');
 
-  // Mock multiple images (in production, these would come from selectedSpace)
+  // Mock booked dates (replace with real data)
+  const bookedDates = [
+    '2025-08-25',
+    '2025-08-26',
+    '2025-08-27',
+    '2025-09-15',
+    '2025-09-16'
+  ];
+
+  // Mock multiple images
   const spaceImages = [
     selectedSpace?.images,
-    selectedSpace?.images, // Duplicate for demo - replace with actual multiple images
+    selectedSpace?.images,
     selectedSpace?.images
   ].filter(Boolean);
-
-  // Calculate duration from dates
-  useEffect(() => {
-    if (selectedDates.start && selectedDates.end) {
-      const start = new Date(selectedDates.start);
-      const end = new Date(selectedDates.end);
-      const diffTime = Math.abs(end - start);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      setDuration(Math.max(7, diffDays)); // Minimum 7 days
-    }
-  }, [selectedDates]);
 
   // Reset state when modal opens
   useEffect(() => {
     if (detailsExpanded && selectedSpace) {
-      setDuration(30);
-      setExpandedSection('');
       setCurrentImageIndex(0);
       setShowMessageModal(false);
       setMessageContent('');
-      
-      // Set default dates
-      const today = new Date();
-      const endDate = new Date(today);
-      endDate.setDate(endDate.getDate() + 30);
-      
-      setSelectedDates({
-        start: today.toISOString().split('T')[0],
-        end: endDate.toISOString().split('T')[0]
-      });
+      setSelectedDates({ start: null, end: null });
+      setCurrentMonth(new Date());
     }
   }, [detailsExpanded, selectedSpace]);
+
+  // Get visibility score
+  const getVisibilityScore = () => {
+    const impressions = selectedSpace?.daily_impressions || 5000;
+    if (impressions > 10000) return { label: 'Excellent', color: 'text-green-600', bg: 'bg-green-100' };
+    if (impressions > 7500) return { label: 'Great', color: 'text-blue-600', bg: 'bg-blue-100' };
+    if (impressions > 5000) return { label: 'Good', color: 'text-amber-600', bg: 'bg-amber-100' };
+    return { label: 'OK', color: 'text-gray-600', bg: 'bg-gray-100' };
+  };
 
   // Get property owner information
   const getPropertyOwner = () => {
@@ -101,8 +99,76 @@ export default function SpaceDetailsModal({
             `${selectedSpace.property.users.firstName} ${selectedSpace.property.users.lastName}`.trim() :
             selectedSpace.property?.users?.full_name ||
             'Property Owner',
-      responseTime: '2 hours' // Mock data - replace with actual
+      responseTime: '2 hours'
     };
+  };
+
+  // Calendar helpers
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    const days = [];
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(year, month, day));
+    }
+    
+    return days;
+  };
+
+  const formatDateForComparison = (date) => {
+    if (!date) return null;
+    return date.toISOString().split('T')[0];
+  };
+
+  const isDateBooked = (date) => {
+    if (!date) return false;
+    return bookedDates.includes(formatDateForComparison(date));
+  };
+
+  const isDateSelected = (date) => {
+    if (!date || (!selectedDates.start && !selectedDates.end)) return false;
+    const dateStr = formatDateForComparison(date);
+    const startStr = selectedDates.start ? formatDateForComparison(selectedDates.start) : null;
+    const endStr = selectedDates.end ? formatDateForComparison(selectedDates.end) : null;
+    
+    if (startStr && endStr) {
+      return dateStr >= startStr && dateStr <= endStr;
+    }
+    return dateStr === startStr;
+  };
+
+  const handleDateClick = (date) => {
+    if (!date || isDateBooked(date) || date < new Date()) return;
+    
+    if (!selectedDates.start || (selectedDates.start && selectedDates.end)) {
+      // Start new selection
+      setSelectedDates({ start: date, end: null });
+    } else if (selectedDates.start && !selectedDates.end) {
+      // Complete the range
+      if (date < selectedDates.start) {
+        setSelectedDates({ start: date, end: selectedDates.start });
+      } else {
+        setSelectedDates({ start: selectedDates.start, end: date });
+      }
+    }
+  };
+
+  const getDuration = () => {
+    if (!selectedDates.start || !selectedDates.end) return 0;
+    const timeDiff = selectedDates.end.getTime() - selectedDates.start.getTime();
+    return Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1; // +1 to include both start and end days
   };
 
   // Handle message owner functionality
@@ -175,9 +241,15 @@ export default function SpaceDetailsModal({
     }
   };
 
-  // ✅ UPDATED: Navigate to CampaignSelection instead of checkout
+  // Navigate to CampaignSelection
   const handleBookNow = () => {
-    if (!selectedSpace) return;
+    if (!selectedSpace || !selectedDates.start || !selectedDates.end) {
+      alert('Please select campaign dates first');
+      return;
+    }
+    
+    const duration = getDuration();
+    const dailyPrice = getNumericPrice(selectedSpace);
     
     console.log('📅 Book Now clicked - navigating to Campaign Selection:', selectedSpace.id);
     
@@ -185,10 +257,13 @@ export default function SpaceDetailsModal({
     sessionStorage.setItem('selectedSpace', JSON.stringify({
       id: selectedSpace.id,
       name: getAreaName(selectedSpace),
-      price: getNumericPrice(selectedSpace),
+      price: dailyPrice,
       duration: duration,
-      dates: selectedDates,
-      totalPrice: getNumericPrice(selectedSpace) * duration,
+      dates: {
+        start: selectedDates.start.toISOString().split('T')[0],
+        end: selectedDates.end.toISOString().split('T')[0]
+      },
+      totalPrice: dailyPrice * duration,
       propertyId: selectedSpace.property?.id || selectedSpace.propertyId
     }));
     
@@ -202,32 +277,24 @@ export default function SpaceDetailsModal({
 
   // Handle add to cart
   const handleAddToCart = () => {
-    if (!selectedSpace) return;
+    if (!selectedSpace || !selectedDates.start || !selectedDates.end) {
+      alert('Please select campaign dates first');
+      return;
+    }
     
     console.log('🛒 Add to Cart clicked from SpaceDetailsModal:', selectedSpace.id);
-    addToCart(selectedSpace, duration);
+    addToCart(selectedSpace, getDuration());
   };
 
   if (!detailsExpanded || !selectedSpace) return null;
 
   const dailyPrice = getNumericPrice(selectedSpace);
+  const duration = getDuration();
   const totalPrice = dailyPrice * duration;
   const platformFee = totalPrice * 0.1;
   const grandTotal = totalPrice + platformFee;
   const owner = getPropertyOwner();
-
-  // Format dimensions helper
-  const formatDimensions = (dimensions) => {
-    if (!dimensions) return 'Standard Size';
-    if (typeof dimensions === 'string') return dimensions;
-    if (typeof dimensions === 'object') {
-      const { width, height, area, unit } = dimensions;
-      if (width && height && unit) return `${width} x ${height} ${unit}`;
-      if (area && unit) return `${area} ${unit}`;
-      if (area) return `${area} sq ft`;
-    }
-    return 'Standard Size';
-  };
+  const visibilityScore = getVisibilityScore();
 
   return (
     <AnimatePresence>
@@ -236,7 +303,7 @@ export default function SpaceDetailsModal({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        style={{ top: NAVBAR_HEIGHT }} // Account for navbar height
+        style={{ top: NAVBAR_HEIGHT }}
         onClick={() => {
           setDetailsExpanded(false);
           setSelectedSpace(null);
@@ -246,8 +313,8 @@ export default function SpaceDetailsModal({
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
-          className="w-full max-w-6xl bg-white rounded-xl shadow-2xl overflow-hidden flex"
-          style={{ maxHeight: `calc(100vh - ${NAVBAR_HEIGHT} - 2rem)` }} // Viewport height minus navbar and padding
+          className="w-full max-w-7xl bg-white rounded-xl shadow-2xl overflow-hidden flex"
+          style={{ maxHeight: `calc(100vh - ${NAVBAR_HEIGHT} - 6rem)` }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Left Side - Image Gallery (50% width) */}
@@ -264,6 +331,23 @@ export default function SpaceDetailsModal({
                       e.target.src = 'https://via.placeholder.com/800x600/4668AB/ffffff?text=Advertisement+Space';
                     }}
                   />
+                  
+                  {/* Visibility Score - Top Right Corner */}
+                  <div className="absolute top-4 right-4 flex items-center gap-2">
+                    <div className={`px-3 py-2 rounded-lg backdrop-blur-sm bg-white/90 flex items-center gap-2 shadow-lg`}>
+                      <Eye className="w-4 h-4 text-slate-600" />
+                      <span className="text-sm font-medium text-slate-700">Visibility:</span>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${visibilityScore.bg} ${visibilityScore.color}`}>
+                        {visibilityScore.label}
+                      </span>
+                      <button
+                        onClick={() => setShowVisibilityInfo(true)}
+                        className="p-1 hover:bg-slate-100 rounded-full transition-colors"
+                      >
+                        <HelpCircle className="w-3 h-3 text-slate-400 hover:text-slate-600" />
+                      </button>
+                    </div>
+                  </div>
                   
                   {/* Image Navigation */}
                   {spaceImages.length > 1 && (
@@ -308,14 +392,6 @@ export default function SpaceDetailsModal({
                   </div>
                 </div>
               )}
-              
-              {/* Property Badge */}
-              <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2">
-                <p className="text-xs text-slate-500">Property</p>
-                <p className="font-medium text-slate-900">
-                  {selectedSpace.propertyName || 'Prime Location'}
-                </p>
-              </div>
             </div>
 
             {/* Thumbnail Strip (if multiple images) */}
@@ -345,21 +421,15 @@ export default function SpaceDetailsModal({
           {/* Right Side - Details (50% width) */}
           <div className="w-1/2 flex flex-col" style={{ maxHeight: `calc(100vh - ${NAVBAR_HEIGHT} - 2rem)` }}>
             {/* Header */}
-            <div className="p-6 border-b border-slate-200">
-              <div className="flex justify-between items-start mb-3">
+            <div className="px-6 pt-6 border-b border-slate-200">
+              <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-slate-900 mb-1">
+                  <h2 className="text-2xl font-bold text-slate-900 mb-2">
                     {getAreaName(selectedSpace)}
                   </h2>
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {selectedSpace.propertyAddress || 'High Traffic Location'}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Shield className="w-3 h-3 text-green-500" />
-                      Verified
-                    </span>
+                  <div className="flex items-center gap-1 text-sm text-slate-600 mb-3">
+                    <MapPin className="w-4 h-4" />
+                    {selectedSpace.propertyAddress || 'High Traffic Location'}
                   </div>
                 </div>
                 <button
@@ -372,245 +442,180 @@ export default function SpaceDetailsModal({
                   <X className="w-5 h-5 text-slate-500" />
                 </button>
               </div>
-
-              {/* Quick Stats Bar */}
-              <div className="flex gap-4 pt-3">
-                <div className="flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-slate-400" />
-                  <div>
-                    <p className="text-xs text-slate-500">Daily Views</p>
-                    <p className="font-semibold text-slate-900">
-                      {selectedSpace.daily_impressions?.toLocaleString() || '5,000'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-slate-400" />
-                  <div>
-                    <p className="text-xs text-slate-500">Engagement</p>
-                    <p className="font-semibold text-slate-900">92%</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Star className="w-4 h-4 text-slate-400" />
-                  <div>
-                    <p className="text-xs text-slate-500">Rating</p>
-                    <p className="font-semibold text-slate-900">4.8</p>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-6">
-              {/* Calendar Selector */}
+              {/* Features and Calendar Section */}
               <div className="mb-6">
                 <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
                   <Calendar className="w-4 h-4" style={{ color: '#4668AB' }} />
-                  Select Campaign Dates
+                  Campaign Details
                 </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-slate-500 mb-1 block">Start Date</label>
-                    <input
-                      type="date"
-                      value={selectedDates.start}
-                      onChange={(e) => setSelectedDates({...selectedDates, start: e.target.value})}
-                      min={new Date().toISOString().split('T')[0]}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-500 mb-1 block">End Date</label>
-                    <input
-                      type="date"
-                      value={selectedDates.end}
-                      onChange={(e) => setSelectedDates({...selectedDates, end: e.target.value})}
-                      min={selectedDates.start || new Date().toISOString().split('T')[0]}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-                <p className="text-xs text-slate-500 mt-2">
-                  Campaign Duration: <span className="font-medium text-slate-700">{duration} days</span> (Minimum: 7 days)
-                </p>
-              </div>
 
-              {/* Key Features */}
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold text-slate-900 mb-3">Key Features</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { icon: Building2, text: formatDimensions(selectedSpace.dimensions) },
-                    { icon: Clock, text: '24/7 Display Time' },
-                    { icon: Shield, text: 'Weather Resistant' },
-                    { icon: CheckCircle, text: 'Professional Installation' }
-                  ].map((feature, index) => (
-                    <div key={index} className="flex items-center gap-2 text-sm">
-                      <feature.icon className="w-4 h-4 text-green-500 flex-shrink-0" />
-                      <span className="text-slate-600">{feature.text}</span>
+                {/* Features and Calendar Container */}
+                <div className="flex gap-4">
+                  {/* Features Section - Left 50% */}
+                  <div className="w-1/2">
+                    <h4 className="text-sm font-medium text-slate-900 mb-3">Features</h4>
+                    <div className="space-y-3">
+                      {/* Ad Size */}
+                      <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <Maximize2 className="w-3 h-3 text-slate-500" />
+                          <span className="text-xs text-slate-600">Ad Size</span>
+                        </div>
+                        <span className="text-xs font-medium text-slate-900">
+                          {selectedSpace?.dimensions ? 
+                            (typeof selectedSpace.dimensions === 'object' ? 
+                              `${selectedSpace.dimensions.width || 24}" × ${selectedSpace.dimensions.height || 36}"` : 
+                              selectedSpace.dimensions
+                            ) : 
+                            '24" × 36"'
+                          }
+                        </span>
+                      </div>
+
+                      {/* Material Type */}
+                      <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <Shield className="w-3 h-3 text-slate-500" />
+                          <span className="text-xs text-slate-600">Material</span>
+                        </div>
+                        <span className="text-xs font-medium text-slate-900">
+                          {selectedSpace?.material || 'Vinyl Banner'}
+                        </span>
+                      </div>
+
+                      {/* Daily Price */}
+                      <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="w-3 h-3 text-slate-500" />
+                          <span className="text-xs text-slate-600">Daily Rate</span>
+                        </div>
+                        <span className="text-xs font-medium text-slate-900">
+                          ${dailyPrice}/day
+                        </span>
+                      </div>
+
+                      {/* Price Breakdown */}
+                      {duration > 0 && (
+                        <div className="mt-3 pt-2 border-t border-slate-200">
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-slate-600">Campaign ({duration} days)</span>
+                              <span className="text-xs text-slate-900">${totalPrice.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-slate-600">
+                                {selectedDates.start && selectedDates.end && 
+                                  `${selectedDates.start.toLocaleDateString()} - ${selectedDates.end.toLocaleDateString()}`
+                                }
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-slate-600">Platform Fee (10%)</span>
+                              <span className="text-xs text-slate-900">${platformFee.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between font-medium pt-1 border-t border-slate-100">
+                              <span className="text-xs text-slate-900">Total</span>
+                              <span className="text-xs text-slate-900">${grandTotal.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Property Owner Card */}
-              {owner && (
-                <div className="mb-6 bg-slate-50 rounded-lg p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Building2 className="w-5 h-5" style={{ color: '#4668AB' }} />
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900">{owner.name}</p>
-                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
-                          <Timer className="w-3 h-3" />
-                          Typically responds in {owner.responseTime}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleMessageOwner}
-                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      Contact
-                    </button>
                   </div>
-                </div>
-              )}
 
-              {/* Collapsible Sections */}
-              <div className="space-y-3">
-                {/* Analytics Link */}
-                <button
-                  onClick={() => setExpandedSection(expandedSection === 'analytics' ? '' : 'analytics')}
-                  className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4" style={{ color: '#4668AB' }} />
-                    <span className="text-sm font-medium text-slate-700">View Analytics & Demographics</span>
-                  </div>
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${
-                    expandedSection === 'analytics' ? 'rotate-180' : ''
-                  }`} />
-                </button>
-                
-                {/* Analytics Content */}
-                <AnimatePresence>
-                  {expandedSection === 'analytics' && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="p-4 bg-white border border-slate-200 rounded-lg">
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-3 gap-3 text-center">
-                            <div className="bg-slate-50 rounded-lg p-3">
-                              <p className="text-lg font-bold text-slate-900">35K</p>
-                              <p className="text-xs text-slate-500">Weekly Views</p>
-                            </div>
-                            <div className="bg-slate-50 rounded-lg p-3">
-                              <p className="text-lg font-bold text-slate-900">2.3%</p>
-                              <p className="text-xs text-slate-500">CTR</p>
-                            </div>
-                            <div className="bg-slate-50 rounded-lg p-3">
-                              <p className="text-lg font-bold text-slate-900">A+</p>
-                              <p className="text-xs text-slate-500">Location Score</p>
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <p className="text-xs font-medium text-slate-700 mb-2">Top Audience Demographics</p>
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-600">Age 25-34</span>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-24 bg-slate-200 rounded-full h-1.5">
-                                    <div className="h-1.5 rounded-full" style={{ width: '35%', backgroundColor: '#4668AB' }} />
-                                  </div>
-                                  <span className="font-medium">35%</span>
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-600">Age 35-44</span>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-24 bg-slate-200 rounded-full h-1.5">
-                                    <div className="h-1.5 rounded-full" style={{ width: '28%', backgroundColor: '#4668AB' }} />
-                                  </div>
-                                  <span className="font-medium">28%</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Pricing Details Link */}
-                <button
-                  onClick={() => setExpandedSection(expandedSection === 'pricing' ? '' : 'pricing')}
-                  className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <Calculator className="w-4 h-4" style={{ color: '#4668AB' }} />
-                    <span className="text-sm font-medium text-slate-700">View Pricing Breakdown</span>
-                  </div>
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${
-                    expandedSection === 'pricing' ? 'rotate-180' : ''
-                  }`} />
-                </button>
-                
-                {/* Pricing Content */}
-                <AnimatePresence>
-                  {expandedSection === 'pricing' && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="p-4 bg-white border border-slate-200 rounded-lg">
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center py-2 border-b border-slate-100">
-                            <span className="text-sm text-slate-600">Daily Rate</span>
-                            <span className="text-sm font-medium text-slate-900">${dailyPrice.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between items-center py-2 border-b border-slate-100">
-                            <span className="text-sm text-slate-600">Duration</span>
-                            <span className="text-sm font-medium text-slate-900">{duration} days</span>
-                          </div>
-                          <div className="flex justify-between items-center py-2 border-b border-slate-100">
-                            <span className="text-sm text-slate-600">Subtotal</span>
-                            <span className="text-sm font-medium text-slate-900">${totalPrice.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between items-center py-2">
-                            <span className="text-sm text-slate-600">Platform Fee (10%)</span>
-                            <span className="text-sm font-medium text-slate-900">${platformFee.toFixed(2)}</span>
-                          </div>
-                        </div>
-                        
-                        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                          <p className="text-xs text-amber-800">
-                            💡 <span className="font-medium">Pro tip:</span> Book 60+ days for a 15% discount
-                          </p>
-                        </div>
-                        
+                  {/* Calendar Section - Right 50% */}
+                  <div className="w-1/2">
+                    <h4 className="text-sm font-medium text-slate-900 mb-3">Select Dates</h4>
+                    
+                    {/* Compact Mini Calendar */}
+                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                      {/* Calendar Header - Compact */}
+                      <div className="bg-slate-50 px-3 py-2 flex items-center justify-between">
                         <button
-                          onClick={() => setShowROICalculator(true)}
-                          className="w-full mt-3 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                          onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                          className="p-1 hover:bg-slate-200 rounded"
                         >
-                          Calculate ROI for this space →
+                          <ChevronLeft className="w-3 h-3" />
+                        </button>
+                        <h4 className="text-sm font-medium text-slate-900">
+                          {currentMonth.toLocaleString('default', { month: 'short', year: 'numeric' })}
+                        </h4>
+                        <button
+                          onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                          className="p-1 hover:bg-slate-200 rounded"
+                        >
+                          <ChevronRight className="w-3 h-3" />
                         </button>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+
+                      {/* Days of Week - Compact */}
+                      <div className="grid grid-cols-7 border-b border-slate-200">
+                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                          <div key={day} className="p-1 text-center text-xs font-medium text-slate-500 bg-slate-50">
+                            {day}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Calendar Days - Compact */}
+                      <div className="grid grid-cols-7">
+                        {getDaysInMonth(currentMonth).map((date, index) => {
+                          if (!date) {
+                            return <div key={index} className="p-1 h-6" />;
+                          }
+
+                          const isBooked = isDateBooked(date);
+                          const isSelected = isDateSelected(date);
+                          const isPast = date < new Date().setHours(0, 0, 0, 0);
+                          const isDisabled = isBooked || isPast;
+
+                          return (
+                            <button
+                              key={date.toISOString()}
+                              onClick={() => handleDateClick(date)}
+                              disabled={isDisabled}
+                              className={`
+                                p-1 h-6 text-xs border-r border-b border-slate-100 transition-colors flex items-center justify-center
+                                ${isSelected 
+                                  ? 'bg-blue-500 text-white font-medium' 
+                                  : isDisabled
+                                  ? 'text-slate-300 cursor-not-allowed bg-slate-50'
+                                  : 'hover:bg-slate-50 text-slate-700'
+                                }
+                                ${isBooked ? 'bg-red-50 text-red-400' : ''}
+                              `}
+                            >
+                              {date.getDate()}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Legend - Compact */}
+                    <div className="flex gap-3 mt-2 text-xs">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-blue-500 rounded-sm"></div>
+                        <span className="text-slate-600">Selected</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-red-100 border border-red-200 rounded-sm"></div>
+                        <span className="text-slate-600">Booked</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-slate-100 border border-slate-200 rounded-sm"></div>
+                        <span className="text-slate-600">Past</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              
             </div>
 
             {/* Footer Actions - Sticky */}
@@ -620,9 +625,11 @@ export default function SpaceDetailsModal({
                 <div>
                   <p className="text-xs text-slate-500">Total Price</p>
                   <p className="text-2xl font-bold" style={{ color: '#4668AB' }}>
-                    ${grandTotal.toFixed(2)}
+                    {duration > 0 ? `$${grandTotal.toFixed(2)}` : '$0.00'}
                   </p>
-                  <p className="text-xs text-slate-500">{duration} days campaign</p>
+                  <p className="text-xs text-slate-500">
+                    {duration > 0 ? `${duration} days campaign` : 'Select dates to see price'}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-green-600 font-medium">✓ Available Now</p>
@@ -645,7 +652,8 @@ export default function SpaceDetailsModal({
                   <Button
                     variant="outline"
                     onClick={handleAddToCart}
-                    className="flex-1 flex items-center justify-center gap-2 hover:bg-slate-50"
+                    disabled={!selectedDates.start || !selectedDates.end}
+                    className="flex-1 flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
                   >
                     <ShoppingCart className="w-4 h-4" />
                     Add to Cart
@@ -667,7 +675,8 @@ export default function SpaceDetailsModal({
                 
                 <Button
                   onClick={handleBookNow}
-                  className="flex-1 flex items-center justify-center gap-2"
+                  disabled={!selectedDates.start || !selectedDates.end}
+                  className="flex-1 flex items-center justify-center gap-2 disabled:opacity-50"
                   style={{ 
                     backgroundColor: '#4668AB',
                     color: 'white'
@@ -683,6 +692,64 @@ export default function SpaceDetailsModal({
           </div>
         </motion.div>
 
+        {/* Visibility Info Modal */}
+        {showVisibilityInfo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-60 flex items-center justify-center p-4"
+            onClick={() => setShowVisibilityInfo(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <Eye className="w-6 h-6" style={{ color: '#4668AB' }} />
+                <h3 className="text-lg font-semibold text-slate-900">
+                  How We Measure Visibility Scores
+                </h3>
+              </div>
+
+              <div className="space-y-3 text-sm text-slate-600">
+                <div className="flex items-center gap-3">
+                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-600">Excellent</span>
+                  <span>10,000+ daily impressions</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-600">Great</span>
+                  <span>7,500+ daily impressions</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-600">Good</span>
+                  <span>5,000+ daily impressions</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600">OK</span>
+                  <span>Under 5,000 daily impressions</span>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-500 mt-4 p-3 bg-slate-50 rounded-lg">
+                Visibility scores are based on foot traffic data, location prominence, and historical performance metrics.
+              </p>
+
+              <div className="flex justify-end mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowVisibilityInfo(false)}
+                >
+                  Got it
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
         {/* Message Composition Modal */}
         {showMessageModal && (
           <motion.div
@@ -690,7 +757,7 @@ export default function SpaceDetailsModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-60 flex items-center justify-center p-4"
-            style={{ top: NAVBAR_HEIGHT }} // Account for navbar height
+            style={{ top: NAVBAR_HEIGHT }}
             onClick={() => setShowMessageModal(false)}
           >
             <motion.div

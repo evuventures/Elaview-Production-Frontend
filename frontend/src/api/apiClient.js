@@ -1631,6 +1631,51 @@ class ApiClient {
       };
     }
   }
+
+  // ✅ NEW: Specific notification count methods for Layout component
+  async getCampaignNotificationCount() {
+    console.log('📊 Getting campaign notification count');
+    try {
+      const response = await this.get('/notifications/count?type=campaign');
+      return { count: response.count || 0 };
+    } catch (error) {
+      console.error('❌ Campaign notification count error:', error);
+      return { count: 0 };
+    }
+  }
+
+  async getBookingNotificationCount() {
+    console.log('📅 Getting booking notification count');
+    try {
+      const response = await this.get('/notifications/count?type=booking');
+      return { count: response.count || 0 };
+    } catch (error) {
+      console.error('❌ Booking notification count error:', error);
+      return { count: 0 };
+    }
+  }
+
+  async getSpaceNotificationCount() {
+    console.log('🏢 Getting space notification count');
+    try {
+      const response = await this.get('/notifications/count?type=space');
+      return { count: response.count || 0 };
+    } catch (error) {
+      console.error('❌ Space notification count error:', error);
+      return { count: 0 };
+    }
+  }
+
+  async getInvoiceNotificationCount() {
+    console.log('💰 Getting invoice notification count');
+    try {
+      const response = await this.get('/notifications/count?type=invoice');
+      return { count: response.count || 0 };
+    } catch (error) {
+      console.error('❌ Invoice notification count error:', error);
+      return { count: 0 };
+    }
+  }
 }
 
 // ✅ CRITICAL: Export the instance as default

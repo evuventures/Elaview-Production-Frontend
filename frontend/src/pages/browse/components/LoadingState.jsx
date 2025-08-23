@@ -2,7 +2,7 @@
 // ✅ UPDATED: Now uses VideoLoader component
 import React from 'react';
 import { motion } from 'framer-motion';
-import VideoLoader from '@/components/ui/VideoLoader';
+import { LoadingAnimation } from '@/components/ui/LoadingAnimation';
 
 export default function LoadingState() {
   const loadingMessages = [
@@ -31,10 +31,11 @@ export default function LoadingState() {
       <div className="text-center">
         {/* ✅ REPLACED: Enhanced Loading Animation with VideoLoader */}
         <div className="relative mb-6">
-          <VideoLoader 
+          <LoadingAnimation 
             size="lg"
-            theme="brand"
-            centered={true}
+            variant="spinner"
+            color="primary"
+            centered={false}
             className="mx-auto"
           />
           

@@ -1,4 +1,4 @@
-// src/pages/Pages.tsx - UPDATED with Home component as default "/" route
+// src/pages/Pages.tsx - UPDATED with AI Builder test route and admin access
 import Layout from "../components/layout/Layout.tsx";
 import Landing from "./landing/LandingPage.jsx";
 import CheckoutPage from "./checkout/CheckoutPage.jsx";
@@ -42,6 +42,9 @@ import CampaignSelection from "./TEMPUserJourney/CampaignSelection.tsx";
 // ✅ EXISTING: Campaign Flow Imports
 import AdvertiserConfirmationPage from "./TEMPUserJourney/AdvertiserConfirmationPage.tsx";
 import SpaceOwnerConfirmationPage from "./TEMPUserJourney/SpaceOwnerConfirmationPage.tsx";
+
+// ✅ NEW: AI Builder Test Import
+import AIBuilderFlow from "../components/test/AIBuilderFlow.jsx"; // You'll need to move the artifact here
 
 // Admin page imports
 import UserManagement from "./admin/UserManagement.tsx";
@@ -99,6 +102,8 @@ const PAGES = {
     MobileDashboard: MobileDashboard,
     MobileSpaces: MobileSpaces,
     MobileBookings: MobileBookings,
+    // ✅ NEW: AI Builder Test
+    AIBuilderTest: AIBuilderFlow,
 }
 
 function BookingToCheckoutRedirect() {
@@ -156,6 +161,15 @@ function PagesContent() {
             } />
             
             <Route path="/debug-signup" element={<DebugSignUpPage />} />
+            
+            {/* ✅ NEW: AI BUILDER TEST ROUTES - ADMIN ONLY */}
+            <Route path="/test/aibuilder" element={
+                <ProtectedRoute requireAdmin={true} allowedRoles={[]} redirectTo="/sign-in" skipOnboardingCheck={true} key="ai-builder-test-protected">
+                    <Layout currentPageName="AI Builder Test" key="ai-builder-test-page">
+                        <AIBuilderFlow key="ai-builder-test-component" />
+                    </Layout>
+                </ProtectedRoute>
+            } />
             
             {/* ✅ AUTH ROUTES - NO LAYOUT */}
             <Route path="/sign-in/*" element={<SignInPage />} />

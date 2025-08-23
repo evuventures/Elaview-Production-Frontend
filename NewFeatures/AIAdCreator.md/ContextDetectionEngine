@@ -1,0 +1,307 @@
+class ContextDetectionEngine {
+  constructor() {
+    this.contextPatterns = {
+      // Physical placement keywords
+      physical: {
+        storefront: ['window', 'storefront', 'shop window', 'front window', 'display window'],
+        outdoor: ['billboard', 'bus stop', 'park bench', 'street', 'highway', 'roadside'],
+        indoor: ['lobby', 'waiting room', 'checkout', 'counter', 'inside', 'interior'],
+        vehicle: ['car wrap', 'truck', 'delivery vehicle', 'van wrap', 'vehicle'],
+        signage: ['sign', 'poster', 'banner', 'flyer', 'brochure', 'print']
+      },
+      
+      // Digital placement keywords
+      digital: {
+        social: ['instagram', 'facebook', 'tiktok', 'twitter', 'linkedin', 'snapchat', 'social media'],
+        web: ['website', 'banner ad', 'popup', 'sidebar', 'header', 'footer', 'landing page'],
+        mobile: ['app', 'mobile', 'smartphone', 'push notification'],
+        email: ['email', 'newsletter', 'mailchimp', 'email campaign'],
+        video: ['youtube', 'video ad', 'pre-roll', 'streaming']
+      },
+      
+      // Context clues for viewing behavior
+      behavior: {
+        quick_glance: ['walking by', 'driving by', 'passing', 'glance', 'quick look'],
+        browsing: ['browsing', 'scrolling', 'feed', 'timeline', 'exploring'],
+        waiting: ['waiting room', 'checkout line', 'lobby', 'queue', 'break room'],
+        focused: ['reading', 'studying', 'newsletter', 'email', 'article']
+      },
+      
+      // Size and distance indicators
+      scale: {
+        large: ['billboard', 'building', 'wall', 'huge', 'massive', 'highway'],
+        medium: ['poster', 'kiosk', 'display', 'screen'],
+        small: ['flyer', 'card', 'handout', 'mobile', 'phone']
+      }
+    };
+    
+    this.geminiAPI = new GeminiAPI();
+  }
+
+  async detectContext(userInput) {
+    // Step 1: Keyword-based detection
+    const keywordContext = this.analyzeKeywords(userInput);
+    
+    // Step 2: AI-enhanced analysis
+    const aiContext = await this.analyzeWithAI(userInput);
+    
+    // Step 3: Combine and validate
+    const finalContext = this.mergeContexts(keywordContext, aiContext);
+    
+    return this.enrichContext(finalContext);
+  }
+
+  analyzeKeywords(input) {
+    const inputLower = input.toLowerCase();
+    const detectedContext = {
+      placement_type: null,
+      specific_location: null,
+      viewing_behavior: null,
+      scale: null,
+      confidence: 0
+    };
+
+    // Check for placement type
+    for (const [category, subcategories] of Object.entries(this.contextPatterns.physical)) {
+      for (const keyword of subcategories) {
+        if (inputLower.includes(keyword)) {
+          detectedContext.placement_type = 'physical';
+          detectedContext.specific_location = category;
+          detectedContext.confidence += 0.3;
+          break;
+        }
+      }
+    }
+
+    for (const [category, subcategories] of Object.entries(this.contextPatterns.digital)) {
+      for (const keyword of subcategories) {
+        if (inputLower.includes(keyword)) {
+          detectedContext.placement_type = 'digital';
+          detectedContext.specific_location = category;
+          detectedContext.confidence += 0.3;
+          break;
+        }
+      }
+    }
+
+    // Check for viewing behavior
+    for (const [behavior, keywords] of Object.entries(this.contextPatterns.behavior)) {
+      for (const keyword of keywords) {
+        if (inputLower.includes(keyword)) {
+          detectedContext.viewing_behavior = behavior;
+          detectedContext.confidence += 0.2;
+          break;
+        }
+      }
+    }
+
+    // Check for scale indicators
+    for (const [scale, keywords] of Object.entries(this.contextPatterns.scale)) {
+      for (const keyword of keywords) {
+        if (inputLower.includes(keyword)) {
+          detectedContext.scale = scale;
+          detectedContext.confidence += 0.2;
+          break;
+        }
+      }
+    }
+
+    return detectedContext;
+  }
+
+  async analyzeWithAI(userInput) {
+    const prompt = `
+      Analyze this advertising request for placement context:
+      "${userInput}"
+      
+      Determine and respond in JSON format:
+      {
+        "placement_type": "physical|digital|hybrid",
+        "specific_location": "detailed location type",
+        "viewing_distance": "close|medium|far",
+        "viewing_duration": "glance|scan|study|extended",
+        "audience_state": "rushing|walking|browsing|waiting|focused",
+        "environmental_factors": {
+          "lighting": "indoor|outdoor|mixed",
+          "noise_level": "quiet|moderate|loud",
+          "distractions": "minimal|moderate|high"
+        },
+        "size_requirements": "small|medium|large|extra_large",
+        "interaction_type": "passive_viewing|click_through|physical_action|none",
+        "confidence_score": 0.0-1.0
+      }
+      
+      If information is unclear, use "unknown" and lower confidence score.
+    `;
+
+    try {
+      const response = await this.geminiAPI.generateContent(prompt);
+      return JSON.parse(response.text);
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+      return { confidence_score: 0 };
+    }
+  }
+
+  mergeContexts(keywordContext, aiContext) {
+    // Combine keyword detection with AI analysis
+    const merged = {
+      placement_type: aiContext.placement_type || keywordContext.placement_type,
+      specific_location: aiContext.specific_location || keywordContext.specific_location,
+      viewing_distance: aiContext.viewing_distance,
+      viewing_duration: aiContext.viewing_duration || keywordContext.viewing_behavior,
+      audience_state: aiContext.audience_state,
+      environmental_factors: aiContext.environmental_factors || {},
+      size_requirements: aiContext.size_requirements || keywordContext.scale,
+      interaction_type: aiContext.interaction_type,
+      confidence: Math.max(keywordContext.confidence, aiContext.confidence_score || 0)
+    };
+
+    return merged;
+  }
+
+  enrichContext(baseContext) {
+    // Add design constraints and recommendations based on detected context
+    const enriched = {
+      ...baseContext,
+      design_constraints: this.getDesignConstraints(baseContext),
+      optimization_priorities: this.getOptimizationPriorities(baseContext),
+      success_metrics: this.getSuccessMetrics(baseContext),
+      clarifying_questions: this.generateClarifyingQuestions(baseContext)
+    };
+
+    return enriched;
+  }
+
+  getDesignConstraints(context) {
+    const constraints = {
+      text_size: 'medium',
+      color_contrast: 'medium',
+      information_density: 'medium',
+      font_choices: 'standard',
+      image_complexity: 'medium'
+    };
+
+    // Adjust based on viewing distance
+    switch (context.viewing_distance) {
+      case 'far':
+        constraints.text_size = 'extra_large';
+        constraints.color_contrast = 'high';
+        constraints.information_density = 'minimal';
+        constraints.font_choices = 'bold_sans_serif';
+        constraints.image_complexity = 'simple';
+        break;
+      case 'close':
+        constraints.text_size = 'small_to_medium';
+        constraints.information_density = 'detailed';
+        constraints.font_choices = 'varied';
+        constraints.image_complexity = 'detailed';
+        break;
+    }
+
+    // Adjust based on viewing duration
+    switch (context.viewing_duration) {
+      case 'glance':
+        constraints.information_density = 'minimal';
+        constraints.message_hierarchy = 'single_focus';
+        break;
+      case 'study':
+        constraints.information_density = 'detailed';
+        constraints.message_hierarchy = 'multi_layered';
+        break;
+    }
+
+    // Adjust based on environment
+    if (context.environmental_factors?.lighting === 'outdoor') {
+      constraints.color_contrast = 'high';
+      constraints.glare_resistance = 'required';
+    }
+
+    return constraints;
+  }
+
+  getOptimizationPriorities(context) {
+    const priorities = [];
+
+    if (context.viewing_duration === 'glance') {
+      priorities.push('immediate_impact', 'single_message', 'bold_visuals');
+    }
+
+    if (context.viewing_distance === 'far') {
+      priorities.push('readability', 'simple_graphics', 'high_contrast');
+    }
+
+    if (context.interaction_type === 'click_through') {
+      priorities.push('clear_cta', 'compelling_offer', 'trust_signals');
+    }
+
+    if (context.audience_state === 'rushing') {
+      priorities.push('instant_recognition', 'minimal_text', 'obvious_benefit');
+    }
+
+    return priorities;
+  }
+
+  getSuccessMetrics(context) {
+    const metrics = [];
+
+    switch (context.placement_type) {
+      case 'physical':
+        metrics.push('foot_traffic_increase', 'brand_recall', 'store_visits');
+        break;
+      case 'digital':
+        metrics.push('click_through_rate', 'engagement_rate', 'conversions');
+        break;
+    }
+
+    if (context.viewing_duration === 'glance') {
+      metrics.push('brand_recognition_speed');
+    }
+
+    return metrics;
+  }
+
+  generateClarifyingQuestions(context) {
+    const questions = [];
+
+    if (context.confidence < 0.7) {
+      questions.push("Where exactly will people see this ad?");
+    }
+
+    if (!context.viewing_distance) {
+      questions.push("How far away will people be when they see it?");
+    }
+
+    if (!context.audience_state) {
+      questions.push("What will people be doing when they encounter this ad?");
+    }
+
+    if (context.placement_type === 'physical' && !context.environmental_factors?.lighting) {
+      questions.push("Will this be displayed indoors or outdoors?");
+    }
+
+    if (!context.interaction_type) {
+      questions.push("What action do you want people to take after seeing this?");
+    }
+
+    return questions;
+  }
+}
+
+// Usage example
+const contextEngine = new ContextDetectionEngine();
+
+// Example usage
+async function processAdRequest(userInput) {
+  const context = await contextEngine.detectContext(userInput);
+  
+  console.log('Detected Context:', context);
+  
+  if (context.confidence < 0.7) {
+    console.log('Need clarification:', context.clarifying_questions);
+  }
+  
+  return context;
+}
+
+export default ContextDetectionEngine;

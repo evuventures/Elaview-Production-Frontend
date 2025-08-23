@@ -8,6 +8,7 @@ import {
   Bell, UserCircle, ChevronDown, Settings, LogOut, 
   Shield, HelpCircle, Building2, MapPin
 } from 'lucide-react';
+import { InlineLoader } from '@/components/ui/LoadingAnimation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
@@ -326,11 +327,7 @@ const MobileTopBar = ({
                       <div className="max-h-60 overflow-y-auto">
                         {isLoadingNotifications ? (
                           <div className="p-6 text-center">
-                            <div 
-                              className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-2"
-                              style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
-                            ></div>
-                            <p className="text-sm text-slate-500">Loading notifications...</p>
+                            <InlineLoader message="Loading notifications..." />
                           </div>
                         ) : notifications.length === 0 ? (
                           <div className="p-6 text-center text-slate-500">

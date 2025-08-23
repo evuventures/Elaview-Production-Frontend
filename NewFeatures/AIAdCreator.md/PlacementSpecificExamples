@@ -1,0 +1,359 @@
+class PlacementSpecificExamples {
+  constructor() {
+    this.placementStrategies = {
+      storefront_window: {
+        design_rules: {
+          text_size: "readable_from_10_feet",
+          font_weight: "bold_or_black",
+          color_contrast: "high_for_daylight",
+          information_hierarchy: ["business_name", "main_offer", "hours", "contact"],
+          layout: "center_vertical_stack",
+          background: "solid_color_or_minimal_pattern"
+        },
+        content_strategy: {
+          headline: "What's the ONE thing that makes people stop?",
+          offer: "Clear, immediate benefit",
+          call_to_action: "Come inside / Call now / Visit today",
+          essential_info: ["Hours", "Phone", "Key service/product"]
+        },
+        success_factors: [
+          "Visible from across the street",
+          "Readable while walking by",
+          "Stands out from neighboring stores",
+          "Weather resistant materials"
+        ],
+        common_mistakes: [
+          "Too much information",
+          "Text too small",
+          "Poor contrast",
+          "Complex graphics"
+        ]
+      },
+
+      highway_billboard: {
+        design_rules: {
+          text_size: "massive_bold",
+          word_count: "maximum_6_words",
+          font_weight: "extra_bold",
+          color_contrast: "extreme_high",
+          layout: "horizontal_emphasis",
+          imagery: "simple_recognizable_silhouettes"
+        },
+        content_strategy: {
+          headline: "Brand name + one benefit",
+          offer: "Simple, memorable phrase",
+          call_to_action: "Next exit / Remember us / Visit location",
+          essential_info: ["Exit number", "Brand logo", "One key message"]
+        },
+        success_factors: [
+          "3-second readability rule",
+          "High contrast in all weather",
+          "Simple, bold imagery",
+          "Clear directional information"
+        ],
+        viewing_context: {
+          speed: "55-75_mph",
+          distance: "500-1000_feet",
+          attention: "divided_driving",
+          duration: "2-4_seconds"
+        }
+      },
+
+      instagram_story: {
+        design_rules: {
+          aspect_ratio: "9:16",
+          safe_zones: "avoid_top_bottom_UI",
+          text_size: "mobile_optimized",
+          animation: "subtle_engaging",
+          branding: "consistent_but_not_overwhelming"
+        },
+        content_strategy: {
+          hook: "Stop-scroll pattern interrupt",
+          content: "Visual storytelling",
+          call_to_action: "Swipe up / DM / Link in bio",
+          engagement: "Question, poll, or interactive element"
+        },
+        success_factors: [
+          "First 0.5 seconds crucial",
+          "Thumb-stopping visual",
+          "Clear value proposition",
+          "Easy interaction"
+        ],
+        platform_specific: {
+          optimal_duration: "3-7_seconds",
+          trending_features: ["polls", "questions", "product_tags"],
+          best_posting_times: "lunch_and_evening_hours"
+        }
+      },
+
+      mall_kiosk: {
+        design_rules: {
+          viewing_angles: "readable_from_multiple_directions",
+          information_density: "medium_detailed",
+          interactive_elements: "large_touch_targets",
+          family_friendly: "appropriate_all_ages",
+          wayfinding: "include_location_context"
+        },
+        content_strategy: {
+          headline: "Clear category identification",
+          benefits: "Multiple value propositions",
+          call_to_action: "Visit store / Get directions / Learn more",
+          location_info: ["Store location", "Map", "Hours"]
+        },
+        success_factors: [
+          "Easy to spot while walking",
+          "Clear store category",
+          "Helpful location information",
+          "Appeal to diverse audience"
+        ],
+        audience_behavior: {
+          typical_state: "leisure_shopping",
+          time_available: "moderate_browsing",
+          decision_mode: "exploring_options"
+        }
+      },
+
+      email_newsletter: {
+        design_rules: {
+          mobile_first: "majority_mobile_readers",
+          scannable: "clear_hierarchy",
+          load_speed: "optimized_images",
+          accessibility: "alt_text_and_contrast"
+        },
+        content_strategy: {
+          subject_line: "curiosity_or_value_driven",
+          preview_text: "complement_subject_line",
+          content_structure: ["hook", "value", "call_to_action"],
+          personalization: "relevant_to_recipient"
+        },
+        success_factors: [
+          "Strong subject line",
+          "Mobile-optimized design",
+          "Clear single focus",
+          "Valuable content"
+        ],
+        engagement_metrics: {
+          open_rate: "subject_line_effectiveness",
+          click_rate: "content_relevance",
+          conversion_rate: "offer_strength"
+        }
+      },
+
+      checkout_counter: {
+        design_rules: {
+          size: "compact_but_visible",
+          information: "impulse_purchase_focused",
+          placement: "eye_level_while_waiting",
+          durability: "handles_frequent_touching"
+        },
+        content_strategy: {
+          headline: "Limited time or exclusive offer",
+          urgency: "Act now messaging",
+          simplicity: "Easy decision making",
+          trust: "Social proof or guarantee"
+        },
+        psychological_factors: [
+          "Impulse purchase mindset",
+          "Waiting time utilization",
+          "Add-on sales opportunity",
+          "Last chance messaging"
+        ],
+        success_factors: [
+          "Catches attention while waiting",
+          "Simple decision process",
+          "Clear value proposition",
+          "Easy to act on immediately"
+        ]
+      },
+
+      youtube_pre_roll: {
+        design_rules: {
+          hook_timing: "first_5_seconds_crucial",
+          skip_consideration: "assume_will_skip_after_5s",
+          audio_optional: "works_without_sound",
+          mobile_optimization: "small_screen_friendly"
+        },
+        content_strategy: {
+          opening: "immediate_value_or_intrigue",
+          pacing: "fast_engaging_rhythm",
+          call_to_action: "clear_next_step",
+          brand_placement: "early_and_memorable"
+        },
+        success_factors: [
+          "Compelling first 5 seconds",
+          "Clear value proposition",
+          "Strong visual storytelling",
+          "Memorable brand moment"
+        ],
+        timing_strategy: {
+          "0-5s": "Hook and brand introduction",
+          "5-15s": "Value proposition and proof",
+          "15-30s": "Call to action and reinforcement"
+        }
+      }
+    };
+  }
+
+  getPlacementStrategy(placementType) {
+    return this.placementStrategies[placementType] || null;
+  }
+
+  generateContextualRecommendations(context, userGoals) {
+    const placement = this.getPlacementStrategy(context.specific_location);
+    if (!placement) return null;
+
+    return {
+      design_approach: this.adaptDesignForContext(placement, context),
+      content_recommendations: this.adaptContentForContext(placement, userGoals),
+      optimization_tips: placement.success_factors,
+      common_pitfalls: placement.common_mistakes || [],
+      success_metrics: this.getRelevantMetrics(placement, context)
+    };
+  }
+
+  adaptDesignForContext(placement, context) {
+    const adaptations = { ...placement.design_rules };
+
+    // Adjust for environmental factors
+    if (context.environmental_factors?.lighting === 'outdoor') {
+      adaptations.color_contrast = 'extremely_high';
+      adaptations.glare_resistance = 'required';
+    }
+
+    // Adjust for audience state
+    if (context.audience_state === 'rushing') {
+      adaptations.information_density = 'minimal';
+      adaptations.message_clarity = 'instant_recognition';
+    }
+
+    return adaptations;
+  }
+
+  adaptContentForContext(placement, userGoals) {
+    const content = { ...placement.content_strategy };
+
+    // Customize based on business goals
+    if (userGoals.includes('brand_awareness')) {
+      content.focus = 'memorable_brand_experience';
+    } else if (userGoals.includes('immediate_sales')) {
+      content.focus = 'clear_offer_and_urgency';
+    }
+
+    return content;
+  }
+
+  getRelevantMetrics(placement, context) {
+    const baseMetrics = placement.engagement_metrics || {};
+    const contextMetrics = [];
+
+    if (context.placement_type === 'physical') {
+      contextMetrics.push('foot_traffic', 'dwell_time', 'recall_rate');
+    } else if (context.placement_type === 'digital') {
+      contextMetrics.push('impressions', 'click_rate', 'conversion_rate');
+    }
+
+    return { ...baseMetrics, additional_metrics: contextMetrics };
+  }
+
+  // Example conversation flows for different contexts
+  generateConversationFlow(context) {
+    const flows = {
+      storefront_window: {
+        discovery: [
+          "What's the main thing you want people walking by to know about your business?",
+          "What makes someone choose you over the shop next door?",
+          "Do you have a current special offer or standout service?"
+        ],
+        optimization: [
+          "For window visibility, we need text readable from across the street",
+          "Let's focus on ONE key message - what's most important?",
+          "Your hours should be clearly visible - when are you open?"
+        ],
+        validation: [
+          "This design will grab attention from 20+ feet away",
+          "The hierarchy guides eyes: business name → offer → hours",
+          "High contrast ensures daylight readability"
+        ]
+      },
+
+      instagram_story: {
+        discovery: [
+          "What should make someone stop scrolling?",
+          "What action do you want them to take?",
+          "Who's your ideal customer on Instagram?"
+        ],
+        optimization: [
+          "Stories are viewed quickly - let's lead with your strongest visual",
+          "The first 0.5 seconds need to create pattern interrupt",
+          "Your CTA should be simple: swipe up, DM, or visit link in bio?"
+        ],
+        validation: [
+          "This hooks attention in the first frame",
+          "Clear value prop within 3 seconds",
+          "CTA is obvious and easy to act on"
+        ]
+      },
+
+      highway_billboard: {
+        discovery: [
+          "What should drivers remember about your business?",
+          "Which exit or location should they know about?",
+          "What's your simplest, strongest message?"
+        ],
+        optimization: [
+          "Drivers have 3 seconds max - let's use 5 words or less",
+          "We need massive, bold text readable at highway speeds",
+          "Simple graphics only - complex images blur at distance"
+        ],
+        validation: [
+          "Follows the 3-second rule perfectly",
+          "Text readable from 500+ feet away",
+          "Clear action: next exit, remember name, or visit location"
+        ]
+      }
+    };
+
+    return flows[context.specific_location] || flows.default;
+  }
+}
+
+// Example usage with real scenarios
+function demonstrateContextualAI() {
+  const examples = new PlacementSpecificExamples();
+
+  // Example 1: Coffee shop window ad
+  const windowContext = {
+    placement_type: 'physical',
+    specific_location: 'storefront_window',
+    viewing_distance: 'close',
+    audience_state: 'walking',
+    environmental_factors: { lighting: 'outdoor' }
+  };
+
+  const windowRecommendations = examples.generateContextualRecommendations(
+    windowContext, 
+    ['foot_traffic', 'brand_awareness']
+  );
+
+  console.log('Window Ad Strategy:', windowRecommendations);
+
+  // Example 2: Social media campaign
+  const socialContext = {
+    placement_type: 'digital',
+    specific_location: 'instagram_story',
+    viewing_duration: 'glance',
+    audience_state: 'browsing',
+    interaction_type: 'click_through'
+  };
+
+  const socialRecommendations = examples.generateContextualRecommendations(
+    socialContext,
+    ['engagement', 'conversions']
+  );
+
+  console.log('Social Media Strategy:', socialRecommendations);
+
+  return { windowRecommendations, socialRecommendations };
+}
+
+export default PlacementSpecificExamples;

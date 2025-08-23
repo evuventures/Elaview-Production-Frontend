@@ -17,7 +17,6 @@ import {
   DollarSign, 
   CreditCard,
   AlertCircle,
-  Loader2,
   Building2,
   Clock,
   ShoppingCart,
@@ -26,6 +25,7 @@ import {
   Trash2,
   Eye
 } from 'lucide-react';
+import { PageLoader, ButtonLoader } from '@/components/ui/LoadingAnimation';
 
 import BusinessDetailsModal from './components/BusinessDetailsModal';
 import apiClient from '../../api/apiClient';
@@ -326,16 +326,9 @@ function CheckoutPage() {
 
           <div className="max-w-6xl mx-auto">
             <Card className="p-4 sm:p-8">
-              <div className="flex flex-col items-center justify-center space-y-4">
-                <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" style={{ color: '#4668AB' }} />
-                <div className="text-center">
-                  <h3 className="text-base sm:text-lg font-semibold text-slate-900">Setting up your checkout...</h3>
-                  <p className="text-sm text-slate-600 mt-1">
-                    {profileLoading && "Loading your business profile..."}
-                    {!profileLoading && "Preparing your order..."}
-                  </p>
-                </div>
-              </div>
+              <PageLoader 
+                message={profileLoading ? "Loading your business profile..." : "Preparing your order..."}
+              />
             </Card>
           </div>
         </div>
@@ -628,7 +621,7 @@ function CheckoutForm({ cart, orderData, businessProfile, updateCartItemDuration
                 >
                   {isProcessing ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      <ButtonLoader size="sm" color="white" />
                       Processing Payment...
                     </>
                   ) : (

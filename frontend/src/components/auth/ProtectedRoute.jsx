@@ -8,6 +8,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import IntroModal from '@/pages/onboarding/IntroPage';
 import apiClient from '@/api/apiClient';
+import { PageLoader } from '@/components/ui/LoadingAnimation';
 
 const ProtectedRoute = ({ 
   children, 
@@ -188,11 +189,7 @@ const ProtectedRoute = ({
   // ✅ LOADING STATE: Clear loading conditions
   if (!isLoaded) {
     console.log('⏳ ProtectedRoute: Waiting for auth to load...');
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <PageLoader message="" centered />;
   }
   
   // ✅ AUTHENTICATION: Redirect if not signed in
@@ -204,14 +201,7 @@ const ProtectedRoute = ({
   // ✅ ONBOARDING CHECK: Show loading while checking
   if (!onboardingState.hasChecked && !skipOnboardingCheck) {
     console.log('⏳ ProtectedRoute: Checking onboarding status...');
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking your account...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader message="Checking your account..." centered />;
   }
   
   // ✅ INTRO MODAL: Show if onboarding needed
