@@ -200,6 +200,13 @@ export default function CreateCampaignWizard() {
 
     try {
       console.log('🚀 Creating campaign...');
+
+      // ✅ ADD THIS DEBUG LOGGING
+    console.log('🔍 DEBUG - Current Clerk User Info:');
+    console.log('  User ID:', window.Clerk?.user?.id);
+    console.log('  Session ID:', window.Clerk?.session?.id);
+    console.log('  User object:', window.Clerk?.user);
+    console.log('  Auth token preview:', (await window.Clerk?.session?.getToken())?.substring(0, 50) + '...');
       
       const campaignPayload = {
         name: campaignData.name,

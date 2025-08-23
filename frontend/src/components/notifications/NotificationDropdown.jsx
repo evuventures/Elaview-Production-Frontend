@@ -1,7 +1,6 @@
 // src/components/notifications/NotificationDropdown.jsx
-// ✅ UPDATED: Added campaign invitation support alongside existing booking notifications
-// ✅ COMPREHENSIVE: Handles both booking requests and campaign invitations
-// ✅ VERIFICATION: Console logs throughout for testing and debugging
+// ✅ DEBUG VERSION: Enhanced logging to identify campaign invitation issues
+// ✅ COMPREHENSIVE: Handles both booking requests and campaign invitations with debugging
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -16,15 +15,40 @@ import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import apiClient from '@/api/apiClient';
 
-// ✅ NEW: Campaign invitation notification component
+// ✅ DEBUG: Enhanced campaign invitation notification component
 const CampaignInvitationCard = ({ notification, onAction }) => {
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
 
-  console.log('🎯 Rendering campaign invitation notification:', notification);
+  console.log('🎯 CAMPAIGN INVITATION CARD: Rendering with notification:', {
+    id: notification.id,
+    type: notification.type,
+    title: notification.title,
+    message: notification.message,
+    data: notification.data,
+    created_at: notification.created_at,
+    full_notification: notification
+  });
 
   // Parse notification data - campaign invitations store data in the 'data' field
-  const campaignData = notification.data || {};
+  let campaignData = {};
+  
+  try {
+    // Handle different data formats
+    if (notification.data) {
+      if (typeof notification.data === 'string') {
+        campaignData = JSON.parse(notification.data);
+        console.log('🎯 PARSED DATA FROM STRING:', campaignData);
+      } else if (typeof notification.data === 'object') {
+        campaignData = notification.data;
+        console.log('🎯 USING DATA OBJECT:', campaignData);
+      }
+    }
+  } catch (error) {
+    console.error('❌ FAILED TO PARSE CAMPAIGN DATA:', error);
+    campaignData = {};
+  }
+
   const {
     campaign_id,
     space_id,
@@ -35,7 +59,15 @@ const CampaignInvitationCard = ({ notification, onAction }) => {
     action_url
   } = campaignData;
 
-  console.log('📋 Campaign notification data:', campaignData);
+  console.log('📋 CAMPAIGN NOTIFICATION PARSED DATA:', {
+    campaign_id,
+    space_id,
+    invitation_id,
+    advertiser_name,
+    space_name,
+    total_price,
+    action_url
+  });
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -52,7 +84,11 @@ const CampaignInvitationCard = ({ notification, onAction }) => {
     e.stopPropagation();
     try {
       setIsProcessing(true);
-      console.log('👁️ Viewing campaign invitation:', invitation_id);
+      console.log('👁️ VIEWING CAMPAIGN INVITATION:', {
+        invitation_id,
+        action_url,
+        notification_id: notification.id
+      });
       
       // Mark notification as read
       await apiClient.markNotificationAsRead(notification.id);
@@ -99,6 +135,15 @@ const CampaignInvitationCard = ({ notification, onAction }) => {
 
   return (
     <div className="p-4 border-l-4 border-l-blue-400 bg-blue-50 hover:bg-blue-100 transition-colors">
+      {/* DEBUG INFO */}
+      <div className="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+        <div><strong>DEBUG:</strong> Campaign Invitation Card</div>
+        <div><strong>Type:</strong> {notification.type}</div>
+        <div><strong>Invitation ID:</strong> {invitation_id || 'Missing'}</div>
+        <div><strong>Advertiser:</strong> {advertiser_name || 'Missing'}</div>
+        <div><strong>Space:</strong> {space_name || 'Missing'}</div>
+      </div>
+
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -116,12 +161,12 @@ const CampaignInvitationCard = ({ notification, onAction }) => {
       {/* Campaign Info */}
       <div className="mb-3">
         <p className="font-medium text-gray-900 text-sm mb-1">
-          <span className="text-blue-600">{advertiser_name}</span> is interested in booking your space
+          <span className="text-blue-600">{advertiser_name || 'Advertiser'}</span> is interested in booking your space
         </p>
         <div className="text-xs text-gray-600 space-y-1">
           <div className="flex items-center gap-1">
             <MapPin className="w-3 h-3" />
-            <span className="font-medium">{space_name}</span>
+            <span className="font-medium">{space_name || 'Your Space'}</span>
           </div>
           {total_price && (
             <div className="flex items-center gap-1">
@@ -136,7 +181,7 @@ const CampaignInvitationCard = ({ notification, onAction }) => {
 
       {/* Message Preview */}
       <div className="mb-3 p-2 bg-white/50 rounded text-xs text-gray-700">
-        {notification.message}
+        {notification.message || notification.title || 'New campaign invitation'}
       </div>
 
       {/* Action Buttons */}
@@ -157,7 +202,7 @@ const CampaignInvitationCard = ({ notification, onAction }) => {
           )}
         </Button>
         
-        {/* Optional: Quick approve button - you can remove this if you want users to always go to the full page */}
+        {/* Optional: Quick approve button */}
         <Button
           onClick={handleQuickApprove}
           disabled={isProcessing}
@@ -363,8 +408,19 @@ const BookingNotificationCard = ({ notification, onAction }) => {
   );
 };
 
-// ✅ UPDATED: Standard notification card with better campaign support
+// ✅ DEBUG: Enhanced standard notification card
 const StandardNotificationCard = ({ notification, onClick }) => {
+  console.log('📋 STANDARD NOTIFICATION CARD: Rendering notification:', {
+    id: notification.id,
+    type: notification.type,
+    title: notification.title,
+    message: notification.message,
+    subject: notification.subject,
+    content: notification.content,
+    messageData: notification.messageData,
+    data: notification.data
+  });
+
   const getNotificationIcon = (notification) => {
     // Handle campaign notifications
     if (notification.type === 'CAMPAIGN_INVITATION') {
@@ -400,6 +456,14 @@ const StandardNotificationCard = ({ notification, onClick }) => {
       onClick={() => onClick(notification)}
       className="p-4 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors"
     >
+      {/* DEBUG INFO for Standard Notifications */}
+      <div className="mb-2 p-2 bg-gray-50 border border-gray-200 rounded text-xs">
+        <div><strong>DEBUG:</strong> Standard Notification</div>
+        <div><strong>Type:</strong> {notification.type}</div>
+        <div><strong>Has messageData:</strong> {!!notification.messageData ? 'Yes' : 'No'}</div>
+        <div><strong>Has data:</strong> {!!notification.data ? 'Yes' : 'No'}</div>
+      </div>
+
       <div className="flex items-start gap-3">
         <div className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
           {getNotificationIcon(notification)}
@@ -420,7 +484,7 @@ const StandardNotificationCard = ({ notification, onClick }) => {
   );
 };
 
-// ✅ UPDATED: Main notification dropdown component with campaign invitation support
+// ✅ DEBUG: Enhanced main notification dropdown component
 const NotificationDropdown = ({ 
   isOpen, 
   onClose, 
@@ -431,17 +495,29 @@ const NotificationDropdown = ({
 }) => {
   const navigate = useNavigate();
 
-  console.log('🔔 NotificationDropdown rendered with:', {
+  console.log('🔔 NOTIFICATION DROPDOWN: Rendered with data:', {
     isOpen,
     notificationCount,
     notificationsLength: notifications.length,
-    isLoading
+    isLoading,
+    notifications: notifications.map(n => ({
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      message: n.message,
+      hasData: !!n.data,
+      hasMessageData: !!n.messageData
+    }))
   });
 
   // Handle standard notification click
   const handleNotificationClick = async (notification) => {
     try {
-      console.log('🔔 Handling notification click:', notification);
+      console.log('🔔 HANDLING NOTIFICATION CLICK:', {
+        id: notification.id,
+        type: notification.type,
+        data: notification.data
+      });
 
       // For campaign notifications, handle special routing
       if (notification.type === 'CAMPAIGN_INVITATION' && notification.data?.action_url) {
@@ -550,6 +626,18 @@ const NotificationDropdown = ({
           )}
         </div>
         
+        {/* DEBUG PANEL */}
+        <div className="p-2 bg-yellow-50 border-b border-yellow-200 text-xs">
+          <div><strong>DEBUG INFO:</strong></div>
+          <div><strong>Count:</strong> {notificationCount}</div>
+          <div><strong>Array Length:</strong> {notifications.length}</div>
+          <div><strong>Loading:</strong> {isLoading ? 'Yes' : 'No'}</div>
+          <div><strong>Notification Types:</strong></div>
+          {notifications.map((n, i) => (
+            <div key={i}>• {i + 1}: {n.type} (ID: {n.id.substring(0, 8)}...)</div>
+          ))}
+        </div>
+        
         {/* Notifications List */}
         <div className="max-h-96 overflow-y-auto">
           {isLoading ? (
@@ -565,10 +653,16 @@ const NotificationDropdown = ({
             </div>
           ) : (
             notifications.map(notification => {
-              console.log('🔔 Rendering notification:', notification.type, notification);
+              console.log('🔔 RENDERING NOTIFICATION IN LOOP:', {
+                id: notification.id,
+                type: notification.type,
+                title: notification.title,
+                message: notification.message
+              });
 
-              // ✅ NEW: Handle campaign invitation notifications
+              // ✅ ENHANCED DEBUG: Check for campaign invitation notifications
               if (notification.type === 'CAMPAIGN_INVITATION') {
+                console.log('🎯 FOUND CAMPAIGN INVITATION - RENDERING CampaignInvitationCard');
                 return (
                   <CampaignInvitationCard
                     key={notification.id}
@@ -579,10 +673,17 @@ const NotificationDropdown = ({
               }
 
               // ✅ EXISTING: Handle booking request notifications
-              const messageData = notification.messageData ? JSON.parse(notification.messageData) : {};
+              let messageData = {};
+              try {
+                messageData = notification.messageData ? JSON.parse(notification.messageData) : {};
+              } catch (e) {
+                console.warn('Failed to parse messageData:', e);
+              }
+              
               const isBookingRequest = messageData.action === 'booking_request';
               
               if (isBookingRequest) {
+                console.log('📅 FOUND BOOKING REQUEST - RENDERING BookingNotificationCard');
                 return (
                   <BookingNotificationCard
                     key={notification.id}
@@ -593,6 +694,7 @@ const NotificationDropdown = ({
               }
               
               // ✅ DEFAULT: Handle all other notifications
+              console.log('📋 RENDERING STANDARD NOTIFICATION CARD');
               return (
                 <StandardNotificationCard
                   key={notification.id}

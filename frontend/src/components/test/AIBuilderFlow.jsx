@@ -120,7 +120,7 @@ export default function AIBuilderFlow() {
       ageRange: [18, 65],
       interests: []
     },
-    budgetRange: [1000, 10000],
+    budgetRange: [0, 10000],
     duration: {
       startDate: '',
       endDate: ''
@@ -491,7 +491,6 @@ export default function AIBuilderFlow() {
         
         {/* Modal */}
         <div className="inline-block w-full max-w-4xl my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl sm:align-middle">
-          {/* Rest of your modal content remains the same */}
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b">
             <div className="flex items-center space-x-3">
@@ -515,7 +514,11 @@ export default function AIBuilderFlow() {
           </div>
 
           {/* Progress Indicator */}
-          {currentPage > AI_BUILDER_PAGES.METHOD_SELECTION && <ProgressIndicator />}
+          {currentPage > AI_BUILDER_PAGES.METHOD_SELECTION && (
+            <div className="px-6 pt-4">
+              <ProgressIndicator />
+            </div>
+          )}
 
           {/* Content */}
           <div className="p-6">
@@ -649,17 +652,27 @@ export default function AIBuilderFlow() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Budget Range: ${sessionData.budgetRange[0].toLocaleString()} - ${sessionData.budgetRange[1].toLocaleString()}
                   </label>
-                  <input
-                    type="range"
-                    min="500"
-                    max="50000"
-                    step="500"
-                    value={sessionData.budgetRange[1]}
-                    onChange={(e) => updateSessionData({ 
-                      budgetRange: [sessionData.budgetRange[0], parseInt(e.target.value)] 
-                    })}
-                    className="w-full"
-                  />
+                  <div className="px-2">
+                    <input
+                      type="range"
+                      min="0"
+                      max="50000"
+                      step="500"
+                      value={sessionData.budgetRange[1]}
+                      onChange={(e) => {
+                        const maxBudget = parseInt(e.target.value);
+                        const minBudget = Math.min(sessionData.budgetRange[0], maxBudget - 500);
+                        updateSessionData({ 
+                          budgetRange: [minBudget >= 0 ? minBudget : 0, maxBudget] 
+                        });
+                      }}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                    />
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>$0</span>
+                      <span>$50,000+</span>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
