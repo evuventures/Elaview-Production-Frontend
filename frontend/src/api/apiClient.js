@@ -2,7 +2,7 @@
 // ✅ ENHANCED: Better error handling for debugging 400 errors
 // ✅ COMPREHENSIVE: All existing functionality preserved
 // ✅ ERROR CAPTURE: Reads error response bodies for detailed debugging
-// ✅ NEW: Home page methods added
+// ✅ NEW: Campaign checkout methods added
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const API_TIMEOUT = 30000;
@@ -381,6 +381,160 @@ class ApiClient {
   }
 
   // ============================================================================
+  // ✅ NEW: CAMPAIGN INVITATION METHODS
+  // ============================================================================
+
+  // Get campaign invitation details
+  async getCampaignInvitation(invitationId) {
+    console.log('📡 Getting campaign invitation:', invitationId);
+    
+    try {
+      const response = await this.get(`/campaigns/invitations/${invitationId}`);
+      
+      if (response.success) {
+        console.log('✅ Campaign invitation loaded:', response.data);
+        return {
+          success: true,
+          data: response.data
+        };
+      } else {
+        console.error('❌ Failed to load campaign invitation:', response.error);
+        return {
+          success: false,
+          error: response.error || 'Failed to load campaign invitation'
+        };
+      }
+    } catch (error) {
+      console.error('❌ Campaign invitation request failed:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to load campaign invitation'
+      };
+    }
+  }
+
+  // Approve campaign invitation (for space owners)
+  async approveCampaignInvitation(invitationId, message = '') {
+    console.log('✅ Approving campaign invitation:', invitationId);
+    
+    try {
+      const response = await this.post('/campaigns/invitations/respond', {
+        invitationId,
+        status: 'APPROVED',
+        message: message || 'Campaign approved! You can now proceed with booking.',
+        responseDate: new Date().toISOString()
+      });
+      
+      if (response.success) {
+        console.log('✅ Campaign invitation approved:', response.data);
+        return {
+          success: true,
+          data: response.data
+        };
+      } else {
+        console.error('❌ Failed to approve campaign invitation:', response.error);
+        return {
+          success: false,
+          error: response.error || 'Failed to approve campaign invitation'
+        };
+      }
+    } catch (error) {
+      console.error('❌ Campaign approval request failed:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to approve campaign invitation'
+      };
+    }
+  }
+
+  // Mark notification as read (for notifications)
+  async markNotificationAsRead(notificationId) {
+    console.log('📖 Marking notification as read:', notificationId);
+    
+    try {
+      const response = await this.put(`/notifications/${notificationId}/read`);
+      
+      if (response.success) {
+        console.log('✅ Notification marked as read');
+        return {
+          success: true,
+          data: response.data
+        };
+      } else {
+        console.error('❌ Failed to mark notification as read:', response.error);
+        return {
+          success: false,
+          error: response.error || 'Failed to mark notification as read'
+        };
+      }
+    } catch (error) {
+      console.error('❌ Mark notification read request failed:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to mark notification as read'
+      };
+    }
+  }
+
+  // Mark all notifications as read
+  async markAllNotificationsAsRead() {
+    console.log('📖 Marking all notifications as read');
+    
+    try {
+      const response = await this.put('/notifications/mark-all-read');
+      
+      if (response.success) {
+        console.log('✅ All notifications marked as read');
+        return {
+          success: true,
+          data: response.data
+        };
+      } else {
+        console.error('❌ Failed to mark all notifications as read:', response.error);
+        return {
+          success: false,
+          error: response.error || 'Failed to mark all notifications as read'
+        };
+      }
+    } catch (error) {
+      console.error('❌ Mark all notifications read request failed:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to mark all notifications as read'
+      };
+    }
+  }
+
+  // Handle notification click (for routing)
+  async handleNotificationClick(notification) {
+    console.log('🔔 Handling notification click:', notification.id);
+    
+    try {
+      const response = await this.post(`/notifications/handle-click/${notification.id}`);
+      
+      if (response.success) {
+        console.log('✅ Notification click handled:', response.data.actionUrl);
+        return {
+          success: true,
+          actionUrl: response.data.actionUrl
+        };
+      } else {
+        console.error('❌ Failed to handle notification click:', response.error);
+        return {
+          success: false,
+          error: response.error || 'Failed to handle notification click'
+        };
+      }
+    } catch (error) {
+      console.error('❌ Notification click request failed:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to handle notification click'
+      };
+    }
+  }
+
+  // ============================================================================
   // ✅ NEW: HOME PAGE METHODS
   // ============================================================================
 
@@ -620,29 +774,6 @@ class ApiClient {
     }
   }
 
-  async getCampaignInvitation(invitationId) {
-    console.log('📋 Getting campaign invitation:', invitationId);
-    try {
-      const response = await this.get(`/campaigns/invitations/${invitationId}`);
-      
-      if (response.success) {
-        console.log('✅ Campaign invitation retrieved:', response.data.id);
-        return response;
-      } else {
-        console.error('❌ Failed to get campaign invitation:', response.error);
-        return response;
-      }
-    } catch (error) {
-      console.error('❌ Get campaign invitation error:', error);
-      return {
-        success: false,
-        error: 'Failed to get campaign invitation',
-        message: error.message,
-        details: error.response || {}
-      };
-    }
-  }
-
   async getCampaignInvitations(params = {}) {
     console.log('📋 Getting campaign invitations with params:', params);
     try {
@@ -695,16 +826,6 @@ class ApiClient {
   }
 
   // ✅ CAMPAIGN INVITATION STATUS METHODS
-  async approveCampaignInvitation(invitationId, message = '') {
-    console.log('✅ Approving campaign invitation:', invitationId);
-    return this.respondToCampaignInvitation({
-      invitationId,
-      status: 'APPROVED',
-      message: message || 'Campaign approved! You can now proceed with booking.',
-      responseDate: new Date().toISOString()
-    });
-  }
-
   async denyCampaignInvitation(invitationId, message) {
     console.log('❌ Denying campaign invitation:', invitationId);
     if (!message || !message.trim()) {
@@ -1186,11 +1307,31 @@ class ApiClient {
     return this.post('/checkout/create-payment-intent', paymentData);
   }
 
+  // ✅ NEW: Campaign checkout payment intent
+  async createCampaignPaymentIntent(invitationId, businessProfile, amount) {
+    console.log('💳 Creating campaign payment intent:', invitationId);
+    return this.post('/checkout/create-campaign-payment-intent', {
+      invitationId,
+      businessProfile,
+      amount
+    });
+  }
+
   async confirmBooking(paymentIntentId, orderData, businessProfile) {
     console.log('📋 Confirming booking after payment:', paymentIntentId);
     return this.post('/checkout/confirm-booking', {
       paymentIntentId,
       orderData,
+      businessProfile
+    });
+  }
+
+  // ✅ NEW: Campaign checkout confirmation
+  async confirmCampaignBooking(paymentIntentId, invitationId, businessProfile) {
+    console.log('📋 Confirming campaign booking after payment:', paymentIntentId);
+    return this.post('/checkout/confirm-campaign-booking', {
+      paymentIntentId,
+      invitationId,
       businessProfile
     });
   }
@@ -1534,14 +1675,6 @@ class ApiClient {
     return this.get('/notifications/count');
   }
 
-  async markNotificationAsRead(id) {
-    return this.put(`/notifications/${id}/read`);
-  }
-
-  async markAllNotificationsAsRead() {
-    return this.put('/notifications/mark-all-read');
-  }
-
   async createNotification(data) {
     return this.post('/notifications', data);
   }
@@ -1573,63 +1706,6 @@ class ApiClient {
     }
 
     return response.json();
-  }
-
-  // Enhanced notification handling for campaigns
-  async handleNotificationClick(notification) {
-    console.log('🔔 Handling notification click:', notification);
-    
-    try {
-      // Handle campaign notifications
-      if (notification.type === 'CAMPAIGN_INVITATION' && notification.data?.action_url) {
-        await this.markNotificationAsRead(notification.id);
-        return {
-          success: true,
-          actionUrl: notification.data.action_url
-        };
-      }
-
-      if (notification.type?.startsWith('CAMPAIGN_')) {
-        await this.markNotificationAsRead(notification.id);
-        const actionUrl = notification.data?.action_url || '/advertise';
-        return {
-          success: true,
-          actionUrl: actionUrl
-        };
-      }
-
-      // Handle other notification types
-      const messageData = notification.messageData ? JSON.parse(notification.messageData) : {};
-      let actionUrl = '/messages';
-
-      switch (messageData.action) {
-        case 'booking_request':
-          actionUrl = `/messages?conversation=${messageData.conversationId}`;
-          break;
-        case 'booking_approved':
-        case 'booking_declined':
-          actionUrl = '/advertise';
-          break;
-        case 'payment_reminder':
-          actionUrl = `/checkout/${messageData.bookingId}`;
-          break;
-        default:
-          actionUrl = '/messages';
-      }
-
-      await this.markNotificationAsRead(notification.id);
-      
-      return {
-        success: true,
-        actionUrl: actionUrl
-      };
-    } catch (error) {
-      console.error('❌ Error handling notification click:', error);
-      return {
-        success: false,
-        error: error.message
-      };
-    }
   }
 
   // ✅ NEW: Specific notification count methods for Layout component
