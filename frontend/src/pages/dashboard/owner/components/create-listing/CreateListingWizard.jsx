@@ -1,6 +1,5 @@
 // src/pages/dashboard/owner/components/create-listing/CreateListingWizard.jsx
-// ✅ UPDATED: Removed product selection, added space photo upload
-// ✅ SIMPLIFIED: Space creation with photo, name, type, dimensions, and rate period selector
+// ✅ FIXED: Navigation issue after successful listing submission
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -132,31 +131,47 @@ export default function CreateListingWizard() {
     }
   }, []);
 
-  // Initialize Google Places Autocomplete
+  // Initialize Google Places Autocomplete - IMPROVED VERSION
   useEffect(() => {
     let mounted = true;
     let retryCount = 0;
-    const maxRetries = 3;
+    const maxRetries = 5;
+    let retryTimeout;
 
     const initAutocomplete = async () => {
       try {
+        console.log('🗺️ Initializing Google Maps autocomplete...');
         setIsLoadingMaps(true);
         setMapsError('');
         
-        const maps = await googleMapsLoader.waitForLoad();
+        // Wait for Google Maps to load with longer timeout
+        const maps = await Promise.race([
+          googleMapsLoader.waitForLoad(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Google Maps load timeout')), 10000)
+          )
+        ]);
         
-        if (!mounted) return;
+        if (!mounted) {
+          console.log('🛑 Component unmounted during Maps loading');
+          return;
+        }
 
-        if (!window.google?.maps?.places) {
-          throw new Error('Google Places library not loaded');
+        // More comprehensive check for Google Maps availability
+        if (!window.google?.maps?.places?.Autocomplete) {
+          throw new Error('Google Places Autocomplete not available');
         }
         
+        console.log('✅ Google Maps loaded successfully');
         setMapsLoaded(true);
         setIsLoadingMaps(false);
         
-        if (addressInputRef.current && !autocompleteRef.current) {
-          initializeAutocompleteInstance();
-        }
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+          if (mounted && addressInputRef.current && !autocompleteRef.current) {
+            initializeAutocompleteInstance();
+          }
+        }, 100);
 
       } catch (error) {
         console.error('❌ Error loading Google Maps:', error);
@@ -165,63 +180,98 @@ export default function CreateListingWizard() {
         
         if (retryCount < maxRetries) {
           retryCount++;
-          setTimeout(() => initAutocomplete(), 2000);
+          const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 8000); // Exponential backoff
+          console.log(`🔄 Retrying Google Maps load (${retryCount}/${maxRetries}) in ${retryDelay}ms`);
+          
+          retryTimeout = setTimeout(() => {
+            if (mounted) {
+              initAutocomplete();
+            }
+          }, retryDelay);
         } else {
-          setMapsError('Failed to load address autocomplete. Please refresh the page.');
+          console.error('💥 Failed to load Google Maps after all retries');
+          setMapsError('Unable to load address search. You can still enter addresses manually.');
           setIsLoadingMaps(false);
         }
       }
     };
 
     const initializeAutocompleteInstance = () => {
-      if (!addressInputRef.current || autocompleteRef.current) {
+      if (!addressInputRef.current || autocompleteRef.current || !window.google?.maps?.places) {
+        console.log('🚫 Cannot initialize autocomplete - missing requirements');
         return;
       }
 
       try {
+        console.log('🎯 Creating autocomplete instance...');
+        
         autocompleteRef.current = new window.google.maps.places.Autocomplete(
           addressInputRef.current,
           {
             types: ['address'],
-            fields: ['formatted_address', 'address_components', 'geometry', 'name', 'place_id', 'types']
+            fields: ['formatted_address', 'address_components', 'geometry', 'name', 'place_id']
           }
         );
 
+        // Set bounds based on user location (optional)
         if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition((position) => {
-            const circle = new window.google.maps.Circle({
-              center: {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-              },
-              radius: 50000
-            });
-            autocompleteRef.current.setBounds(circle.getBounds());
-          });
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              if (autocompleteRef.current) {
+                const circle = new window.google.maps.Circle({
+                  center: {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                  },
+                  radius: 50000
+                });
+                autocompleteRef.current.setBounds(circle.getBounds());
+                console.log('📍 Location bounds set for autocomplete');
+              }
+            },
+            (error) => {
+              console.log('📍 Geolocation not available:', error.message);
+            },
+            { timeout: 5000 }
+          );
         }
 
         autocompleteRef.current.addListener('place_changed', handlePlaceSelect);
+        console.log('✅ Autocomplete initialized successfully');
 
       } catch (error) {
-        console.error('❌ Error creating autocomplete:', error);
+        console.error('❌ Error creating autocomplete instance:', error);
         setMapsError('Failed to initialize address search');
+        setIsLoadingMaps(false);
       }
     };
 
+    // Start initialization
     initAutocomplete();
 
     return () => {
       mounted = false;
-      if (autocompleteRef.current && window.google?.maps?.event) {
-        window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
-        autocompleteRef.current = null;
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
+      if (autocompleteRef.current) {
+        try {
+          if (window.google?.maps?.event) {
+            window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+          }
+          autocompleteRef.current = null;
+          console.log('🧹 Autocomplete cleanup completed');
+        } catch (error) {
+          console.error('Error during autocomplete cleanup:', error);
+        }
       }
     };
   }, []);
 
-  // Re-initialize autocomplete when input becomes available
+  // Re-initialize autocomplete when input becomes available - IMPROVED VERSION
   useEffect(() => {
     if (mapsLoaded && addressInputRef.current && !autocompleteRef.current) {
+      console.log('🔄 Re-initializing autocomplete for current step');
       try {
         autocompleteRef.current = new window.google.maps.places.Autocomplete(
           addressInputRef.current,
@@ -231,8 +281,10 @@ export default function CreateListingWizard() {
           }
         );
         autocompleteRef.current.addListener('place_changed', handlePlaceSelect);
+        console.log('✅ Autocomplete re-initialized');
       } catch (error) {
-        console.error('❌ Error re-initializing:', error);
+        console.error('❌ Error re-initializing autocomplete:', error);
+        setMapsError('Address autocomplete unavailable - you can still enter addresses manually');
       }
     }
   }, [mapsLoaded, currentStep]);
@@ -472,7 +524,7 @@ export default function CreateListingWizard() {
     ));
   };
 
-  // Navigation
+  // Navigation - IMPROVED VALIDATION FOR MANUAL ADDRESS ENTRY
   const nextStep = () => {
     setError('');
     
@@ -485,8 +537,10 @@ export default function CreateListingWizard() {
         setError('Property address is required');
         return;
       }
-      if (!propertyData.latitude || !propertyData.longitude) {
-        setError('Please select a valid address from the dropdown');
+      // Only require coordinates if Maps loaded successfully
+      // Allow manual address entry without coordinates
+      if (mapsLoaded && !mapsError && (!propertyData.latitude || !propertyData.longitude)) {
+        setError('Please select a valid address from the dropdown suggestions, or skip autocomplete to enter manually');
         return;
       }
       if (!propertyData.primary_image) {
@@ -520,12 +574,14 @@ export default function CreateListingWizard() {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  // Submit listing
+  // Submit listing - FIXED NAVIGATION ISSUE
   const submitListing = async () => {
     setIsLoading(true);
     setError('');
 
     try {
+      console.log('🚀 Submitting listing...');
+      
       const propertyPayload = {
         title: propertyData.title,
         address: propertyData.address,
@@ -565,15 +621,41 @@ export default function CreateListingWizard() {
         }))
       };
       
+      console.log('📦 Property payload:', propertyPayload);
+      
       const result = await apiClient.createProperty(propertyPayload);
+      
+      console.log('✅ API Response:', result);
       
       if (!result.success) {
         throw new Error(result.error || result.message || 'Failed to create property');
       }
 
-      navigate('/dashboard?tab=listings&created=true');
+      console.log('🎉 Listing created successfully, navigating to dashboard...');
+
+      // ✅ MULTIPLE NAVIGATION STRATEGIES FOR RELIABILITY
+      
+      // Strategy 1: Direct navigation with replace to prevent back button issues
+      navigate('/dashboard?tab=listings&created=true', { replace: true });
+      
+      // Strategy 2: Fallback navigation after a short delay
+      setTimeout(() => {
+        if (window.location.pathname !== '/dashboard') {
+          console.log('🔄 Fallback navigation triggered');
+          window.location.href = '/dashboard?tab=listings&created=true';
+        }
+      }, 100);
+
+      // Strategy 3: Additional verification and force navigation if needed
+      setTimeout(() => {
+        if (window.location.pathname !== '/dashboard') {
+          console.log('⚠️ Navigation failed, forcing redirect');
+          window.location.replace('/dashboard?tab=listings&created=true');
+        }
+      }, 500);
 
     } catch (error) {
+      console.error('❌ Error submitting listing:', error);
       setError(error.message);
     } finally {
       setIsLoading(false);
@@ -612,8 +694,11 @@ export default function CreateListingWizard() {
     { value: 'storefront_window', label: 'Storefront Window' },
     { value: 'building_exterior', label: 'Building Exterior' },
     { value: 'retail_frontage', label: 'Retail Frontage' },
-    { value: 'pole_mount', label: 'Billboard/Sign' }
-  ];
+    { value: 'event_space', label: 'Event Space' },        // Add this
+    { value: 'billboard', label: 'Billboard' },            // Add this
+    { value: 'pole_mount', label: 'Pole Mount/Sign' },     // Keep existing
+    { value: 'other', label: 'Other' }
+  ]
 
   const propertyTypeOptions = [
     { value: 'COMMERCIAL', label: 'Commercial' },
@@ -755,9 +840,9 @@ export default function CreateListingWizard() {
                           type="text"
                           value={propertyData.address}
                           onChange={handleAddressChange}
-                          placeholder="Start typing to search..."
-                          disabled={isLoadingMaps}
-                          className="w-full px-3 py-2 pl-9 text-sm border border-slate-300 rounded-md focus:ring-2 focus:ring-[#4668AB] focus:border-transparent transition-all disabled:bg-slate-50"
+                          placeholder={isLoadingMaps ? "Loading address search..." : "Start typing to search or enter manually..."}
+                          disabled={false} // Never disable - allow manual entry
+                          className="w-full px-3 py-2 pl-9 text-sm border border-slate-300 rounded-md focus:ring-2 focus:ring-[#4668AB] focus:border-transparent transition-all"
                         />
                         <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                         {isLoadingMaps && (
@@ -765,9 +850,26 @@ export default function CreateListingWizard() {
                         )}
                       </div>
                       {isLoadingMaps ? (
-                        <p className="text-xs text-amber-600 mt-1">Loading autocomplete...</p>
-                      ) : mapsLoaded && !mapsError && (
-                        <p className="text-xs text-slate-500 mt-1">Select from dropdown for accurate location</p>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-xs text-amber-600">Loading autocomplete...</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsLoadingMaps(false);
+                              setMapsError('');
+                              setMapsLoaded(false);
+                            }}
+                            className="text-xs text-slate-500 hover:text-slate-700 underline"
+                          >
+                            Skip autocomplete
+                          </button>
+                        </div>
+                      ) : mapsLoaded && !mapsError ? (
+                        <p className="text-xs text-slate-500 mt-1">Select from dropdown for accurate location or enter manually</p>
+                      ) : mapsError ? (
+                        <p className="text-xs text-orange-600 mt-1">{mapsError}</p>
+                      ) : (
+                        <p className="text-xs text-slate-500 mt-1">Enter address manually - autocomplete unavailable</p>
                       )}
                     </div>
 
