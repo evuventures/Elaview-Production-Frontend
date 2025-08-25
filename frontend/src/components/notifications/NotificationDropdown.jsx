@@ -1,5 +1,6 @@
 // src/components/notifications/NotificationDropdown.jsx
-// ✅ DEBUG VERSION: Enhanced logging to identify campaign invitation issues
+// ✅ FIXED: ID string conversion error that was crashing the component
+// ✅ DEBUG: Enhanced logging to identify campaign invitation issues
 // ✅ COMPREHENSIVE: Handles both booking requests and campaign invitations with debugging
 
 import React, { useState } from 'react';
@@ -484,7 +485,7 @@ const StandardNotificationCard = ({ notification, onClick }) => {
   );
 };
 
-// ✅ DEBUG: Enhanced main notification dropdown component
+// ✅ FIXED: Enhanced main notification dropdown component with ID string conversion
 const NotificationDropdown = ({ 
   isOpen, 
   onClose, 
@@ -634,7 +635,7 @@ const NotificationDropdown = ({
           <div><strong>Loading:</strong> {isLoading ? 'Yes' : 'No'}</div>
           <div><strong>Notification Types:</strong></div>
           {notifications.map((n, i) => (
-            <div key={i}>• {i + 1}: {n.type} (ID: {n.id.substring(0, 8)}...)</div>
+            <div key={i}>• {i + 1}: {n.type} (ID: {String(n.id).substring(0, 8)}...)</div>
           ))}
         </div>
         

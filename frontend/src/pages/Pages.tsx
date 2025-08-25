@@ -1,7 +1,8 @@
-// src/pages/Pages.tsx - UPDATED with AI Builder test route and admin access
+// src/pages/Pages.tsx - UPDATED with proper campaign checkout route
 import Layout from "../components/layout/Layout.tsx";
 import Landing from "./landing/LandingPage.jsx";
 import CheckoutPage from "./checkout/CheckoutPage.jsx";
+import CampaignCheckout from "./payments/CampaignCheckout.jsx"; // ✅ NEW: Campaign-specific checkout
 import AdvertisingPage from "./dashboard/advertiser/AdvertiserDashboard.tsx";
 import Map from "./browse/BrowsePage.jsx";
 import Messages from "./messages/MessagesPage.tsx";
@@ -17,7 +18,6 @@ import PropertyManagement from "./properties/PropertyManagement.jsx";
 import DataSeeder from "./DataSeeder.jsx";
 import Admin from "./dashboard/admin/Admin.tsx";
 import EditProperty from "./properties/EditProperty.jsx";
-import CampaignCheckout from "./payments/Checkout.jsx";
 import CampaignDetails from "./campaigns/CampaignDetails.jsx";
 import PaymentTest from "./payments/PaymentTest.jsx";
 import ProtectedRoute from "../components/auth/ProtectedRoute.jsx";
@@ -69,7 +69,7 @@ const PAGES = {
     MobileHome: MobileHomePage, // ✅ MOBILE: Mobile-specific home for onboarding
     Messages: Messages,
     CheckoutPage: CheckoutPage,
-    CampaignCheckout: CampaignCheckout,
+    CampaignCheckout: CampaignCheckout, // ✅ NEW: Campaign-specific checkout
     AdvertisingPage: AdvertisingPage,
     Profile: Profile,
     Settings: Settings,
@@ -218,9 +218,9 @@ function PagesContent() {
             } />
 
             <Route path="/advertise" element={
-                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="bookings-protected">
-                    <Layout currentPageName="Bookings" key="bookings-page">
-                        <AdvertisingPage key="bookings-component" />
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="advertise-protected">
+                    <Layout currentPageName="Advertise" key="advertise-page">
+                        <AdvertisingPage key="advertise-component" />
                     </Layout>
                 </ProtectedRoute>
             } />
@@ -260,7 +260,7 @@ function PagesContent() {
                 </ProtectedRoute>
             } />
 
-            {/* ✅ EXISTING: DYNAMIC SPACE OWNER CONFIRMATION WITH CAMPAIGN ID */}
+            {/* ✅ FIXED: DYNAMIC SPACE OWNER CONFIRMATION WITH CAMPAIGN ID */}
             <Route path="/SpaceOwnerConfirmation/:campaignId" element={
                 <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="space-owner-confirmation-id-protected">
                     <Layout currentPageName="Campaign Approval" key="space-owner-confirmation-id-page">
@@ -311,13 +311,18 @@ function PagesContent() {
                 </ProtectedRoute>
             } />
 
-            <Route path="/campaign-checkout" element={
-                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="campaign-checkout-protected">
-                    <Layout currentPageName="Campaign Checkout" key="campaign-checkout-page">
-                        <CampaignCheckout key="campaign-checkout-component" />
+            {/* ✅ FIXED: CAMPAIGN CHECKOUT WITH INVITATION ID PARAMETER */}
+            <Route path="/CampaignCheckout/:invitationId" element={
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="campaign-checkout-id-protected">
+                    <Layout currentPageName="Campaign Checkout" key="campaign-checkout-id-page">
+                        <CampaignCheckout key="campaign-checkout-id-component" />
                     </Layout>
                 </ProtectedRoute>
             } />
+
+            {/* ✅ FALLBACK: Campaign checkout without ID redirects to advertise */}
+            <Route path="/campaign-checkout" element={<Navigate to="/advertise" replace />} />
+            <Route path="/CampaignCheckout" element={<Navigate to="/advertise" replace />} />
 
             {/* ✅ Legacy redirect */}
             <Route path="/booking/:propertyId/:spaceId" element={<BookingToCheckoutRedirect />} />

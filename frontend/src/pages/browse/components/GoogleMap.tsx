@@ -1,6 +1,8 @@
 // src/components/browse/maps/GoogleMap.tsx
-// ✅ CLEAN: Simplified GoogleMap with Elaview design system - Deep Teal
+// ✅ CLEAN: Simplified GoogleMap with Elaview design system - Light Theme
 // ✅ MOBILE: Disabled default Google Maps controls on mobile
+// ✅ FIXED: Removed fullscreen control completely
+// 🎨 STYLED: Custom Elaview Light Theme - Brand Blue & Light Blue Gradient
 
 import React, { useEffect, useRef, useState } from 'react';
 import { X, MapPin } from 'lucide-react';
@@ -82,6 +84,74 @@ interface GoogleMapProps {
   onAreaClick?: (area: Space) => void; // DEPRECATED: Use onSpaceClick
   showAreaMarkers?: boolean;
 }
+
+// 🎨 ELAVIEW LIGHT THEME - Matches brand colors and light blue gradient
+const elaviewLightStyle = [
+  {
+    // Base background - matches your light blue gradient
+    featureType: 'all',
+    elementType: 'geometry',
+    stylers: [{ color: '#F8FAFF' }] // --color-bg-light-blue
+  },
+  {
+    // Water bodies - brand blue
+    featureType: 'water',
+    elementType: 'geometry',
+    stylers: [{ color: '#4668AB' }] // --color-primary (Brand Blue)
+  },
+  {
+    // Hide POI labels for cleaner look
+    featureType: 'poi',
+    elementType: 'labels',
+    stylers: [{ visibility: 'off' }]
+  },
+  {
+    // Hide business POIs
+    featureType: 'poi.business',
+    stylers: [{ visibility: 'off' }]
+  },
+  {
+    // Roads - pure white for clarity
+    featureType: 'road',
+    elementType: 'geometry',
+    stylers: [{ color: '#FFFFFF' }] // --color-pure-white
+  },
+  {
+    // Highway styling - light gray
+    featureType: 'road.highway',
+    elementType: 'geometry',
+    stylers: [{ color: '#F1F5F9' }] // --color-slate-100
+  },
+  {
+    // Road labels - charcoal colors
+    featureType: 'road',
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#334155' }] // --color-slate-700
+  },
+  {
+    // Parks and natural areas - light blue tint
+    featureType: 'landscape.natural',
+    elementType: 'geometry',
+    stylers: [{ color: '#E8F2FF' }] // --color-bg-blue-50
+  },
+  {
+    // Buildings - off-white
+    featureType: 'landscape.man_made',
+    elementType: 'geometry',
+    stylers: [{ color: '#F9FAFB' }] // --color-off-white
+  },
+  {
+    // Administrative boundaries - brand blue
+    featureType: 'administrative',
+    elementType: 'geometry.stroke',
+    stylers: [{ color: '#4668AB', weight: 0.5 }]
+  },
+  {
+    // Transit lines - hide for cleaner look
+    featureType: 'transit',
+    stylers: [{ visibility: 'off' }]
+  }
+];
 
 // ✅ CLEAN: Simplified Space Dropdown
 interface SpaceDropdownProps {
@@ -204,7 +274,8 @@ const SpaceDropdown: React.FC<SpaceDropdownProps> = ({
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="property-price bg-teal-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+          <span className="property-price text-white px-3 py-1 rounded-full text-sm font-semibold" 
+                style={{ backgroundColor: '#4668AB' }}>
             {getSpacePrice(currentSpace)}
           </span>
           <Button 
@@ -223,8 +294,9 @@ const SpaceDropdown: React.FC<SpaceDropdownProps> = ({
                 key={index}
                 onClick={() => setCurrentIndex(index)}
                 className={`w-2 h-2 rounded-full transition-colors ${
-                  index === currentIndex ? 'bg-teal-500' : 'bg-slate-300'
+                  index === currentIndex ? 'bg-blue-500' : 'bg-slate-300'
                 }`}
+                style={{ backgroundColor: index === currentIndex ? '#4668AB' : undefined }}
               />
             ))}
           </div>
@@ -360,7 +432,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
 
         const { Map } = await window.google.maps.importLibrary("maps");
         
-        // ✅ FIXED: Conditional UI controls based on mobile state
+        // 🎨 ELAVIEW LIGHT THEME - Brand colors and styling
         const map = new Map(mapRef.current, {
           center,
           zoom,
@@ -372,21 +444,10 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
           scaleControl: false,                  // Always off
           streetViewControl: false,             // Always off
           rotateControl: false,                 // Always off
-          fullscreenControl: !isMobile,         // ✅ Hide fullscreen on mobile
+          fullscreenControl: false,             // ✅ REMOVED: Always disabled
           clickableIcons: false,
-          backgroundColor: '#f8fafc',
-          styles: [
-            {
-              featureType: 'poi',
-              elementType: 'labels',
-              stylers: [{ visibility: 'off' }]
-            },
-            {
-              featureType: 'all',
-              elementType: 'geometry',
-              stylers: [{ color: '#f8fafc' }]
-            }
-          ]
+          backgroundColor: '#F8FAFF',           // 🎨 Brand light blue background
+          styles: elaviewLightStyle,            // 🎨 Custom Elaview Light Theme
         });
 
         mapInstanceRef.current = map;
@@ -419,7 +480,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
     }
   }, [center.lat, center.lng, zoom, isMapReady]);
 
-  // ✅ CLEAN: Simplified property markers
+  // ✅ CLEAN: Simplified property markers with brand colors
   useEffect(() => {
     const createPropertyMarkers = async () => {
       if (!mapInstanceRef.current || !isMapReady || !showPropertyMarkers) {
@@ -449,13 +510,22 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
 
           const spaceCount = property.spaces?.length || 0;
           
-          // ✅ CLEAN: Simple marker design with Deep Teal
+          // 🎨 BRANDED: Marker design with Brand Blue
           const markerElement = document.createElement('div');
-          markerElement.className = 'flex items-center justify-center w-8 h-8 bg-teal-500 text-white rounded-full border-2 border-white shadow-soft cursor-pointer hover:bg-teal-600 transition-all duration-200 hover:scale-110';
+          markerElement.className = 'flex items-center justify-center w-8 h-8 text-white rounded-full border-2 border-white shadow-soft cursor-pointer transition-all duration-200 hover:scale-110';
+          markerElement.style.backgroundColor = '#4668AB'; // Brand blue
           markerElement.style.fontSize = '12px';
           markerElement.style.fontWeight = '600';
           markerElement.textContent = spaceCount.toString();
           markerElement.title = `${spaceCount} space${spaceCount !== 1 ? 's' : ''} available`;
+
+          // Hover effect with darker brand blue
+          markerElement.addEventListener('mouseenter', () => {
+            markerElement.style.backgroundColor = '#395A8C'; // Darker brand blue
+          });
+          markerElement.addEventListener('mouseleave', () => {
+            markerElement.style.backgroundColor = '#4668AB'; // Original brand blue
+          });
 
           const marker = new AdvancedMarkerElement({
             map: mapInstanceRef.current,
@@ -466,40 +536,40 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
 
           // ✅ Show dropdown on property marker click
           // ✅ FIXED: Mobile-aware property marker click handler
-marker.addListener('click', (e: any) => {
-  e.stop();
-  
-  // ✅ Check if currently mobile (real-time detection)
-  const isCurrentlyMobile = window.innerWidth < 768;
-  
-  if (isCurrentlyMobile) {
-    // ✅ Mobile: Always use bottom sheet via onPropertyClick
-    console.log('📱 Mobile property marker clicked - opening bottom sheet');
-    onPropertyClick(property);
-  } else {
-    // ✅ Desktop: Use dropdown as before
-    console.log('🖥️ Desktop property marker clicked - showing dropdown');
-    
-    // MIGRATION: Use spaces or fallback to advertisingAreas for backward compatibility
-    const allSpaces = spaces.length > 0 ? spaces : advertisingAreas;
-    const propertySpaces = allSpaces.filter(space => 
-      space.propertyId === property.id || 
-      space.property?.id === property.id ||
-      (space.propertyCoords && 
-       Math.abs(space.propertyCoords.lat - position!.lat) < 0.001 &&
-       Math.abs(space.propertyCoords.lng - position!.lng) < 0.001)
-    );
+          marker.addListener('click', (e: any) => {
+            e.stop();
+            
+            // ✅ Check if currently mobile (real-time detection)
+            const isCurrentlyMobile = window.innerWidth < 768;
+            
+            if (isCurrentlyMobile) {
+              // ✅ Mobile: Always use bottom sheet via onPropertyClick
+              console.log('📱 Mobile property marker clicked - opening bottom sheet');
+              onPropertyClick(property);
+            } else {
+              // ✅ Desktop: Use dropdown as before
+              console.log('🖥️ Desktop property marker clicked - showing dropdown');
+              
+              // MIGRATION: Use spaces or fallback to advertisingAreas for backward compatibility
+              const allSpaces = spaces.length > 0 ? spaces : advertisingAreas;
+              const propertySpaces = allSpaces.filter(space => 
+                space.propertyId === property.id || 
+                space.property?.id === property.id ||
+                (space.propertyCoords && 
+                 Math.abs(space.propertyCoords.lat - position!.lat) < 0.001 &&
+                 Math.abs(space.propertyCoords.lng - position!.lng) < 0.001)
+              );
 
-    if (propertySpaces.length > 0) {
-      setActiveDropdown({
-        spaces: propertySpaces,
-        position: position!
-      });
-    } else {
-      onPropertyClick(property);
-    }
-  }
-});
+              if (propertySpaces.length > 0) {
+                setActiveDropdown({
+                  spaces: propertySpaces,
+                  position: position!
+                });
+              } else {
+                onPropertyClick(property);
+              }
+            }
+          });
 
           newMarkers.push(marker);
         }
@@ -527,8 +597,8 @@ marker.addListener('click', (e: any) => {
         }
 
         const pin = new PinElement({
-          background: '#0f766e', // Deep Teal color
-          borderColor: '#0d9488',
+          background: '#4668AB',    // 🎨 Brand Blue
+          borderColor: '#395A8C',   // Darker brand blue border
           glyphColor: '#ffffff',
           scale: 1.0,
         });
@@ -576,11 +646,13 @@ marker.addListener('click', (e: any) => {
         />
       )}
       
-      {/* ✅ CLEAN: Simple loading state */}
+      {/* 🎨 BRANDED: Loading state with brand colors */}
       {!isMapReady && (
-        <div className="absolute inset-0 bg-slate-50 rounded-2xl flex items-center justify-center">
+        <div className="absolute inset-0 bg-slate-50 rounded-2xl flex items-center justify-center"
+             style={{ backgroundColor: '#F8FAFF' }}>
           <div className="text-center">
-            <div className="loading-spinner w-6 h-6 text-teal-500 mx-auto mb-3"></div>
+            <div className="loading-spinner w-6 h-6 mx-auto mb-3" 
+                 style={{ borderTopColor: '#4668AB' }}></div>
             <p className="body-small text-slate-600">Loading map...</p>
           </div>
         </div>

@@ -1,14 +1,17 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
-// Minimal loading configuration
+// Enhanced loading configuration aligned with your design system
 const LOADING_CONFIG = {
-  // Colors - focused on slate palette for minimal design
+  // Colors aligned with your CSS variables
   colors: {
-    slate: '#1e293b',    // slate-800 - primary minimal color
-    light: '#64748b',    // slate-500 - lighter variant
-    muted: '#94a3b8',    // slate-400 - most subtle
-    white: '#ffffff'
+    primary: '#4668AB',      // Your brand blue (--color-primary)
+    slate: '#1e293b',        // slate-800 (--color-slate-800)
+    light: '#64748b',        // slate-500 (--color-slate-500)
+    muted: '#94a3b8',        // slate-400 (--color-slate-400)
+    white: '#ffffff',
+    charcoal: '#0f172a',     // Your deep charcoal (--color-charcoal)
+    charcoalLight: '#1e293b' // Your charcoal-light (--color-charcoal-light)
   },
   
   // Animation speeds (in seconds)
@@ -29,20 +32,12 @@ const LOADING_CONFIG = {
 };
 
 /**
- * Minimal Three Bouncing Dots Loading Animation
- * 
- * @param {Object} props
- * @param {string} props.size - Dot size: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
- * @param {string} props.color - Color theme: 'slate' | 'light' | 'muted' | 'white'
- * @param {string} props.speed - Animation speed: 'fast' | 'normal' | 'slow'
- * @param {string} props.message - Optional loading message
- * @param {boolean} props.showMessage - Whether to show the message
- * @param {boolean} props.centered - Center the loader in its container
- * @param {string} props.className - Additional CSS classes
+ * Enhanced Three Bouncing Dots Loading Animation
+ * Now fully aligned with your design system
  */
 export const LoadingAnimation = ({
   size = 'md',
-  color = 'slate',
+  color = 'primary', // Changed default to primary brand color
   speed = 'normal',
   message = '',
   showMessage = false,
@@ -50,12 +45,12 @@ export const LoadingAnimation = ({
   className = ''
 }) => {
   const dotSize = LOADING_CONFIG.sizes[size] || LOADING_CONFIG.sizes.md;
-  const colorValue = LOADING_CONFIG.colors[color] || LOADING_CONFIG.colors.slate;
+  const colorValue = LOADING_CONFIG.colors[color] || LOADING_CONFIG.colors.primary;
   const duration = LOADING_CONFIG.speeds[speed] || LOADING_CONFIG.speeds.normal;
 
   const DotsAnimation = () => (
     <div 
-      className={cn("flex items-center space-x-1", className)}
+      className={cn("flex items-center", className)}
       style={{ gap: `${dotSize * 0.5}px` }}
     >
       {[0, 1, 2].map((index) => (
@@ -83,7 +78,7 @@ export const LoadingAnimation = ({
       <DotsAnimation />
       {showMessage && message && (
         <div 
-          className="text-sm font-medium"
+          className="text-sm font-medium text-shadow-soft"
           style={{ color: colorValue }}
         >
           {message}
@@ -103,66 +98,147 @@ export const LoadingAnimation = ({
   return content;
 };
 
-// Preset loading states for common use cases
-export const PageLoader = ({ message = "Loading..." }) => (
-  <LoadingAnimation
-    size="lg"
-    color="slate"
-    speed="normal"
-    message={message}
-    showMessage={true}
-    centered
-    className="py-12"
-  />
-);
+/**
+ * Enhanced Page Loader - Full viewport centering with glassmorphism
+ */
+export const PageLoader = ({ 
+  message = "Loading...", 
+  fullscreen = false,
+  centered = false // Keep for backward compatibility
+}) => {
+  if (fullscreen || centered) {
+    // Full viewport overlay with glassmorphism
+    return (
+      <div className="fixed inset-0 flex items-center justify-center glass-primary backdrop-blur-lg z-50">
+        <div className="text-center">
+          <LoadingAnimation
+            size="lg"
+            color="primary"
+            speed="normal"
+            message={message}
+            showMessage={true}
+            className="mb-4"
+          />
+        </div>
+      </div>
+    );
+  }
+  
+  // Inline loading for content areas
+  return (
+    <div className="flex items-center justify-center py-12">
+      <LoadingAnimation
+        size="lg"
+        color="primary"
+        speed="normal"
+        message={message}
+        showMessage={true}
+      />
+    </div>
+  );
+};
 
-export const ButtonLoader = ({ size = "sm", color = "white" }) => (
+/**
+ * Enhanced Button Loader - Consistent sizing and colors
+ */
+export const ButtonLoader = ({ 
+  size = "sm", 
+  color = "white",
+  className = ""
+}) => (
   <LoadingAnimation
     size={size}
     color={color}
     speed="fast"
     showMessage={false}
+    className={cn("inline-flex", className)}
   />
 );
 
-export const InlineLoader = ({ message = "", size = "sm" }) => (
-  <LoadingAnimation
-    size={size}
-    color="slate"
-    speed="normal"
-    message={message}
-    showMessage={!!message}
-  />
-);
-
-export const CardLoader = () => (
-  <div className="space-y-3 p-4 animate-pulse">
-    <div className="h-4 bg-slate-200 rounded w-3/4" />
-    <div className="h-3 bg-slate-200 rounded w-1/2" />
-    <div className="h-3 bg-slate-200 rounded w-2/3" />
+/**
+ * Enhanced Inline Loader - Better spacing and typography
+ */
+export const InlineLoader = ({ 
+  message = "", 
+  size = "sm",
+  color = "primary",
+  className = ""
+}) => (
+  <div className={cn("inline-flex items-center gap-2", className)}>
+    <LoadingAnimation
+      size={size}
+      color={color}
+      speed="normal"
+      showMessage={false}
+    />
+    {message && (
+      <span className="text-sm font-medium" style={{ color: LOADING_CONFIG.colors[color] }}>
+        {message}
+      </span>
+    )}
   </div>
 );
 
-export const SkeletonLoader = ({ lines = 3, className = "" }) => (
-  <div className={cn("space-y-2 animate-pulse", className)}>
-    {Array.from({ length: lines }).map((_, i) => (
-      <div
-        key={i}
-        className="h-3 bg-slate-200 rounded"
-        style={{ width: `${100 - (i * 15)}%` }}
-      />
-    ))}
+/**
+ * Enhanced Card Loader - Uses your glassmorphism design
+ */
+export const CardLoader = ({ className = "" }) => (
+  <div className={cn("card-glass space-y-3 p-6 animate-pulse", className)}>
+    <div className="h-4 bg-slate-300/50 rounded-lg w-3/4" />
+    <div className="h-3 bg-slate-300/50 rounded-lg w-1/2" />
+    <div className="h-3 bg-slate-300/50 rounded-lg w-2/3" />
+    <div className="flex gap-2 mt-4">
+      <div className="h-8 bg-slate-300/50 rounded-lg w-20" />
+      <div className="h-8 bg-slate-300/50 rounded-lg w-16" />
+    </div>
   </div>
 );
 
-// Alternative minimal loading animations
-export const MinimalSpinner = ({ size = "md", color = "slate" }) => {
+/**
+ * Enhanced Skeleton Loader - Better glassmorphism integration
+ */
+export const SkeletonLoader = ({ 
+  lines = 3, 
+  className = "",
+  variant = "default" // "default", "glass", "card"
+}) => {
+  const baseClasses = "space-y-3 animate-pulse";
+  const variantClasses = {
+    default: "",
+    glass: "glass-secondary p-4 rounded-lg",
+    card: "card-glass p-6"
+  };
+
+  return (
+    <div className={cn(baseClasses, variantClasses[variant], className)}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <div
+          key={i}
+          className="h-4 bg-slate-300/60 rounded-lg animate-pulse"
+          style={{ 
+            width: `${100 - (i * 12)}%`,
+            animationDelay: `${i * 0.1}s`
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+/**
+ * Enhanced Minimal Spinner - Aligned with your brand colors
+ */
+export const MinimalSpinner = ({ 
+  size = "md", 
+  color = "primary",
+  className = ""
+}) => {
   const dimension = LOADING_CONFIG.sizes[size] * 3;
   const colorValue = LOADING_CONFIG.colors[color];
   
   return (
     <div
-      className="animate-spin rounded-full border-2 border-t-transparent"
+      className={cn("loading-spinner-glass", className)}
       style={{
         width: `${dimension}px`,
         height: `${dimension}px`,
@@ -174,24 +250,98 @@ export const MinimalSpinner = ({ size = "md", color = "slate" }) => {
   );
 };
 
-export const PulsingCircle = ({ size = "md", color = "slate" }) => {
-  const dimension = LOADING_CONFIG.sizes[size] * 2;
+/**
+ * Enhanced Pulsing Circle - Brand color integration
+ */
+export const PulsingCircle = ({ 
+  size = "md", 
+  color = "primary",
+  className = ""
+}) => {
+  const dimension = LOADING_CONFIG.sizes[size] * 2.5;
   const colorValue = LOADING_CONFIG.colors[color];
   
   return (
     <div
-      className="rounded-full animate-pulse"
+      className={cn("rounded-full animate-pulse", className)}
       style={{
         width: `${dimension}px`,
         height: `${dimension}px`,
-        backgroundColor: colorValue,
-        animationDuration: '1.5s'
+        backgroundColor: `${colorValue}40`, // 40% opacity
+        animationDuration: '1.5s',
+        boxShadow: `0 0 0 0 ${colorValue}60`
       }}
     />
   );
 };
 
-// Export configuration
+/**
+ * NEW: Property Loader - Specialized for property listings
+ */
+export const PropertyLoader = ({ className = "" }) => (
+  <div className={cn("property-listing animate-pulse", className)}>
+    <div className="w-full h-48 bg-slate-300/50 rounded-t-xl" />
+    <div className="p-6 space-y-3">
+      <div className="flex justify-between items-start">
+        <div className="space-y-2 flex-1">
+          <div className="h-5 bg-slate-300/50 rounded-lg w-3/4" />
+          <div className="h-4 bg-slate-300/50 rounded-lg w-1/2" />
+        </div>
+        <div className="h-6 bg-slate-300/50 rounded-full w-16" />
+      </div>
+      <div className="flex justify-between items-center pt-2">
+        <div className="h-6 bg-slate-300/50 rounded-lg w-24" />
+        <div className="h-8 bg-slate-300/50 rounded-lg w-20" />
+      </div>
+    </div>
+  </div>
+);
+
+/**
+ * NEW: Glass Loader - Full glassmorphism effect
+ */
+export const GlassLoader = ({
+  message = "Loading...",
+  size = "lg",
+  className = ""
+}) => (
+  <div className={cn("glass-primary p-8 rounded-2xl text-center glass-shimmer", className)}>
+    <LoadingAnimation
+      size={size}
+      color="primary"
+      speed="normal"
+      message={message}
+      showMessage={true}
+    />
+  </div>
+);
+
+/**
+ * NEW: Overlay Loader - For modal/overlay loading states
+ */
+export const OverlayLoader = ({
+  message = "Loading...",
+  blur = true,
+  className = ""
+}) => (
+  <div className={cn(
+    "fixed inset-0 flex items-center justify-center z-50",
+    blur ? "backdrop-blur-sm" : "",
+    className
+  )}>
+    <div className="glass-primary p-8 rounded-2xl text-center shadow-2xl">
+      <LoadingAnimation
+        size="xl"
+        color="primary"
+        speed="normal"
+        message={message}
+        showMessage={true}
+      />
+    </div>
+  </div>
+);
+
+// Export configuration for external use
 export { LOADING_CONFIG };
 
 // Default export
