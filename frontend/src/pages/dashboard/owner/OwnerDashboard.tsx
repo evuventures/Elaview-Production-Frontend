@@ -1,9 +1,10 @@
-// Space Owner Dashboard - REAL DATA VERSION
+// Space Owner Dashboard - REAL DATA VERSION WITH FIXED PRICING
 // ✅ REAL DATA: Fetches actual data from your backend API
 // ✅ SPACES FIRST: Spaces tab is now default and first in order
 // ✅ ERROR HANDLING: Proper error states and fallbacks
 // ✅ LOADING STATES: Real loading indicators
 // ✅ AUTO REFRESH: Refreshes data when returning from space creation
+// ✅ FIXED PRICING: Shows correct rate period (per day/week/month)
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -13,7 +14,8 @@ import {
   DollarSign, Clock, CheckCircle, AlertCircle,
   Eye, Upload, ChevronRight, MapPin, FileText,
   Download, Truck, Navigation, Star, TrendingUp, X,
-  BarChart3, Activity, ArrowUp, ArrowDown, Loader2, RefreshCw
+  BarChart3, Activity, ArrowUp, ArrowDown, Loader2, RefreshCw,
+  Edit2, Trash2
 } from 'lucide-react';
 
 // ✅ REAL DATA: Import your actual API client
@@ -116,6 +118,8 @@ interface Space {
   dimensions?: any;
   baseRate?: number;
   pricing?: any;
+  ratePeriod?: string; // ✅ FIXED: Added ratePeriod field
+  rateType?: string;   // ✅ FIXED: Added rateType alternative
   status: string;
   isActive?: boolean;
   currency?: string;
@@ -193,6 +197,71 @@ export default function SpaceOwnerDashboardMVP() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [deletingSpaceId, setDeletingSpaceId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+
+  // ✅ FIXED PRICING: Helper function to get rate period display text
+  const getRatePeriodLabel = (period?: string) => {
+    if (!period) return 'per month'; // Default fallback
+    
+    const labels = {
+      DAILY: 'per day',
+      WEEKLY: 'per week', 
+      MONTHLY: 'per month',
+      // Handle legacy/alternative formats
+      daily: 'per day',
+      weekly: 'per week',
+      monthly: 'per month',
+      DAY: 'per day',
+      WEEK: 'per week',
+      MONTH: 'per month'
+    };
+    return labels[period] || 'per month'; // fallback to 'per month'
+  };
+
+  // ✅ SPACE MANAGEMENT: Edit and delete functions
+  const handleEditSpace = (spaceId: string) => {
+    console.log('🔧 Editing space:', spaceId);
+    navigate(`/spaces/${spaceId}/edit`);
+  };
+
+  const handleDeleteSpace = async (spaceId: string) => {
+    console.log('🗑️ Deleting space:', spaceId);
+    setDeletingSpaceId(spaceId);
+    setError(null);
+    
+    try {
+      const response = await apiClient.deleteSpace(spaceId);
+      
+      if (response.success) {
+        console.log('✅ Space deleted successfully');
+        // Remove space from local state
+        setSpaces(prev => prev.filter(space => space.id !== spaceId));
+        // Update stats
+        setStats(prev => ({
+          ...prev,
+          activeListings: Math.max(0, prev.activeListings - 1)
+        }));
+        setShowDeleteConfirm(null);
+      } else {
+        console.error('❌ Failed to delete space:', response.error);
+        setError(response.error || 'Failed to delete space');
+      }
+    } catch (error: any) {
+      console.error('❌ Delete space error:', error);
+      setError('Failed to delete space. Please try again.');
+    } finally {
+      setDeletingSpaceId(null);
+    }
+  };
+
+  const confirmDeleteSpace = (spaceId: string, spaceName: string) => {
+    setShowDeleteConfirm(spaceId);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(null);
+  };
 
   // ✅ SPACE CREATION: Check for space creation success
   useEffect(() => {
@@ -211,7 +280,7 @@ export default function SpaceOwnerDashboardMVP() {
       fetchAllData(true);
       
       // Clear URL params after processing
-      navigate('/space-owner', { replace: true });
+      navigate('/dashboard', { replace: true });
     }
   }, [searchParams, navigate]);
 
@@ -241,7 +310,7 @@ export default function SpaceOwnerDashboardMVP() {
     }
   };
 
-  // ✅ REAL DATA: Fetch spaces
+  // ✅ REAL DATA: Fetch spaces with enhanced debugging for ratePeriod
   const fetchSpaces = async () => {
     try {
       console.log('🏢 Fetching spaces...');
@@ -256,8 +325,34 @@ export default function SpaceOwnerDashboardMVP() {
       }
       
       if (response.success && response.data) {
-        setSpaces(response.data);
-        console.log('✅ Spaces loaded:', response.data.length, 'spaces');
+        // ✅ FIXED PRICING: Debug space data to check ratePeriod field
+        console.log('🔍 DEBUG: Sample space data for pricing:', response.data[0]);
+        
+        // ✅ FIXED PRICING: Transform spaces data to ensure ratePeriod is available
+        const transformedSpaces = response.data.map(space => {
+          // Check for ratePeriod in multiple possible locations
+          const ratePeriod = space.ratePeriod || 
+                            space.rateType || 
+                            space.pricing?.ratePeriod ||
+                            space.pricing?.rateType ||
+                            'MONTHLY'; // Default fallback
+          
+          console.log(`🔍 Space "${space.name}" rate period:`, ratePeriod);
+          
+          return {
+            ...space,
+            ratePeriod: ratePeriod // Ensure ratePeriod is set
+          };
+        });
+        
+        setSpaces(transformedSpaces);
+        console.log('✅ Spaces loaded:', transformedSpaces.length, 'spaces');
+        
+        // ✅ FIXED PRICING: Log pricing info for debugging
+        transformedSpaces.forEach(space => {
+          console.log(`💰 Space "${space.name}": $${space.baseRate} ${getRatePeriodLabel(space.ratePeriod)}`);
+        });
+        
       } else {
         console.error('❌ Failed to fetch spaces:', response.error);
         setSpaces([]);
@@ -520,7 +615,7 @@ export default function SpaceOwnerDashboardMVP() {
     </div>
   );
 
-  // ✅ REAL DATA: Enhanced Spaces Table with real data
+  // ✅ FIXED PRICING: Enhanced Spaces Table with correct rate period display
   const EnhancedSpacesTable = () => (
     <div 
       className="rounded-2xl overflow-hidden relative"
@@ -658,7 +753,9 @@ export default function SpaceOwnerDashboardMVP() {
                           <div className="font-semibold text-gray-900">
                             {formatCurrency(price, space.currency)}
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">per month</div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {getRatePeriodLabel(space.ratePeriod || space.rateType)}
+                          </div>
                         </div>
                       </td>
                       <td className="py-3 px-6">
@@ -667,12 +764,34 @@ export default function SpaceOwnerDashboardMVP() {
                         </span>
                       </td>
                       <td className="py-3 px-6">
-                        <button 
-                          onClick={() => navigate(`/spaces/${space.id}/edit`)}
-                          className="text-blue-600 hover:text-blue-800 font-medium text-xs hover:underline transition-colors"
-                        >
-                          Edit Space
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleEditSpace(space.id)}
+                            className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all shadow-sm hover:shadow-md"
+                            title="Edit space details"
+                          >
+                            <Edit2 className="w-3.5 h-3.5 mr-1" />
+                            Edit
+                          </button>
+                          <button 
+                            onClick={() => confirmDeleteSpace(space.id, space.title || space.name)}
+                            disabled={deletingSpaceId === space.id}
+                            className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Delete this space"
+                          >
+                            {deletingSpaceId === space.id ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                                Deleting...
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="w-3.5 h-3.5 mr-1" />
+                                Delete
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1257,6 +1376,80 @@ export default function SpaceOwnerDashboardMVP() {
           </div>
         </div>
       </div>
+
+      {/* ✅ DELETE CONFIRMATION MODAL */}
+      {showDeleteConfirm && (
+        <div 
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ 
+            background: 'rgba(0, 0, 0, 0.5)',
+            backdropFilter: 'blur(4px)'
+          }}
+        >
+          <div 
+            className="bg-white rounded-xl p-6 max-w-md mx-4 shadow-xl border"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}
+          >
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+                <AlertCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Delete Space
+                </h3>
+                <p className="text-sm text-gray-600">
+                  This action cannot be undone
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-gray-700 text-sm">
+                Are you sure you want to delete this space? This will permanently remove:
+              </p>
+              <ul className="mt-2 text-sm text-gray-600 list-disc list-inside space-y-1">
+                <li>The space listing</li>
+                <li>All associated images</li>
+                <li>Space availability data</li>
+              </ul>
+              <p className="mt-3 text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+                ⚠️ Active bookings for this space will not be affected but new bookings will be disabled.
+              </p>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={cancelDelete}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteSpace(showDeleteConfirm)}
+                disabled={deletingSpaceId === showDeleteConfirm}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              >
+                {deletingSpaceId === showDeleteConfirm ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Space
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

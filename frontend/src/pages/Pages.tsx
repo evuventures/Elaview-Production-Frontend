@@ -1,4 +1,4 @@
-// src/pages/Pages.tsx - UPDATED with AI Builder test route and admin access
+// src/pages/Pages.tsx - UPDATED with AI Builder test route and admin access + Edit Space Route
 import Layout from "../components/layout/Layout.tsx";
 import Landing from "./landing/LandingPage.jsx";
 import CheckoutPage from "./checkout/CheckoutPage.jsx";
@@ -338,10 +338,19 @@ function PagesContent() {
                 </ProtectedRoute>
             } />
             
-            {/* ✅ List Space route - No special onboarding handling needed */}
+            {/* ✅ SPACE MANAGEMENT ROUTES - List and Edit */}
+            
+            {/* List Space route - No special onboarding handling needed */}
             <Route path="/list-space" element={
                 <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="list-space-protected">
                     <CreateListingWizard key="list-space-component" />
+                </ProtectedRoute>
+            } />
+
+            {/* ✅ NEW: Edit Space route - Uses same component in edit mode */}
+            <Route path="/spaces/:spaceId/edit" element={
+                <ProtectedRoute requireAdmin={false} allowedRoles={[]} redirectTo="/sign-in" key="edit-space-protected">
+                    <CreateListingWizard key="edit-space-component" />
                 </ProtectedRoute>
             } />
 
