@@ -1,5 +1,4 @@
-// src/pages/browse/BrowsePage.jsx - ENHANCED UI/UX VERSION WITH INTRO MODAL
-// ✅ UPDATED: Added IntroModal integration for first-time users
+// src/pages/browse/BrowsePage.jsx - ENHANCED UI/UX VERSION
 // ✅ IMPROVED: Reduced mobile visual clutter and consolidated information hierarchy
 // ✅ ENHANCED: Better loading states with skeleton screens and progressive disclosure
 // ✅ OPTIMIZED: Improved layout flexibility and touch target optimization
@@ -33,9 +32,6 @@ import MobileCartDrawer from './components/mobile/MobileCartDrawer';
 import BusinessDetailsModal from '../checkout/components/BusinessDetailsModal';
 import { useBusinessProfile, checkBusinessProfileRequired } from '../checkout/hooks/useBusinessProfile';
 
-// ✅ NEW: Intro Modal Component
-import IntroModal from '@/pages/onboarding/IntroPage';
-
 // ✅ Import utility functions
 import { getDistanceInKm } from './utils/distance';
 import { getPropertyCoords, getPropertyAddress, getPropertyName } from './utils/propertyHelpers';
@@ -57,7 +53,7 @@ import {
 import locationService from './services/locationService';
 import apiClient from '@/api/apiClient';
 
-// ✅ NEW: Enhanced Z-Index Scale (updated for intro modal)
+// ✅ NEW: Enhanced Z-Index Scale
 const Z_INDEX = {
   MAP: 10,
   MOBILE_CONTROLS: 20,
@@ -66,8 +62,7 @@ const Z_INDEX = {
   MOBILE_DRAWER: 40,
   MODAL_BACKDROP: 50,
   MODAL_CONTENT: 55,
-  INTRO_MODAL: 60, // Higher than other modals
-  DROPDOWN: 65,
+  DROPDOWN: 60,
   TOAST: 70
 };
 
@@ -99,10 +94,6 @@ export default function BrowsePage() {
   const [selectedSpace, setSelectedSpace] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // ✅ NEW: Intro modal state
-  const [showIntroModal, setShowIntroModal] = useState(false);
-  const [hasCheckedIntro, setHasCheckedIntro] = useState(false);
   
   // ✅ ENHANCED: Dynamic map location with Israeli fallback
   const [mapCenter, setMapCenter] = useState(DEFAULT_MAP_CENTER);
@@ -204,47 +195,6 @@ export default function BrowsePage() {
     completionPercentage,
     missingFields
   } = useBusinessProfile();
-
-  // ✅ NEW: Check for first-time user and show intro modal
-  useEffect(() => {
-    const checkFirstTimeUser = async () => {
-      if (!currentUser?.id || hasCheckedIntro) return;
-      
-      try {
-        console.log('🎯 Checking if user needs intro modal...');
-        
-        // Check development bypasses first
-        const urlParams = new URLSearchParams(window.location.search);
-        const skipIntro = urlParams.get('skip_intro') === 'true' || 
-                         import.meta.env.VITE_SKIP_INTRO === 'true';
-        
-        if (skipIntro) {
-          console.log('🚀 Development bypass: Skipping intro modal');
-          setHasCheckedIntro(true);
-          return;
-        }
-        
-        const response = await apiClient.checkFirstTimeStatus();
-        
-        if (response.success && response.data.isFirstTime) {
-          console.log('🎯 First-time user detected, showing intro modal');
-          setShowIntroModal(true);
-        } else {
-          console.log('🎯 Returning user, skipping intro modal');
-        }
-        
-        setHasCheckedIntro(true);
-      } catch (error) {
-        console.error('❌ Error checking first-time status:', error);
-        setHasCheckedIntro(true);
-      }
-    };
-    
-    // Only check after initial data load to avoid blocking the UI
-    if (!isLoading && currentUser?.id) {
-      checkFirstTimeUser();
-    }
-  }, [currentUser?.id, isLoading, hasCheckedIntro]);
 
   // ✅ IMPROVED: Enhanced mobile detection with debouncing
   useEffect(() => {
@@ -394,14 +344,12 @@ export default function BrowsePage() {
         setProperties(validProperties);
         setAllSpaces(flattenedSpaces);
         
-        // ✅ IMPROVED: Auto-open mobile sheet only if user hasn't interacted yet and intro modal isn't showing
-        if (isMobile && flattenedSpaces.length > 0 && !showIntroModal) {
+        // ✅ IMPROVED: Auto-open mobile sheet only if user hasn't interacted yet
+        if (isMobile && flattenedSpaces.length > 0) {
           setTimeout(() => {
-            if (!showIntroModal) {
-              setShowMobileSheet(true);
-              setSheetTitle("Spaces Near You");
-            }
-          }, 1200); // Longer delay to avoid conflicts with intro modal
+            setShowMobileSheet(true);
+            setSheetTitle("Spaces Near You");
+          }, 800); // Slight delay for better UX
         }
       }
     } catch (error) {
@@ -480,20 +428,6 @@ export default function BrowsePage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [filters]);
-
-  // ✅ NEW: Intro modal handlers
-  const handleIntroComplete = (userType) => {
-    console.log('🎯 Intro completed with user type:', userType);
-    setShowIntroModal(false);
-    
-    // User type handling is done in the IntroModal component
-    // If they're staying on browse page, we're already here
-  };
-
-  const handleIntroClose = () => {
-    console.log('🎯 Intro modal closed');
-    setShowIntroModal(false);
-  };
 
   // ✅ Cart functions with mobile logging
   const addToCart = (space, duration = 30) => {
@@ -952,6 +886,10 @@ export default function BrowsePage() {
               advertisingAreas={paginatedSpaces}
               onAreaClick={handleSpaceClick}
               showAreaMarkers={true}
+              onAddToCart={addToCart}
+              onToggleFavorite={toggleSavedSpace}
+              isInCart={isInCart}
+              savedSpaces={savedSpaces}
             />
 
             {/* ✅ IMPROVED: Simplified Map Controls with better spacing */}
@@ -1062,13 +1000,6 @@ export default function BrowsePage() {
             )}
           </div>
         </div>
-
-        {/* ✅ NEW: Intro Modal - Higher z-index than other modals */}
-        <IntroModal
-          isOpen={showIntroModal}
-          onClose={handleIntroClose}
-          onComplete={handleIntroComplete}
-        />
 
         {/* ✅ Mobile Bottom Sheet with enhanced z-index */}
         <MobileBottomSheet
@@ -1293,7 +1224,7 @@ export default function BrowsePage() {
                   <div 
                     className="border-t shadow-lg px-6 py-4 rounded-lg mt-6 sticky bottom-0"
                     style={{ 
-                      
+                      backgroundColor: '#FFFFFF', 
                       borderColor: '#E5E7EB',
                       backdropFilter: 'blur(10px)',
                       backgroundColor: 'rgba(255, 255, 255, 0.95)'
@@ -1336,6 +1267,10 @@ export default function BrowsePage() {
               advertisingAreas={paginatedSpaces}
               onAreaClick={handleSpaceClick}
               showAreaMarkers={true}
+              onAddToCart={addToCart}
+              onToggleFavorite={toggleSavedSpace}
+              isInCart={isInCart}
+              savedSpaces={savedSpaces}
             />
 
             <div 
@@ -1383,6 +1318,9 @@ export default function BrowsePage() {
               </div>
             )}
 
+            {/* ✅ ENHANCED: Map legend with progressive disclosure */}
+            
+
             {/* ✅ ENHANCED: Loading state with better messaging */}
             {isLoading && (
               <div 
@@ -1402,13 +1340,6 @@ export default function BrowsePage() {
           </div>
         </div>
       </div>
-
-      {/* ✅ NEW: Intro Modal for Desktop - Highest z-index */}
-      <IntroModal
-        isOpen={showIntroModal}
-        onClose={handleIntroClose}
-        onComplete={handleIntroComplete}
-      />
 
       {/* ✅ Business Profile Modal for Desktop */}
       <BusinessDetailsModal
