@@ -107,6 +107,7 @@ export default function BrowsePage() {
   // ✅ ENHANCED: Dynamic map location with Israeli fallback
   const [mapCenter, setMapCenter] = useState(DEFAULT_MAP_CENTER);
   const [mapZoom, setMapZoom] = useState(DEFAULT_MAP_ZOOM);
+  const [mapBounds, setMapBounds] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [mapLocationSource, setMapLocationSource] = useState('loading');
   const [mapLocationName, setMapLocationName] = useState('Loading...');
@@ -435,7 +436,7 @@ export default function BrowsePage() {
   }, []);
 
   // ✅ Advanced filtering for spaces with pagination
-  const { filteredSpaces, totalPages, paginatedSpaces } = useMemo(() => {
+  const { filteredSpaces, visibleSpaces, displayedSpaces, usingFallback, totalPages, paginatedSpaces } = useMemo(() => {
     let filtered = allSpaces;
 
     filtered = applyPriceFilter(filtered, filters.priceRange);
@@ -450,8 +451,27 @@ export default function BrowsePage() {
     filtered = applyAudienceFilter(filtered, filters.audience);
     filtered = applyFeaturesFilter(filtered, filters.features);
 
+  // Bounds-based filtering (visible region)
+    let visible = filtered;
+    if (mapBounds) {
+      const { north, south, east, west } = mapBounds;
+      visible = filtered.filter(space => {
+        const c = space.coordinates && space.coordinates.lat && space.coordinates.lng 
+          ? space.coordinates 
+          : space.propertyCoords;
+        if (!c) return false;
+        const latOk = c.lat <= north && c.lat >= south;
+        const lngOk = east >= west
+          ? c.lng <= east && c.lng >= west
+          : (c.lng <= east || c.lng >= west); // antimeridian wraparound
+        return latOk && lngOk;
+      });
+    }
+
+    // Sort visible spaces by distance to current map center
+    let sortedVisible = visible;
     if (mapCenter) {
-      const spacesWithDistance = filtered
+      sortedVisible = visible
         .map(space => ({
           ...space,
           distance: space.propertyCoords ? 
@@ -459,22 +479,40 @@ export default function BrowsePage() {
             Infinity
         }))
         .sort((a, b) => a.distance - b.distance);
-      
-      filtered = spacesWithDistance;
     }
 
-    const totalSpaces = filtered.length;
+  // 🛟 Fallback: if nothing visible in the current region, show the 10 closest to the user (no filters)
+    const origin = userLocation || mapCenter;
+    let fallbackTop10 = [];
+    if (origin && (!sortedVisible || sortedVisible.length === 0)) {
+      fallbackTop10 = allSpaces
+        .filter(s => s.propertyCoords && typeof s.propertyCoords.lat === 'number' && typeof s.propertyCoords.lng === 'number')
+        .map(s => ({
+          ...s,
+          distance: getDistanceInKm(origin.lat, origin.lng, s.propertyCoords.lat, s.propertyCoords.lng)
+        }))
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 10);
+    }
+
+    const usingFallback = (!sortedVisible || sortedVisible.length === 0) && fallbackTop10.length > 0;
+    const displayed = usingFallback ? fallbackTop10 : sortedVisible;
+
+    const totalSpaces = displayed.length;
     const totalPages = Math.ceil(totalSpaces / CARDS_PER_PAGE);
     const startIndex = (currentPage - 1) * CARDS_PER_PAGE;
     const endIndex = startIndex + CARDS_PER_PAGE;
-    const paginatedSpaces = filtered.slice(startIndex, endIndex);
+    const paginatedSpaces = displayed.slice(startIndex, endIndex);
     
     return {
       filteredSpaces: filtered,
+      visibleSpaces: sortedVisible,
+      displayedSpaces: displayed,
+      usingFallback,
       totalPages,
       paginatedSpaces
     };
-  }, [allSpaces, filters, mapCenter, currentPage]);
+  }, [allSpaces, filters, mapCenter, userLocation, currentPage, mapBounds]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -949,9 +987,13 @@ export default function BrowsePage() {
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"
-              advertisingAreas={paginatedSpaces}
+              spaces={displayedSpaces}
+              advertisingAreas={displayedSpaces}
+              onSpaceClick={handleSpaceClick}
               onAreaClick={handleSpaceClick}
               showAreaMarkers={true}
+              showPropertyMarkers={false}
+              onBoundsChange={(b, z) => setMapBounds(b)}
             />
 
             {/* ✅ IMPROVED: Simplified Map Controls with better spacing */}
@@ -1075,7 +1117,7 @@ export default function BrowsePage() {
           ref={mobileSheetRef}
           isOpen={showMobileSheet}
           onClose={handleMobileSheetClose}
-          spaces={filteredSpaces}
+          spaces={displayedSpaces}
           selectedProperty={selectedProperty}
           mapCenter={mapCenter}
           onSpaceSelect={handleMobileSpaceSelect}
@@ -1085,7 +1127,7 @@ export default function BrowsePage() {
           onAddToCart={addToCart}
           isInCart={isInCart}
           cartCount={cart.length}
-          title={sheetTitle}
+          title={usingFallback ? 'Closest spaces to you' : sheetTitle}
           style={{ zIndex: Z_INDEX.MOBILE_SHEET }}
         />
 
@@ -1182,8 +1224,8 @@ export default function BrowsePage() {
                 {!isLoading && !error ? (
                   <>
                     <p className="body-medium text-slate-600 mt-1">
-                      {filteredSpaces.length > 0 
-                        ? `${filteredSpaces.length} ${filteredSpaces.length === 1 ? 'space' : 'spaces'}`
+                      {displayedSpaces.length > 0 
+                        ? `${displayedSpaces.length} ${displayedSpaces.length === 1 ? 'space' : 'spaces'}`
                         : 'No spaces found with current filters'
                       }
                     </p>
@@ -1289,7 +1331,7 @@ export default function BrowsePage() {
                 />
 
                 {/* ✅ ENHANCED: Improved pagination with better styling */}
-                {!isLoading && !error && filteredSpaces.length > 0 && totalPages > 1 && (
+                {!isLoading && !error && displayedSpaces.length > 0 && totalPages > 1 && (
                   <div 
                     className="border-t shadow-lg px-6 py-4 rounded-lg mt-6 sticky bottom-0"
                     style={{ 
@@ -1310,7 +1352,13 @@ export default function BrowsePage() {
               </div>
             ) : (
               <div className="py-12">
-                <EmptyState onClearFilters={clearFilters} />
+                {usingFallback ? (
+                  <div className="text-center text-slate-600">
+                    Showing the 10 closest spaces to you.
+                  </div>
+                ) : (
+                  <EmptyState onClearFilters={clearFilters} />
+                )}
               </div>
             )}
           </div>
@@ -1333,9 +1381,13 @@ export default function BrowsePage() {
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-[calc(100%-100px)]"
-              advertisingAreas={paginatedSpaces}
+              spaces={displayedSpaces}
+              advertisingAreas={displayedSpaces}
+              onSpaceClick={handleSpaceClick}
               onAreaClick={handleSpaceClick}
               showAreaMarkers={true}
+              showPropertyMarkers={false}
+              onBoundsChange={(b, z) => setMapBounds(b)}
             />
 
             <div 
@@ -1353,35 +1405,7 @@ export default function BrowsePage() {
               </Button>
             </div>
 
-            {/* ✅ ENHANCED: Improved map info panel */}
-            {!isLoading && !error && (
-              <div 
-                className="absolute top-4 left-4"
-                style={{ zIndex: Z_INDEX.MAP }}
-              >
-                <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg max-w-64">
-                  <div className="text-center">
-                    <p 
-                      className="text-lg font-semibold"
-                      style={{ color: '#4668AB' }}
-                    >
-                      {filteredSpaces.length}
-                    </p>
-                    <p className="text-xs text-slate-600">
-                      {filteredSpaces.length === 1 ? 'Space Available' : 'Spaces Available'}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      📍 {mapLocationName}
-                    </p>
-                    {activeFiltersCount > 0 && (
-                      <p className="text-xs text-slate-500 mt-1">
-                        {activeFiltersCount} filter{activeFiltersCount !== 1 ? 's' : ''} active
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Removed top-left panel to adopt Airbnb-like popup UX; counts now shown in list header */}
 
             {/* ✅ ENHANCED: Loading state with better messaging */}
             {isLoading && (

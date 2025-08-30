@@ -3,6 +3,7 @@
 // ✅ MOBILE: Disabled default Google Maps controls on mobile
 
 import React, { useEffect, useRef, useState } from 'react';
+import ReactDOM from 'react-dom/client';
 import { X, MapPin } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
@@ -81,6 +82,9 @@ interface GoogleMapProps {
   onSpaceClick?: (space: Space) => void;
   onAreaClick?: (area: Space) => void; // DEPRECATED: Use onSpaceClick
   showAreaMarkers?: boolean;
+  onBoundsChange?: (bounds: { north: number; south: number; east: number; west: number }, zoom: number) => void;
+  selectedSpaceId?: string;
+  disableSpacePopupOnMobile?: boolean;
 }
 
 // ✅ CLEAN: Simplified Space Dropdown
@@ -254,6 +258,201 @@ interface GoogleMapsWindow extends Window {
 
 declare const window: GoogleMapsWindow;
 
+// ✅ Robust portal overlay: render React children into Google Maps floatPane at a LatLng
+const MapOverlayPortal: React.FC<{
+  map: google.maps.Map;
+  position: LatLng;
+  children: React.ReactNode;
+  zIndex?: number;
+  offsetY?: number; // extra pixels above the anchor
+}> = ({ map, position, children, zIndex = 1000, offsetY = 12 }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<ReturnType<typeof ReactDOM.createRoot> | null>(null);
+  const overlayRef = useRef<google.maps.OverlayView | null>(null);
+
+  useEffect(() => {
+    // Create container and overlay when mounted
+    const overlay = new window.google.maps.OverlayView();
+    overlay.onAdd = function () {
+      const panes = this.getPanes();
+      if (!panes) return;
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.transform = `translate(-50%, calc(-100% - ${offsetY}px))`;
+      container.style.pointerEvents = 'auto';
+      container.style.zIndex = String(zIndex);
+      containerRef.current = container;
+      panes.floatPane.appendChild(container);
+      rootRef.current = ReactDOM.createRoot(container);
+      rootRef.current.render(<>{children}</>);
+    };
+    overlay.draw = function () {
+      if (!containerRef.current) return;
+      const projection = this.getProjection();
+      if (!projection) return;
+      const point = projection.fromLatLngToDivPixel(
+        new window.google.maps.LatLng(position.lat, position.lng)
+      );
+      if (!point) return;
+      containerRef.current.style.left = `${point.x}px`;
+      containerRef.current.style.top = `${point.y}px`;
+    };
+    overlay.onRemove = function () {
+      if (rootRef.current) {
+        rootRef.current.unmount();
+        rootRef.current = null;
+      }
+      if (containerRef.current && containerRef.current.parentNode) {
+        containerRef.current.parentNode.removeChild(containerRef.current);
+      }
+      containerRef.current = null;
+    };
+    overlay.setMap(map);
+    overlayRef.current = overlay;
+    return () => {
+      overlay.setMap(null);
+      overlayRef.current = null;
+    };
+  }, [map]);
+
+  // Re-render children if they change
+  useEffect(() => {
+    if (rootRef.current) {
+      rootRef.current.render(<>{children}</>);
+    }
+  }, [children]);
+
+  // Update position on pan/zoom/prop changes
+  useEffect(() => {
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+    // Request a draw on next frame (projection-based)
+    overlay.draw();
+  }, [position.lat, position.lng]);
+
+  return null;
+};
+
+// ✅ Component: Anchored popup for a Space
+const SpaceAnchoredPopup: React.FC<{
+  map: google.maps.Map;
+  space: Space;
+  position: LatLng;
+  onClose: () => void;
+  onView?: (s: Space) => void;
+}> = ({ map, space, position, onClose, onView }) => {
+  const title = space.name || space.title || 'Advertising Space';
+  const price = space.baseRate
+    ? `$${space.baseRate}${space.rateType ? '/' + space.rateType.toLowerCase().replace('ly','').replace('y','y') : ''}`
+    : 'Contact for pricing';
+  const img = (typeof space.images === 'string' && space.images) ? space.images : (space.property?.primary_image || '');
+  return (
+    <MapOverlayPortal map={map} position={position}>
+      <div className="rounded-xl shadow-soft-lg bg-white border border-slate-200" style={{ width: 260 }}>
+        <div className="relative">
+          {img ? (
+            <img src={img} alt={title} className="w-full h-24 object-cover rounded-t-xl" />
+          ) : (
+            <div className="w-full h-24 bg-slate-100 rounded-t-xl" />
+          )}
+          <button
+            onClick={onClose}
+            className="absolute top-2 right-2 p-1 bg-white/90 rounded-md hover:bg-white shadow"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4 text-slate-500" />
+          </button>
+        </div>
+        <div className="p-2">
+          <div className="flex items-center justify-between mb-1.5">
+            <h4 className="text-sm font-semibold text-slate-800 truncate mr-2">{title}</h4>
+            <span className="text-xs font-semibold text-white bg-[#4668AB] px-2 py-0.5 rounded-full">{price}</span>
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <Button className="btn-primary btn-small" onClick={() => onView && onView(space)}>
+              View details
+            </Button>
+          </div>
+        </div>
+        <div 
+          className="absolute top-full left-1/2 -translate-x-1/2"
+          style={{
+            width: 0,
+            height: 0,
+            borderLeft: '10px solid transparent',
+            borderRight: '10px solid transparent',
+            borderTop: '10px solid white',
+          }}
+        />
+      </div>
+    </MapOverlayPortal>
+  );
+};
+
+// ✅ Component: Anchored popup for a Property
+const PropertyAnchoredPopup: React.FC<{
+  map: google.maps.Map;
+  property: Property;
+  position: LatLng;
+  spaces: Space[];
+  onClose: () => void;
+  onView?: (p: Property) => void;
+}> = ({ map, property, position, spaces, onClose, onView }) => {
+  const propertyTitle = property.name || property.title || 'Property';
+  const img = property.primary_image || '';
+  const list = spaces && spaces.length ? spaces : (property.spaces || []);
+  const count = list?.length || 0;
+  const prices: number[] = [];
+  list.forEach((s: any) => {
+    if (s?.baseRate && typeof s.baseRate === 'number') prices.push(s.baseRate);
+    else if (s?.pricing?.base_price && typeof s.pricing.base_price === 'number') prices.push(s.pricing.base_price);
+  });
+  const minPrice = prices.length ? Math.min(...prices) : null;
+  return (
+    <MapOverlayPortal map={map} position={position}>
+      <div className="rounded-xl shadow-soft-lg bg-white border border-slate-200" style={{ width: 280 }}>
+        <div className="relative">
+          {img ? (
+            <img src={img} alt={propertyTitle} className="w-full h-24 object-cover rounded-t-xl" />
+          ) : (
+            <div className="w-full h-24 bg-slate-100 rounded-t-xl" />
+          )}
+          <button
+            onClick={onClose}
+            className="absolute top-2 right-2 p-1 bg-white/90 rounded-md hover:bg-white shadow"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4 text-slate-500" />
+          </button>
+        </div>
+        <div className="p-2">
+          <div className="flex items-center justify-between mb-1">
+            <h4 className="text-sm font-semibold text-slate-800 truncate mr-2">{propertyTitle}</h4>
+            {minPrice !== null && (
+              <span className="text-xs font-semibold text-white bg-[#4668AB] px-2 py-0.5 rounded-full">{`$${minPrice}`}</span>
+            )}
+          </div>
+          <p className="caption text-slate-500 mb-1.5">{count} space{count !== 1 ? 's' : ''} available</p>
+          <div className="flex items-center justify-end gap-2">
+            <Button className="btn-ghost btn-small" onClick={onClose}>Close</Button>
+            <Button className="btn-primary btn-small" onClick={() => onView && onView(property)}>View property</Button>
+          </div>
+        </div>
+        <div 
+          className="absolute top-full left-1/2 -translate-x-1/2"
+          style={{
+            width: 0,
+            height: 0,
+            borderLeft: '10px solid transparent',
+            borderRight: '10px solid transparent',
+            borderTop: '10px solid white',
+          }}
+        />
+      </div>
+    </MapOverlayPortal>
+  );
+};
+
 const GoogleMap: React.FC<GoogleMapProps> = ({
   properties,
   onPropertyClick,
@@ -268,10 +467,14 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   onSpaceClick,
   onAreaClick, // DEPRECATED: Use onSpaceClick instead
   showAreaMarkers = true,
+  onBoundsChange,
+  selectedSpaceId,
+  disableSpacePopupOnMobile = true,
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const propertyMarkersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const areaMarkersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const clickMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
   
@@ -282,6 +485,19 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   const [activeDropdown, setActiveDropdown] = useState<{
     spaces: Space[];
     position: LatLng;
+  } | null>(null);
+
+  // ✅ New Airbnb-like space popup state
+  const [activeSpacePopup, setActiveSpacePopup] = useState<{
+    space: Space;
+    position: LatLng;
+  } | null>(null);
+
+  // ✅ NEW: Property-level anchored popup (above property marker)
+  const [activePropertyPopup, setActivePropertyPopup] = useState<{
+    property: Property;
+    position: LatLng;
+    spaces: Space[];
   } | null>(null);
 
   // ✅ NEW: Mobile detection useEffect
@@ -308,6 +524,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   useEffect(() => {
     return () => {
       propertyMarkersRef.current = cleanupMarkers(propertyMarkersRef.current);
+  areaMarkersRef.current = cleanupMarkers(areaMarkersRef.current);
       if (clickMarkerRef.current && clickMarkerRef.current.map) {
         clickMarkerRef.current.map = null;
       }
@@ -391,12 +608,26 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
 
         mapInstanceRef.current = map;
 
+  // No need for a persistent projection overlay; MapOverlayPortal manages its own
+
         // Add click listener to close dropdown
         map.addListener('click', (event: google.maps.MapMouseEvent) => {
           setActiveDropdown(null);
+          setActiveSpacePopup(null);
+          setActivePropertyPopup(null);
           if (onClick) {
             onClick(event);
           }
+        });
+        
+        // Emit bounds change to parent after map settles
+        map.addListener('idle', () => {
+          if (!onBoundsChange || !mapInstanceRef.current) return;
+          const b = mapInstanceRef.current.getBounds();
+          if (!b) return;
+          const ne = b.getNorthEast();
+          const sw = b.getSouthWest();
+          onBoundsChange({ north: ne.lat(), south: sw.lat(), east: ne.lng(), west: sw.lng() }, map.getZoom());
         });
         
         setIsMapReady(true);
@@ -451,7 +682,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
           
           // ✅ CLEAN: Simple marker design with Deep Teal
           const markerElement = document.createElement('div');
-          markerElement.className = 'flex items-center justify-center w-8 h-8 bg-teal-500 text-white rounded-full border-2 border-white shadow-soft cursor-pointer hover:bg-teal-600 transition-all duration-200 hover:scale-110';
+          markerElement.className = 'flex items-center justify-center w-8 h-8 bg-[#4668AB] text-white rounded-full border-2 border-white shadow-soft cursor-pointer hover:bg-[#3c5997] transition-all duration-200 hover:scale-110';
           markerElement.style.fontSize = '12px';
           markerElement.style.fontWeight = '600';
           markerElement.textContent = spaceCount.toString();
@@ -464,42 +695,33 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
             gmpClickable: true,
           });
 
-          // ✅ Show dropdown on property marker click
-          // ✅ FIXED: Mobile-aware property marker click handler
-marker.addListener('click', (e: any) => {
-  e.stop();
-  
-  // ✅ Check if currently mobile (real-time detection)
-  const isCurrentlyMobile = window.innerWidth < 768;
-  
-  if (isCurrentlyMobile) {
-    // ✅ Mobile: Always use bottom sheet via onPropertyClick
-    console.log('📱 Mobile property marker clicked - opening bottom sheet');
-    onPropertyClick(property);
-  } else {
-    // ✅ Desktop: Use dropdown as before
-    console.log('🖥️ Desktop property marker clicked - showing dropdown');
-    
-    // MIGRATION: Use spaces or fallback to advertisingAreas for backward compatibility
-    const allSpaces = spaces.length > 0 ? spaces : advertisingAreas;
-    const propertySpaces = allSpaces.filter(space => 
-      space.propertyId === property.id || 
-      space.property?.id === property.id ||
-      (space.propertyCoords && 
-       Math.abs(space.propertyCoords.lat - position!.lat) < 0.001 &&
-       Math.abs(space.propertyCoords.lng - position!.lng) < 0.001)
-    );
+          // ✅ Property marker click → Anchored popup above the property
+          // ✅ Mobile → open bottom sheet via onPropertyClick; Desktop → anchored popup
+          marker.addListener('click', (e: any) => {
+            e.stop();
+            const isCurrentlyMobile = window.innerWidth < 768;
 
-    if (propertySpaces.length > 0) {
-      setActiveDropdown({
-        spaces: propertySpaces,
-        position: position!
-      });
-    } else {
-      onPropertyClick(property);
-    }
-  }
-});
+            // Find spaces belonging to this property (from props)
+            const allSpaces = spaces.length > 0 ? spaces : advertisingAreas;
+            const propertySpaces = allSpaces.filter(space => 
+              space.propertyId === property.id || 
+              space.property?.id === property.id ||
+              (space.propertyCoords && 
+                Math.abs(space.propertyCoords.lat - position!.lat) < 0.001 &&
+                Math.abs(space.propertyCoords.lng - position!.lng) < 0.001)
+            );
+
+            if (isCurrentlyMobile) {
+              // Bottom sheet flow
+              onPropertyClick(property);
+              return;
+            }
+
+            // Desktop: show anchored property popup
+            setActivePropertyPopup({ property, position: position!, spaces: propertySpaces });
+            setActiveDropdown(null);
+            setActiveSpacePopup(null);
+          });
 
           newMarkers.push(marker);
         }
@@ -513,6 +735,91 @@ marker.addListener('click', (e: any) => {
 
     createPropertyMarkers();
   }, [properties, spaces, advertisingAreas, isMapReady, onPropertyClick, showPropertyMarkers]);
+
+  // ✅ NEW: Space (area) markers rendering (Airbnb-like per-space markers)
+  useEffect(() => {
+    const createAreaMarkers = async () => {
+      if (!mapInstanceRef.current || !isMapReady || !showAreaMarkers) {
+        areaMarkersRef.current = cleanupMarkers(areaMarkersRef.current);
+        return;
+      }
+
+      try {
+        const { AdvancedMarkerElement } = await window.google.maps.importLibrary('marker');
+        areaMarkersRef.current = cleanupMarkers(areaMarkersRef.current);
+
+        const allSpaces = spaces.length > 0 ? spaces : advertisingAreas;
+        const newMarkers: google.maps.marker.AdvancedMarkerElement[] = [];
+
+        for (const space of allSpaces) {
+          const pos: LatLng | null = space.coordinates?.lat && space.coordinates?.lng
+            ? { lat: space.coordinates.lat, lng: space.coordinates.lng }
+            : space.propertyCoords
+              ? { lat: space.propertyCoords.lat, lng: space.propertyCoords.lng }
+              : null;
+          if (!pos) continue;
+
+          const el = document.createElement('div');
+          el.className = 'px-2 py-1 rounded-full text-white bg-[#4668AB] border border-white shadow-soft text-xs font-semibold cursor-pointer hover:bg-[#3c5997] transition-colors';
+          const price = space.baseRate ? `$${space.baseRate}` : '';
+          el.textContent = price || '●';
+
+          const m = new AdvancedMarkerElement({
+            map: mapInstanceRef.current,
+            position: pos,
+            content: el,
+            gmpClickable: true,
+          });
+
+          m.addListener('click', (e: any) => {
+            // Prevent immediate navigation; emulate Airbnb behavior
+            if (e?.stop) e.stop();
+
+            const isCurrentlyMobile = window.innerWidth < 768;
+
+            // Close other UI elements
+            setActiveDropdown(null);
+            setActivePropertyPopup(null);
+
+            // On mobile, if popups are disabled, open bottom sheet via onSpaceClick
+            if (isCurrentlyMobile && disableSpacePopupOnMobile) {
+              if (onSpaceClick) onSpaceClick(space);
+              return;
+            }
+
+            // Desktop (or mobile with popup enabled): open anchored popup above the marker
+            setActiveSpacePopup({ space, position: pos });
+          });
+
+          newMarkers.push(m);
+        }
+
+        areaMarkersRef.current = newMarkers;
+      } catch (err) {
+        console.error('Error creating area markers:', err);
+      }
+    };
+
+    createAreaMarkers();
+  }, [spaces, advertisingAreas, isMapReady, showAreaMarkers, onSpaceClick, disableSpacePopupOnMobile]);
+
+  // ✅ Keep popup anchored to the map point during pan/zoom
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    const listeners: google.maps.MapsEventListener[] = [];
+    const update = () => {
+      if (activeSpacePopup) {
+        // trigger re-render by resetting the same state (position stays)
+        setActiveSpacePopup({ ...activeSpacePopup });
+      }
+      if (activePropertyPopup) {
+        setActivePropertyPopup({ ...activePropertyPopup });
+      }
+    };
+    listeners.push(mapInstanceRef.current.addListener('zoom_changed', update));
+    listeners.push(mapInstanceRef.current.addListener('center_changed', update));
+    return () => listeners.forEach(l => l.remove());
+  }, [activeSpacePopup, activePropertyPopup]);
 
   // ✅ Create click marker when marker prop changes
   useEffect(() => {
@@ -575,6 +882,32 @@ marker.addListener('click', (e: any) => {
           map={mapInstanceRef.current}
         />
       )}
+
+      {/* ✅ NEW: Airbnb-like anchored space popup */}
+      {activeSpacePopup && mapInstanceRef.current && (
+        <SpaceAnchoredPopup
+          map={mapInstanceRef.current}
+          space={activeSpacePopup.space}
+          position={activeSpacePopup.position}
+          onClose={() => setActiveSpacePopup(null)}
+          onView={onSpaceClick}
+        />
+      )}
+
+      {/* ✅ NEW: Anchored property popup (above property marker) */}
+      {activePropertyPopup && mapInstanceRef.current && (
+        <PropertyAnchoredPopup
+          map={mapInstanceRef.current}
+          property={activePropertyPopup.property}
+          position={activePropertyPopup.position}
+          spaces={activePropertyPopup.spaces}
+          onClose={() => setActivePropertyPopup(null)}
+          onView={(p) => {
+            setActivePropertyPopup(null);
+            onPropertyClick(p);
+          }}
+        />
+      )}
       
       {/* ✅ CLEAN: Simple loading state */}
       {!isMapReady && (
@@ -582,6 +915,23 @@ marker.addListener('click', (e: any) => {
           <div className="text-center">
             <div className="loading-spinner w-6 h-6 text-teal-500 mx-auto mb-3"></div>
             <p className="body-small text-slate-600">Loading map...</p>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ RETURNED: Top-left info panel */}
+      {isMapReady && (
+        <div className="absolute top-3 left-3 z-40">
+          <div className="bg-white/95 backdrop-blur rounded-xl shadow-soft border border-slate-200 px-3 py-2">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-[#4668AB]" />
+              <div>
+                <div className="text-xs font-semibold text-slate-700">Map</div>
+                <div className="text-[11px] text-slate-500">
+                  {spaces?.length || 0} spaces · {properties?.length || 0} properties
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
