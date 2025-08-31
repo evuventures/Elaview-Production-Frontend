@@ -1,25 +1,26 @@
 // src/pages/browse/utils/mapConstants.js
-// ✅ ENHANCED: Updated with intelligent location detection while preserving Israeli context
+// ✅ UPDATED: Changed default to US while preserving Israeli context
 
 // ✅ Pagination settings
 export const CARDS_PER_PAGE = 12;
 
-// ✅ ENHANCED: Dynamic location detection with Israeli priority
-// These are now determined by LocationService, with Kfar Kama as Israeli fallback
-export const DEFAULT_MAP_CENTER = { lat: 32.721105, lng: 35.442834 }; // Kfar Kama (Israeli context)
-export const DEFAULT_MAP_ZOOM = 12; // Better zoom for small town
+// ✅ FIXED: Default map center now points to US instead of Israel
+export const DEFAULT_MAP_CENTER = { lat: 39.8283, lng: -98.5795 }; // United States center
+export const DEFAULT_MAP_ZOOM = 4; // Country-level zoom for US
 export const LOCATION_ZOOM = 15; // Zoom level when user centers on their location
 
 // ✅ ENHANCED: Alternative map centers with intelligent detection
 export const MAP_CENTERS = {
-  // Israeli locations (primary market)
+  // Israeli locations (preserved for Israeli users)
   israel: { lat: 31.7683, lng: 35.2137 }, // Israel center  
   kfarKama: { lat: 32.721105, lng: 35.442834 }, // Kfar Kama
   galilee: { lat: 32.8, lng: 35.5 }, // Galilee region
   
-  // International fallbacks  
+  // US locations (primary market)
+  unitedStates: { lat: 39.8283, lng: -98.5795 }, // Central US
   california: { lat: 33.7175, lng: -117.8311 }, // Orange, CA
-  unitedStates: { lat: 39.8283, lng: -98.5795 }, // Central US ✅ UPDATED
+  
+  // Global fallbacks
   global: { lat: 20, lng: 0 } // Global view
 };
 
@@ -119,8 +120,16 @@ export const SPACE_TYPE_CATEGORIES_COMBINED = {
   exteriorwall: ['building_exterior', 'wall_graphic', 'building_wrap']
 };
 
-// ✅ PRESERVED: Price ranges for ILS currency (Kfar Kama pricing)
+// ✅ UPDATED: Default to USD pricing, with ILS as option
 export const PRICE_RANGE_OPTIONS = [
+  { id: 'all', label: 'Any Budget', min: 0, max: Infinity },
+  { id: 'under500', label: 'Under $500/mo', min: 0, max: 500 },
+  { id: 'under1000', label: 'Under $1K/mo', min: 0, max: 1000 },
+  { id: 'under2000', label: 'Under $2K/mo', min: 0, max: 2000 }
+];
+
+// Alternative ILS pricing for Israeli markets
+export const ILS_PRICE_RANGE_OPTIONS = [
   { id: 'all', label: 'Any Budget', min: 0, max: Infinity },
   { id: 'under200', label: 'Under ₪200/day', min: 0, max: 200 },
   { id: 'under350', label: 'Under ₪350/day', min: 0, max: 350 },
@@ -128,13 +137,8 @@ export const PRICE_RANGE_OPTIONS = [
   { id: 'premium', label: '₪500+/day', min: 500, max: Infinity }
 ];
 
-// Alternative USD pricing for US markets
-export const USD_PRICE_RANGE_OPTIONS = [
-  { id: 'all', label: 'Any Budget', min: 0, max: Infinity },
-  { id: 'under500', label: 'Under $500/mo', min: 0, max: 500 },
-  { id: 'under1000', label: 'Under $1K/mo', min: 0, max: 1000 },
-  { id: 'under2000', label: 'Under $2K/mo', min: 0, max: 2000 }
-];
+// Keep USD as default (renamed from previous)
+export const USD_PRICE_RANGE_OPTIONS = PRICE_RANGE_OPTIONS;
 
 // ✅ PRESERVED: All your existing filter and display constants
 export const SPACE_TYPE_OPTIONS = [

@@ -1,4 +1,4 @@
-// src/pages/auth/SignUp.jsx - WIREFRAME DESIGN VERSION
+// src/pages/auth/SignUp.jsx - COMPLETE FILE WITH AUTHENTICATION FIX
 import React, { useState } from 'react';
 import { SignUp, useSignUp, useAuth } from '@clerk/clerk-react';
 import { useNavigate } from 'react-router-dom';
@@ -23,7 +23,6 @@ export default function SignUpPage() {
   const { signUp, setActive } = useSignUp();
   const { isSignedIn } = useAuth();
 
-  // ✅ MOBILE: Add console log for mobile debugging
   React.useEffect(() => {
     console.log('📱 SIGN-UP PAGE: Mobile viewport check', {
       windowWidth: window.innerWidth,
@@ -32,15 +31,14 @@ export default function SignUpPage() {
     });
   }, []);
 
-  // If already signed in, redirect
+  // CHANGED: Redirect to home if already signed in
   React.useEffect(() => {
     if (isSignedIn) {
-      navigate('/browse');
+      navigate('/');
     }
   }, [isSignedIn, navigate]);
 
   const handleSubmit = async () => {
-    // Validate and clean inputs
     const trimmedFirstName = firstName.trim();
     const trimmedLastName = lastName.trim();
     const trimmedEmail = email.trim().toLowerCase();
@@ -51,24 +49,20 @@ export default function SignUpPage() {
       return;
     }
     
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(trimmedEmail)) {
       setError('Please enter a valid email address.');
       return;
     }
     
-    // Password validation - enhanced for Clerk's requirements
     if (trimmedPassword.length < 8) {
       setError('Password must be at least 8 characters long.');
       return;
     }
     
-    // ✅ ENHANCED: Check for password strength
     const hasUpperCase = /[A-Z]/.test(trimmedPassword);
     const hasLowerCase = /[a-z]/.test(trimmedPassword);
     const hasNumbers = /\d/.test(trimmedPassword);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(trimmedPassword);
     
     if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
       setError('Password must contain uppercase, lowercase, and numbers. Consider adding special characters for extra security.');
@@ -85,7 +79,6 @@ export default function SignUpPage() {
         emailAddress: trimmedEmail 
       });
       
-      // ✅ DEBUG: Log what Clerk expects
       console.log('🔍 Clerk signup object state:', signUp);
       console.log('🔍 Available fields:', {
         requiredFields: signUp?.requiredFields,
@@ -93,7 +86,6 @@ export default function SignUpPage() {
         missingFields: signUp?.missingFields
       });
       
-      // ✅ CORRECTED: Use camelCase for frontend API (not snake_case)
       const result = await signUp.create({
         firstName: trimmedFirstName,
         lastName: trimmedLastName,
@@ -107,18 +99,17 @@ export default function SignUpPage() {
       if (result.status === 'complete') {
         console.log('✅ Signup complete immediately!');
         await setActive({ session: result.createdSessionId });
-        navigate('/browse');
+        // CHANGED: Redirect to home
+        navigate('/');
       } else {
-        // ✅ NEW APPROACH: Handle verification in custom UI
         console.log('🔄 Preparing email verification...');
         
         try {
           await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
           console.log('📧 Email verification prepared successfully');
           
-          // Show custom verification step instead of Clerk UI
           setShowVerification(true);
-          setError(''); // Clear any previous errors
+          setError('');
           
         } catch (prepError) {
           console.error('❌ Could not prepare email verification:', prepError);
@@ -130,7 +121,6 @@ export default function SignUpPage() {
       console.error('Sign-up error:', err);
       console.error('🔍 Full error details:', JSON.stringify(err, null, 2));
       
-      // Check if the error is CAPTCHA-related
       if (err.errors?.some(error => 
         error.code === 'captcha_invalid' || 
         error.code === 'captcha_required' ||
@@ -144,7 +134,6 @@ export default function SignUpPage() {
       )) {
         console.error('❌ CONFIGURATION ERROR: Check your Clerk Dashboard settings!');
         setError('Configuration error. Please contact support if this persists.');
-        // Show Clerk UI as fallback
         setShowClerkUI(true);
       } else if (err.errors?.some(error => 
         error.code === 'form_identifier_exists' ||
@@ -175,20 +164,18 @@ export default function SignUpPage() {
     }
   };
 
-  // ✅ FIXED: Force Google account selection for sign-up too
   const handleGoogleSignUp = async () => {
     try {
       console.log('🔐 Starting Google OAuth signup with account selection...');
       
-      // ✅ SOLUTION: Force Google account picker for sign-up
       await signUp.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: '/sso-callback',
-        redirectUrlComplete: '/browse',
-        // ✅ FORCE ACCOUNT SELECTION: This makes Google show account picker
+        // CHANGED: Redirect to home after SSO
+        redirectUrlComplete: '/',
         additionalOAuthScopes: ['email', 'profile'],
         unsafeMetadata: {
-          prompt: 'select_account',  // Force Google to show account selection
+          prompt: 'select_account',
           include_granted_scopes: 'true'
         }
       });
@@ -224,8 +211,9 @@ export default function SignUpPage() {
       
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
-        console.log('🎉 Signup and verification complete! Redirecting to /browse');
-        navigate('/browse');
+        // CHANGED: Redirect to home
+        console.log('🎉 Signup and verification complete! Redirecting to home');
+        navigate('/');
       } else {
         console.log('⚠️ Verification incomplete, status:', result.status);
         setError('Verification incomplete. Please try again or use the secure form below.');
@@ -353,9 +341,9 @@ export default function SignUpPage() {
             <SignUp 
               routing="path"
               path="/sign-up"
-              fallbackRedirectUrl="/browse"
-              forceRedirectUrl="/browse"
-              // ✅ ENHANCED: Force Google account selection in Clerk UI
+              // CHANGED: Redirect to home
+              fallbackRedirectUrl="/"
+              forceRedirectUrl="/"
               socialConnectorOptions={{
                 google: {
                   prompt: 'select_account'
@@ -393,9 +381,7 @@ export default function SignUpPage() {
     <div className="min-h-screen flex">
       {/* Left Side - Dark Hero Section */}
       <div className="hidden lg:flex lg:w-1/2 bg-slate-800 text-white flex-col justify-center items-center p-12">
-        {/* Main Content */}
         <div className="text-center max-w-lg">
-          {/* Logo positioned above heading */}
           <div className="flex justify-center mb-8">
             <img 
               src={elaviewLogo} 
@@ -411,12 +397,7 @@ export default function SignUpPage() {
           <p className="text-xl text-gray-300 mb-8 font-light">
             Start buying and selling advertising spaces.
           </p>
-          <button 
-            onClick={() => navigate('/learn-more')}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg transition-all duration-200 font-medium"
-          >
-            Learn More
-          </button>
+          {/* REMOVED: Learn More button */}
         </div>
       </div>
 
@@ -608,7 +589,7 @@ export default function SignUpPage() {
               </p>
             </div>
 
-            {/* ✅ CAPTCHA Container - Required for Clerk CAPTCHA */}
+            {/* CAPTCHA Container */}
             <div id="clerk-captcha" className="hidden"></div>
           </div>
         </div>

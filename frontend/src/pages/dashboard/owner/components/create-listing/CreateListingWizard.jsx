@@ -2,6 +2,7 @@
 // ✅ ENHANCED: Now supports both CREATE and EDIT modes
 // ✅ EDIT MODE: Pre-populates forms with existing space data
 // ✅ CHANGE DETECTION: Highlights modified fields and shows diff in review
+// ✅ FIXED: Changed ratePeriod to rateType to match Prisma schema
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -99,13 +100,13 @@ export default function CreateListingWizard() {
     description: 'High-visibility advertising space in prime location.'
   });
 
-  // Spaces data - updated with predefined size structure
+  // Spaces data - updated with predefined size structure and fixed rateType
   const [spacesData, setSpacesData] = useState([{
     id: isEditMode ? spaceId : 'space-1',
     name: '',
     type: 'storefront_window',
     baseRate: '',
-    ratePeriod: 'DAILY',
+    rateType: 'DAILY', // ✅ FIXED: Changed from ratePeriod to rateType
     currency: 'USD',
     sizeCategory: 'MEDIUM',
     image: null,
@@ -360,11 +361,12 @@ export default function CreateListingWizard() {
         }
       }
       
-      // Extract rate period from various possible fields
-      const ratePeriod = spaceData.ratePeriod || 
-                        spaceData.rateType || 
-                        spaceData.pricing?.ratePeriod ||
-                        'DAILY';
+      // ✅ FIXED: Extract rate type from various possible fields, prioritizing rateType
+      const rateType = spaceData.rateType || 
+                      spaceData.ratePeriod || // Keep as fallback for existing data
+                      spaceData.pricing?.rateType ||
+                      spaceData.pricing?.ratePeriod ||
+                      'DAILY';
       
       // Set up property data
       const propertyInfo = propertyDetails || spaceData.property || {};
@@ -389,7 +391,7 @@ export default function CreateListingWizard() {
         name: spaceData.name || '',
         type: spaceData.type || spaceData.spaceType || 'storefront_window',
         baseRate: String(spaceData.baseRate || spaceData.pricing?.baseRate || ''),
-        ratePeriod: ratePeriod,
+        rateType: rateType, // ✅ FIXED: Changed from ratePeriod to rateType
         currency: spaceData.currency || propertyInfo.currency || 'USD',
         sizeCategory: spaceData.sizeCategory || spaceData.dimensions?.sizeCategory || 'MEDIUM',
         image: spaceData.image || spaceData.images?.[0],
@@ -418,7 +420,7 @@ export default function CreateListingWizard() {
     }
   };
 
-  // ✅ CHANGE DETECTION: Check if data has been modified
+  // ✅ CHANGE DETECTION: Check if data has been modified - Fixed field names
   const detectChanges = () => {
     if (!originalData || !isEditMode) {
       setHasUnsavedChanges(false);
@@ -433,7 +435,7 @@ export default function CreateListingWizard() {
       currentSpace.name !== originalSpace.name ||
       currentSpace.type !== originalSpace.type ||
       currentSpace.baseRate !== originalSpace.baseRate ||
-      currentSpace.ratePeriod !== originalSpace.ratePeriod ||
+      currentSpace.rateType !== originalSpace.rateType || // ✅ FIXED: Changed from ratePeriod
       currentSpace.currency !== originalSpace.currency ||
       currentSpace.sizeCategory !== originalSpace.sizeCategory ||
       currentSpace.image !== originalSpace.image
@@ -821,7 +823,7 @@ export default function CreateListingWizard() {
       name: '',
       type: 'storefront_window',
       baseRate: '',
-      ratePeriod: 'DAILY',
+      rateType: 'DAILY', // ✅ FIXED: Changed from ratePeriod to rateType
       currency: spacesData[0]?.currency || 'USD',
       sizeCategory: 'MEDIUM',
       image: null,
@@ -923,7 +925,7 @@ export default function CreateListingWizard() {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  // ✅ EDIT MODE: Submit updated space
+  // ✅ EDIT MODE: Submit updated space - Fixed API payload
   const submitUpdates = async () => {
     setIsLoading(true);
     setError('');
@@ -938,9 +940,9 @@ export default function CreateListingWizard() {
         name: space.name,
         type: space.type,
         baseRate: parseFloat(space.baseRate),
-        ratePeriod: space.ratePeriod,
+        rateType: space.rateType, // ✅ FIXED: Changed from ratePeriod to rateType
         currency: space.currency,
-        image: space.image,
+        images: space.image, // ✅ FIXED: Changed from image to images
         sizeCategory: space.sizeCategory,
         dimensions: {
           width: dimensions.width,
@@ -982,7 +984,7 @@ export default function CreateListingWizard() {
     }
   };
 
-  // Submit new listing (create mode)
+  // Submit new listing (create mode) - Fixed API payload
   const submitListing = async () => {
     setIsLoading(true);
     setError('');
@@ -1010,7 +1012,7 @@ export default function CreateListingWizard() {
             type: space.type,
             baseRate: parseFloat(space.baseRate),
             currency: space.currency,
-            rateType: space.ratePeriod,
+            rateType: space.rateType, // ✅ FIXED: Changed from ratePeriod to rateType
             image: space.image,
             sizeCategory: space.sizeCategory,
             dimensions: {
@@ -1434,7 +1436,7 @@ export default function CreateListingWizard() {
               </div>
             )}
 
-            {/* STEP 2: Space Details - Enhanced for Edit Mode */}
+            {/* STEP 2: Space Details - Enhanced for Edit Mode - Fixed field references */}
             {currentStep === 2 && (
               <div className="space-y-5">
                 <div className="flex items-center justify-between mb-3">
@@ -1655,9 +1657,9 @@ export default function CreateListingWizard() {
                                       <button
                                         key={option.value}
                                         type="button"
-                                        onClick={() => updateSpaceData(space.id, 'ratePeriod', option.value)}
+                                        onClick={() => updateSpaceData(space.id, 'rateType', option.value)}
                                         className={`px-3 py-2 text-xs font-medium transition-all ${
-                                          space.ratePeriod === option.value
+                                          space.rateType === option.value
                                             ? 'bg-[#4668AB] text-white'
                                             : 'bg-white text-slate-600 hover:bg-slate-50'
                                         }`}
@@ -1749,7 +1751,7 @@ export default function CreateListingWizard() {
                                 />
                               )}
                               <div className="text-right">
-                                <p className="text-xs text-slate-500">{getRatePeriodLabel(space.ratePeriod)}</p>
+                                <p className="text-xs text-slate-500">{getRatePeriodLabel(space.rateType)}</p>
                                 <p className="text-lg font-bold text-[#4668AB]">
                                   {getCurrencySymbol(space.currency)}{space.baseRate}
                                 </p>
@@ -1811,7 +1813,7 @@ export default function CreateListingWizard() {
                   )}
                 </div>
 
-                {/* Spaces Summary - Enhanced for Edit Mode */}
+                {/* Spaces Summary - Enhanced for Edit Mode with fixed field references */}
                 <div className="bg-slate-50 rounded-lg p-4">
                   <h3 className="text-sm font-semibold text-slate-900 mb-3">
                     {isEditMode ? 'Space Changes' : `${spacesData.length} Space${spacesData.length !== 1 ? 's' : ''}`}
@@ -1839,7 +1841,7 @@ export default function CreateListingWizard() {
                         space.name !== originalSpace.name ||
                         space.type !== originalSpace.type ||
                         space.baseRate !== originalSpace.baseRate ||
-                        space.ratePeriod !== originalSpace.ratePeriod ||
+                        space.rateType !== originalSpace.rateType ||
                         space.sizeCategory !== originalSpace.sizeCategory ||
                         space.image !== originalSpace.image
                       );
@@ -1893,7 +1895,7 @@ export default function CreateListingWizard() {
                           </div>
                           <p className="text-sm font-semibold text-[#4668AB] ml-4">
                             {getCurrencySymbol(space.currency)}{space.baseRate}
-                            {getRatePeriodShortLabel(space.ratePeriod)}
+                            {getRatePeriodShortLabel(space.rateType)}
                           </p>
                         </div>
                       );

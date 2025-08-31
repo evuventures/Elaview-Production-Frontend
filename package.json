@@ -4,7 +4,8 @@
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.16",
     "date-fns": "^4.1.0",
-    "framer-motion": "^12.23.12"
+    "framer-motion": "^12.23.12",
+    "react-multi-carousel": "^2.8.6"
   },
   "devDependencies": {
     "@types/react-lazy-load-image-component": "^1.6.4",

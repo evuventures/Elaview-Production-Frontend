@@ -1,4 +1,4 @@
-// src/pages/SignIn.jsx - WIREFRAME DESIGN VERSION
+// src/pages/auth/SignIn.jsx - COMPLETE FILE WITH AUTHENTICATION FIX
 import React, { useState } from 'react';
 import { SignIn, useSignIn, useAuth } from '@clerk/clerk-react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -8,7 +8,8 @@ import elaviewLogo from '../../public/elaview-logo.png';
 export default function SignInPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const redirectUrl = searchParams.get('redirect_url') || '/browse';
+  // CHANGED: Redirect to home instead of browse
+  const redirectUrl = searchParams.get('redirect_url') || '/';
   
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -21,7 +22,6 @@ export default function SignInPage() {
   const { signIn, setActive } = useSignIn();
   const { isSignedIn } = useAuth();
 
-  // ✅ MOBILE: Add console log for mobile debugging
   React.useEffect(() => {
     console.log('📱 SIGN-IN PAGE: Mobile viewport check', {
       windowWidth: window.innerWidth,
@@ -30,7 +30,6 @@ export default function SignInPage() {
     });
   }, []);
 
-  // Check for SSO error from URL params
   React.useEffect(() => {
     const error = searchParams.get('error');
     if (error === 'sso_failed') {
@@ -38,21 +37,19 @@ export default function SignInPage() {
     }
   }, [searchParams]);
 
-  // If already signed in, redirect
+  // CHANGED: Redirect to home if already signed in
   React.useEffect(() => {
     if (isSignedIn) {
-      navigate(redirectUrl);
+      navigate('/');
     }
-  }, [isSignedIn, navigate, redirectUrl]);
+  }, [isSignedIn, navigate]);
 
-  // ✅ ENHANCED: Better email validation
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email.trim().toLowerCase());
   };
 
   const handleSubmit = async () => {
-    // ✅ ENHANCED: Better input validation
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedPassword = password.trim();
     
@@ -72,9 +69,8 @@ export default function SignInPage() {
     try {
       console.log('🔐 Attempting sign-in with email:', trimmedEmail);
       
-      // ✅ FIXED: Use emailAddress instead of identifier for better compatibility
       const result = await signIn.create({
-        identifier: trimmedEmail,  // Clerk accepts both emailAddress and identifier
+        identifier: trimmedEmail,
         password: trimmedPassword,
       });
 
@@ -82,10 +78,10 @@ export default function SignInPage() {
 
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
-        console.log('✅ Sign-in successful, redirecting to:', redirectUrl);
-        navigate(redirectUrl);
+        // CHANGED: Redirect to home
+        console.log('✅ Sign-in successful, redirecting to home');
+        navigate('/');
       } else if (result.status === 'needs_second_factor') {
-        // Handle 2FA if enabled
         setError('Two-factor authentication required. Please use the secure form below.');
         setShowClerkUI(true);
       } else {
@@ -96,7 +92,6 @@ export default function SignInPage() {
     } catch (err) {
       console.error('❌ Sign-in error:', err);
       
-      // ✅ ENHANCED: Better error handling
       if (err.errors?.some(error => 
         error.code === 'form_identifier_not_found' ||
         error.code === 'form_identifier_exists' ||
@@ -121,7 +116,6 @@ export default function SignInPage() {
         setError('Invalid email format. Please check your email address.');
       } else {
         setError(err.errors?.[0]?.message || 'Sign-in failed. Please try the secure form below.');
-        // Show Clerk UI for complex cases
         setTimeout(() => setShowClerkUI(true), 2000);
       }
     } finally {
@@ -129,20 +123,18 @@ export default function SignInPage() {
     }
   };
 
-  // ✅ FIXED: Force Google account selection
   const handleGoogleSignIn = async () => {
     try {
       console.log('🔐 Starting Google OAuth with account selection...');
       
-      // ✅ SOLUTION: Force Google account picker
       await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: '/sso-callback',
-        redirectUrlComplete: redirectUrl,
-        // ✅ FORCE ACCOUNT SELECTION: This makes Google show account picker
+        // CHANGED: Redirect to home after SSO
+        redirectUrlComplete: '/',
         additionalOAuthScopes: ['email', 'profile'],
         unsafeMetadata: {
-          prompt: 'select_account',  // Force Google to show account selection
+          prompt: 'select_account',
           include_granted_scopes: 'true'
         }
       });
@@ -158,7 +150,6 @@ export default function SignInPage() {
     }
   };
 
-  // Show Clerk's default UI for complex flows (if needed)
   if (showClerkUI) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -175,9 +166,9 @@ export default function SignInPage() {
             <SignIn 
               routing="path"
               path="/sign-in"
-              fallbackRedirectUrl={redirectUrl}
-              forceRedirectUrl={redirectUrl}
-              // ✅ ENHANCED: Force Google account selection in Clerk UI too
+              // CHANGED: Redirect to home
+              fallbackRedirectUrl="/"
+              forceRedirectUrl="/"
               socialConnectorOptions={{
                 google: {
                   prompt: 'select_account'
@@ -215,9 +206,7 @@ export default function SignInPage() {
     <div className="min-h-screen flex">
       {/* Left Side - Dark Hero Section */}
       <div className="hidden lg:flex lg:w-1/2 bg-slate-800 text-white flex-col justify-center items-center p-12">
-        {/* Main Content */}
         <div className="text-center max-w-lg">
-          {/* Logo positioned above heading */}
           <div className="flex justify-center mb-8">
             <img 
               src={elaviewLogo} 
@@ -233,12 +222,7 @@ export default function SignInPage() {
           <p className="text-xl text-gray-300 mb-8 font-light">
             Getting noticed has never been easier.
           </p>
-          <button 
-            onClick={() => navigate('/learn-more')}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg transition-all duration-200 font-medium"
-          >
-            Learn More
-          </button>
+          {/* REMOVED: Learn More button */}
         </div>
       </div>
 
@@ -412,7 +396,7 @@ export default function SignInPage() {
               </p>
             </div>
             
-            {/* ✅ CAPTCHA Container - Required for Clerk CAPTCHA */}
+            {/* CAPTCHA Container */}
             <div id="clerk-captcha" className="hidden"></div>
           </div>
         </div>

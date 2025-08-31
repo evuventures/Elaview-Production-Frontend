@@ -1,13 +1,9 @@
 // src/services/locationService.js
 // 🌍 Intelligent location detection with fallback chain for Elaview
 
-// Regional defaults - prioritizing Israeli/Middle Eastern markets first
+// Regional defaults - prioritizing US/global markets first
 const REGIONAL_CENTERS = {
-  // ✅ PRIORITY: Israel/Middle East (primary market)
-  IL: { lat: 31.7683, lng: 35.2137, zoom: 7, name: 'Israel' },
-  KFAR_KAMA: { lat: 32.721105, lng: 35.442834, zoom: 12, name: 'Kfar Kama' },
-  
-  // North America - ✅ FIXED: More central US location
+  // ✅ PRIORITY: North America (primary market)
   US: { lat: 39.8283, lng: -98.5795, zoom: 4, name: 'United States' },
   CA: { lat: 56.1304, lng: -106.3468, zoom: 3, name: 'Canada' },
   MX: { lat: 23.6345, lng: -102.5528, zoom: 5, name: 'Mexico' },
@@ -20,6 +16,10 @@ const REGIONAL_CENTERS = {
   IT: { lat: 41.8719, lng: 12.5674, zoom: 6, name: 'Italy' },
   NL: { lat: 52.1326, lng: 5.2913, zoom: 7, name: 'Netherlands' },
   
+  // Middle East
+  IL: { lat: 31.7683, lng: 35.2137, zoom: 7, name: 'Israel' },
+  KFAR_KAMA: { lat: 32.721105, lng: 35.442834, zoom: 12, name: 'Kfar Kama' },
+  
   // Asia Pacific
   AU: { lat: -25.2744, lng: 133.7751, zoom: 4, name: 'Australia' },
   JP: { lat: 36.2048, lng: 138.2529, zoom: 5, name: 'Japan' },
@@ -28,7 +28,7 @@ const REGIONAL_CENTERS = {
   SG: { lat: 1.3521, lng: 103.8198, zoom: 11, name: 'Singapore' },
   
   // Global fallback
-  GLOBAL: { lat: 20, lng: 0, zoom: 2, name: 'World' }
+  GLOBAL: { lat: 39.8283, lng: -98.5795, zoom: 3, name: 'United States' }
 };
 
 // IP Geolocation Services (Free tiers)
@@ -157,22 +157,22 @@ class LocationService {
         return langLoc;
       }
 
-      // 4. Final fallback to Israeli context (Kfar Kama)
-      console.log('⚠️ Using Kfar Kama fallback');
+      // 4. Final fallback to US (more appropriate for global users)
+      console.log('⚠️ Using US fallback location');
       return {
-        center: REGIONAL_CENTERS.KFAR_KAMA,
-        zoom: REGIONAL_CENTERS.KFAR_KAMA.zoom,
-        source: 'kfar_kama_fallback',
-        name: 'Kfar Kama, Israel'
+        center: REGIONAL_CENTERS.US,
+        zoom: REGIONAL_CENTERS.US.zoom,
+        source: 'us_fallback',
+        name: 'United States'
       };
 
     } catch (error) {
       console.error('❌ LocationService error:', error);
       return {
-        center: REGIONAL_CENTERS.KFAR_KAMA,
-        zoom: REGIONAL_CENTERS.KFAR_KAMA.zoom,
+        center: REGIONAL_CENTERS.US,
+        zoom: REGIONAL_CENTERS.US.zoom,
         source: 'error_fallback',
-        name: 'Kfar Kama, Israel'
+        name: 'United States'
       };
     }
   }
@@ -194,8 +194,15 @@ class LocationService {
         return;
       }
 
+      console.log('📍 Attempting to get user geolocation...');
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          console.log('✅ Geolocation success:', {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            accuracy: position.coords.accuracy
+          });
+          
           const location = {
             coordinates: {
               lat: position.coords.latitude,
@@ -207,12 +214,12 @@ class LocationService {
           resolve(location);
         },
         (error) => {
-          console.log('🚫 Geolocation permission denied or failed:', error.message);
+          console.log('🚫 Geolocation failed:', error.code, error.message);
           resolve(null);
         },
         {
           enableHighAccuracy: false, // Faster, less battery
-          timeout: 10000,
+          timeout: 8000, // Reduced timeout for faster fallback
           maximumAge: 300000 // Cache for 5 minutes
         }
       );
@@ -284,7 +291,7 @@ class LocationService {
   }
 
   /**
-   * 🗣️ Get location based on browser language settings (Israeli context priority)
+   * 🗣️ Get location based on browser language settings (US context priority)
    */
   getLanguageBasedLocation() {
     try {
@@ -305,20 +312,20 @@ class LocationService {
         };
       }
 
-      // ✅ Enhanced language-based regional fallbacks (Israeli context)
+      // ✅ Enhanced language-based regional fallbacks (US context priority)
       const langRegionMap = {
-        'he': 'IL',    // Hebrew -> Israel ✅ ADDED
-        'ar': 'IL',    // Arabic -> Israel (many Arabic speakers in Israel) ✅ ADDED
         'en': 'US',    // English -> US
-        'es': 'ES',    // Spanish -> Spain
-        'fr': 'FR',    // French -> France
+        'es': 'US',    // Spanish -> US (large Hispanic population)
+        'fr': 'CA',    // French -> Canada (Quebec)
         'de': 'DE',    // German -> Germany
         'it': 'IT',    // Italian -> Italy
         'pt': 'BR',    // Portuguese -> Brazil (not in our centers, will fallback)
         'ja': 'JP',    // Japanese -> Japan
         'zh': 'CN',    // Chinese -> China
         'ko': 'KR',    // Korean -> Korea (not in our centers, will fallback)
-        'ru': 'RU'     // Russian -> Russia (not in our centers, will fallback)
+        'ru': 'RU',    // Russian -> Russia (not in our centers, will fallback)
+        'he': 'IL',    // Hebrew -> Israel
+        'ar': 'IL'     // Arabic -> Israel (many Arabic speakers in Israel)
       };
       
       const langCode = language.split('-')[0];
@@ -326,6 +333,7 @@ class LocationService {
       
       if (regionCode && REGIONAL_CENTERS[regionCode]) {
         const location = REGIONAL_CENTERS[regionCode];
+        console.log(`🗣️ Language region mapping (${langCode} -> ${regionCode}):`, location);
         return {
           center: location,
           zoom: location.zoom,
@@ -351,8 +359,15 @@ class LocationService {
         return;
       }
 
+      console.log('📍 User requested geolocation...');
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          console.log('✅ User geolocation granted:', {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            accuracy: position.coords.accuracy
+          });
+          
           const location = {
             coordinates: {
               lat: position.coords.latitude,
@@ -381,6 +396,7 @@ class LocationService {
               break;
           }
           
+          console.log('❌ User geolocation failed:', error.code, message);
           reject(new Error(message));
         },
         {

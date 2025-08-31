@@ -1,3 +1,7 @@
+// src/pages/browse/components/SpaceCard.jsx
+// ✅ FIXED: Proper image handling based on actual Prisma schema structure
+// ✅ ENHANCED: Comprehensive error handling and logging for debugging
+
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,7 +31,7 @@ export default function SpaceCard({
   const insights = getBusinessInsights(space.property);
   const IconComponent = getAreaCategoryIcon(space);
 
-  // ✅ GLASSMORPHISM: Verification console logs
+  // GLASSMORPHISM: Verification console logs
   useEffect(() => {
     console.log('🎨 SPACECARD GLASSMORPHISM: Enhanced styling applied', {
       spaceName: getAreaName(space),
@@ -42,7 +46,131 @@ export default function SpaceCard({
       ],
       timestamp: new Date().toISOString()
     });
+
+    // DEBUG: Log space data structure for debugging
+    console.log('🃏 SPACE CARD DEBUG - Space data structure:', {
+      spaceId: space.id,
+      spaceName: getAreaName(space),
+      // Check all possible image fields from schema
+      images: space.images, // String? from schema
+      // Check property relation images
+      propertyImages: space.property ? {
+        primary_image: space.property.primary_image,
+        images: space.property.images,
+        photos: space.property.photos
+      } : null,
+      // Additional space image fields that might exist
+      image: space.image, // Check if single 'image' field exists
+      primaryImage: space.primaryImage,
+      // Full space object keys for debugging
+      spaceKeys: Object.keys(space),
+      propertyKeys: space.property ? Object.keys(space.property) : null
+    });
   }, [space]);
+
+  // FIXED: Completely rewritten image retrieval based on actual Prisma schema
+  const getSpaceImage = (space) => {
+    console.log('🖼️ SPACE CARD - Getting image for space:', space.id);
+    
+    // STEP 1: Check space.images field (String? from Prisma schema)
+    if (space.images && typeof space.images === 'string' && space.images.trim()) {
+      console.log('✅ SPACE CARD - Found space.images (string):', space.images);
+      return space.images;
+    }
+    
+    // STEP 2: Check if images might be stored as JSON array (edge case handling)
+    if (space.images && Array.isArray(space.images) && space.images.length > 0) {
+      console.log('✅ SPACE CARD - Found space.images (array):', space.images[0]);
+      return space.images[0];
+    }
+    
+    // STEP 3: Check for single 'image' field (might exist in some data)
+    if (space.image && typeof space.image === 'string' && space.image.trim()) {
+      console.log('✅ SPACE CARD - Found space.image (single):', space.image);
+      return space.image;
+    }
+    
+    // STEP 4: Check property relation images through property.images (Json? from schema)
+    if (space.property && space.property.images) {
+      console.log('🏢 SPACE CARD - Checking property.images:', space.property.images);
+      
+      // If it's an array
+      if (Array.isArray(space.property.images) && space.property.images.length > 0) {
+        console.log('✅ SPACE CARD - Found property.images (array):', space.property.images[0]);
+        return space.property.images[0];
+      }
+      
+      // If it's stored as JSON string, try to parse
+      if (typeof space.property.images === 'string') {
+        try {
+          const parsed = JSON.parse(space.property.images);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            console.log('✅ SPACE CARD - Found property.images (parsed JSON array):', parsed[0]);
+            return parsed[0];
+          } else {
+            console.log('⚠️ SPACE CARD - Property.images parsed but empty array:', parsed);
+          }
+        } catch (e) {
+          console.log('⚠️ SPACE CARD - Could not parse property.images JSON:', space.property.images);
+        }
+      }
+    }
+    
+    // STEP 5: Check property.primary_image (String? from schema)
+    if (space.property && space.property.primary_image && space.property.primary_image.trim()) {
+      console.log('✅ SPACE CARD - Found property.primary_image:', space.property.primary_image);
+      return space.property.primary_image;
+    }
+    
+    // STEP 6: Check property.photos (Json? from schema) 
+    if (space.property && space.property.photos) {
+      console.log('🏢 SPACE CARD - Checking property.photos:', space.property.photos);
+      
+      if (Array.isArray(space.property.photos) && space.property.photos.length > 0) {
+        console.log('✅ SPACE CARD - Found property.photos (array):', space.property.photos[0]);
+        return space.property.photos[0];
+      }
+      
+      if (typeof space.property.photos === 'string') {
+        try {
+          const parsed = JSON.parse(space.property.photos);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            console.log('✅ SPACE CARD - Found property.photos (parsed JSON array):', parsed[0]);
+            return parsed[0];
+          } else {
+            console.log('⚠️ SPACE CARD - Property.photos parsed but empty array:', parsed);
+          }
+        } catch (e) {
+          console.log('⚠️ SPACE CARD - Could not parse property.photos JSON:', space.property.photos);
+        }
+      }
+    }
+    
+    // STEP 7: Log complete failure and space structure for debugging
+    console.log('❌ SPACE CARD - NO IMAGE FOUND for space:', space.id);
+    console.log('🔍 SPACE CARD - Complete space structure for debugging:', {
+      id: space.id,
+      name: space.name,
+      images: space.images,
+      image: space.image,
+      property: space.property ? {
+        id: space.property.id,
+        primary_image: space.property.primary_image,
+        images: space.property.images,
+        photos: space.property.photos
+      } : 'NO PROPERTY RELATION',
+      allSpaceKeys: Object.keys(space),
+      allPropertyKeys: space.property ? Object.keys(space.property) : null
+    });
+    
+    return null;
+  };
+
+  // Get the final image URL
+  const spaceImage = getSpaceImage(space);
+  
+  // DEBUG: Log final image result
+  console.log('🎯 SPACE CARD FINAL - Image result for space:', space.id, '-> URL:', spaceImage);
 
   return (
     <motion.div
@@ -57,7 +185,7 @@ export default function SpaceCard({
           isAnimating ? 'ring-2' : ''
         }`}
         style={{
-          // ✅ GLASSMORPHISM: Main container with premium glass effect
+          // GLASSMORPHISM: Main container with premium glass effect
           background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.25) 100%)', 
           backdropFilter: 'blur(20px) saturate(180%)',
           WebkitBackdropFilter: 'blur(20px) saturate(180%)',
@@ -75,7 +203,7 @@ export default function SpaceCard({
                inset 0 -1px 0 rgba(255, 255, 255, 0.05)`,
         }}
         onMouseEnter={(e) => {
-          // ✅ GLASSMORPHISM: Enhanced hover effect
+          // GLASSMORPHISM: Enhanced hover effect
           e.currentTarget.style.transform = 'translateY(-8px)';
           e.currentTarget.style.boxShadow = `
             0 16px 48px rgba(0, 0, 0, 0.18),
@@ -96,7 +224,7 @@ export default function SpaceCard({
           e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.25) 100%)';
         }}
       >
-        {/* ✅ GLASSMORPHISM: Glass reflection effect overlay */}
+        {/* GLASSMORPHISM: Glass reflection effect overlay */}
         <div 
           className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-t-2xl"
           style={{
@@ -104,7 +232,7 @@ export default function SpaceCard({
           }}
         />
         
-        {/* ✅ GLASSMORPHISM: Glass highlight edge */}
+        {/* GLASSMORPHISM: Glass highlight edge */}
         <div 
           className="absolute top-0 left-0 right-0 h-px rounded-t-2xl"
           style={{
@@ -113,19 +241,48 @@ export default function SpaceCard({
         />
 
         <CardContent className="p-0 relative z-10">
-          {/* Enhanced Image Section with subtle glassmorphism overlays */}
+          {/* Enhanced Image Section with proper error handling */}
           <div className="relative h-60 p-3">
             <div className="relative h-full w-full rounded-lg overflow-hidden">
-              <img 
-                src={space.images || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400'} 
-                alt={getAreaName(space)} 
-                className="w-full h-full object-cover transition-transform duration-500" 
-                onError={(e) => {
-                  e.target.src = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400';
-                }}
-              />
+              {spaceImage ? (
+                <img 
+                  src={spaceImage} 
+                  alt={getAreaName(space)} 
+                  className="w-full h-full object-cover transition-transform duration-500" 
+                  onError={(e) => {
+                    console.log('❌ SPACE CARD - Image load error for URL:', spaceImage);
+                    console.log('🔍 SPACE CARD - Error event:', e);
+                    // Fall back to default image
+                    e.target.src = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400';
+                  }}
+                  onLoad={() => {
+                    console.log('✅ SPACE CARD - Image loaded successfully:', spaceImage);
+                  }}
+                />
+              ) : (
+                <>
+                  {/* FALLBACK: Show default image when no space image found */}
+                  <img 
+                    src='https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400'
+                    alt={getAreaName(space)} 
+                    className="w-full h-full object-cover transition-transform duration-500 opacity-75" 
+                    onError={(e) => {
+                      console.log('❌ SPACE CARD - Even fallback image failed to load');
+                      // Replace with a colored div if even fallback fails
+                      e.target.style.display = 'none';
+                      e.target.parentElement.style.background = 'linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%)';
+                    }}
+                  />
+                  {/* DEBUG: Show missing image warning in development */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                      No Image Found
+                    </div>
+                  )}
+                </>
+              )}
               
-              {/* ✅ GLASSMORPHISM: Enhanced overlay elements with glass effect */}
+              {/* GLASSMORPHISM: Enhanced overlay elements with glass effect */}
               <div className="absolute top-3 left-3">
                 <span 
                   className="text-white flex items-center gap-1 text-xs font-medium shadow-lg px-3 py-1 rounded-full relative overflow-hidden"
@@ -148,75 +305,10 @@ export default function SpaceCard({
                   <span className="relative z-10">{getAreaType(space)}</span>
                 </span>
               </div>
-
-              <div className="absolute top-3 right-3 flex gap-2">
-                {/* ✅ GLASSMORPHISM: Enhanced Quick Add to Cart Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!isInCart(space.id)) {
-                      addToCart(space);
-                    }
-                  }}
-                  className={`p-2 rounded-full transition-all duration-300 relative overflow-hidden ${
-                    isInCart(space.id) ? '' : ''
-                  }`}
-                  style={{ 
-                    background: isInCart(space.id) 
-                      ? 'linear-gradient(135deg, rgba(240, 253, 244, 0.9) 0%, rgba(240, 253, 244, 0.95) 100%)'
-                      : 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
-                    backdropFilter: 'blur(10px) saturate(150%)',
-                    WebkitBackdropFilter: 'blur(10px) saturate(150%)',
-                    border: `1px solid ${isInCart(space.id) ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255, 255, 255, 0.3)'}`,
-                    boxShadow: isInCart(space.id) 
-                      ? '0 4px 16px rgba(34, 197, 94, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-                      : '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-                  }}
-                  disabled={isInCart(space.id)}
-                >
-                  {/* Glass reflection on button */}
-                  <div 
-                    className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-full"
-                    style={{
-                      background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%)'
-                    }}
-                  />
-                  {isInCart(space.id) ? (
-                    <CheckCircle className="w-4 h-4 text-green-600 relative z-10" />
-                  ) : (
-                    <Plus className="w-4 h-4 text-slate-600 relative z-10" />
-                  )}
-                </button>
-              </div>
-
-              {trust?.verified && (
-                <div className="absolute bottom-3 left-3">
-                  <span 
-                    className="text-white flex items-center gap-1 text-xs shadow-lg px-3 py-1 rounded-full relative overflow-hidden"
-                    style={{ 
-                      background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.9) 0%, rgba(34, 197, 94, 0.95) 100%)',
-                      backdropFilter: 'blur(10px) saturate(150%)',
-                      WebkitBackdropFilter: 'blur(10px) saturate(150%)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      boxShadow: '0 4px 16px rgba(34, 197, 94, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-                    }}
-                  >
-                    {/* Glass reflection on verified badge */}
-                    <div 
-                      className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none"
-                      style={{
-                        background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%)'
-                      }}
-                    />
-                    <CheckCircle className="w-3 h-3 relative z-10" />
-                    <span className="relative z-10">Verified</span>
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* ✅ GLASSMORPHISM: Enhanced Content Section with subtle glass background */}
+          {/* GLASSMORPHISM: Enhanced Content Section with subtle glass background */}
           <div 
             className="p-4 space-y-2 relative overflow-hidden rounded-b-2xl"
             style={{
@@ -266,28 +358,10 @@ export default function SpaceCard({
               {space.propertyAddress}
             </p>
 
-            {/* Performance Metrics with enhanced visibility */}
-            <div className="flex items-center justify-between text-xs relative z-10">
-              <div className="flex items-center text-green-600">
-                <Users className="w-3 h-3 mr-1 drop-shadow-sm" />
-                <span style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>{(insights.footTraffic/1000).toFixed(0)}K/day</span>
-              </div>
-              <div 
-                className="flex items-center"
-                style={{ color: '#4668AB' }}
-              >
-                <TrendingUp className="w-3 h-3 mr-1 drop-shadow-sm" />
-                <span style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>+{insights.avgCampaignLift}%</span>
-              </div>
-            </div>
-
-            {/* ✅ GLASSMORPHISM: Enhanced Action Area */}
-            <div className="flex items-center justify-between pt-2 relative z-10">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center text-green-600">
-                  <Eye className="w-3 h-3 mr-1 drop-shadow-sm" />
-                  <span className="text-xs font-medium" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>Available</span>
-                </div>
+            {/* GLASSMORPHISM: Enhanced Action Area with new layout */}
+            <div className="relative z-10 space-y-2">
+              {/* Price and Viewers Row */}
+              <div className="flex items-center justify-between">
                 <span 
                   className="text-white font-bold shadow-lg px-3 py-1 rounded-full text-xs relative overflow-hidden"
                   style={{
@@ -307,44 +381,96 @@ export default function SpaceCard({
                   />
                   <span className="relative z-10">{getAreaPrice(space)}</span>
                 </span>
+                
+                <div className="flex items-center text-slate-600">
+                  <Eye className="w-3 h-3 mr-1 drop-shadow-sm" />
+                  <span className="text-xs font-medium" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>
+                    {(insights.footTraffic/1000).toFixed(0)}k/day
+                  </span>
+                </div>
               </div>
-              <Button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSpaceClick(space);
-                }}
-                size="sm"
-                className="text-white text-xs px-3 py-1 shadow-lg border-0 transition-all duration-300 relative overflow-hidden"
-                style={{ 
-                  background: 'linear-gradient(135deg, #5A7BC2 0%, #4668AB 50%, #3A5490 100%)',
-                  backdropFilter: 'blur(10px)',
-                  WebkitBackdropFilter: 'blur(10px)',
-                  boxShadow: '0 4px 16px rgba(70, 104, 171, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = 'linear-gradient(135deg, #6B8BD1 0%, #5A7BC2 50%, #4668AB 100%)';
-                  e.target.style.transform = 'translateY(-1px)';
-                  e.target.style.boxShadow = '0 6px 20px rgba(70, 104, 171, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = 'linear-gradient(135deg, #5A7BC2 0%, #4668AB 50%, #3A5490 100%)';
-                  e.target.style.transform = 'translateY(0px)';
-                  e.target.style.boxShadow = '0 4px 16px rgba(70, 104, 171, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
-                }}
-              >
-                {/* Glass reflection on button */}
-                <div 
-                  className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%)'
+
+              {/* Buttons Row */}
+              <div className="flex items-center gap-2">
+                <Button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSpaceClick(space);
                   }}
-                />
-                <span className="relative z-10">Details</span>
-              </Button>
+                  size="sm"
+                  className="text-white text-xs px-3 py-1 shadow-lg border-0 transition-all duration-300 relative overflow-hidden flex-1"
+                  style={{ 
+                    background: 'linear-gradient(135deg, #5A7BC2 0%, #4668AB 50%, #3A5490 100%)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    boxShadow: '0 4px 16px rgba(70, 104, 171, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                    flexBasis: '70%'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = 'linear-gradient(135deg, #6B8BD1 0%, #5A7BC2 50%, #4668AB 100%)';
+                    e.target.style.transform = 'translateY(-1px)';
+                    e.target.style.boxShadow = '0 6px 20px rgba(70, 104, 171, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = 'linear-gradient(135deg, #5A7BC2 0%, #4668AB 50%, #3A5490 100%)';
+                    e.target.style.transform = 'translateY(0px)';
+                    e.target.style.boxShadow = '0 4px 16px rgba(70, 104, 171, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+                  }}
+                >
+                  {/* Glass reflection on button */}
+                  <div 
+                    className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%)'
+                    }}
+                  />
+                  <span className="relative z-10">Details</span>
+                </Button>
+
+                {/* GLASSMORPHISM: Enhanced Cart Button moved to bottom */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!isInCart(space.id)) {
+                      addToCart(space);
+                    }
+                  }}
+                  className="p-2 rounded-lg transition-all duration-300 relative overflow-hidden"
+                  style={{ 
+                    background: isInCart(space.id) 
+                      ? 'linear-gradient(135deg, rgba(240, 253, 244, 0.9) 0%, rgba(240, 253, 244, 0.95) 100%)'
+                      : 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
+                    backdropFilter: 'blur(10px) saturate(150%)',
+                    WebkitBackdropFilter: 'blur(10px) saturate(150%)',
+                    border: `1px solid ${isInCart(space.id) ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255, 255, 255, 0.3)'}`,
+                    boxShadow: isInCart(space.id) 
+                      ? '0 4px 16px rgba(34, 197, 94, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                      : '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                    flexBasis: '30%',
+                    minWidth: 'fit-content'
+                  }}
+                  disabled={isInCart(space.id)}
+                >
+                  {/* Glass reflection on button */}
+                  <div 
+                    className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-lg"
+                    style={{
+                      background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%)'
+                    }}
+                  />
+                  {isInCart(space.id) ? (
+                    <CheckCircle className="w-4 h-4 text-green-600 relative z-10" />
+                  ) : (
+                    <Plus className="w-4 h-4 text-slate-600 relative z-10" />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      
     </motion.div>
   );
 }

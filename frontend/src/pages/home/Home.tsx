@@ -1,13 +1,17 @@
 // src/pages/home/Home.tsx
-// ✅ ELAVIEW HOMEPAGE - Redesigned with modern card styling
+// ✅ ELAVIEW HOMEPAGE - With glassmorphism card styling matching Browse page
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import billboard1 from './../../public/billboard1.webp'
+import Footer from '../../components/layout/Footer';
+// ✅ Import carousel components
+import Carousel from "react-multi-carousel";
+import "react-multi-carousel/lib/styles.css";
 import { 
   ArrowRight, 
   Search, 
@@ -19,12 +23,19 @@ import {
   ShoppingCart,
   Clock,
   Calendar,
-  BarChart3
+  BarChart3,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  CheckCircle,
+  Plus
 } from "lucide-react";
 
 export default function Home() {
   const navigate = useNavigate();
   const { isSignedIn } = useAuth();
+
+  console.log('🏠 Home page loaded - Carousel implementation active with glassmorphism');
 
   // ✅ Smart List Property button with auth handling
   const handleListPropertyClick = () => {
@@ -38,6 +49,59 @@ export default function Home() {
       sessionStorage.setItem('redirectAfterSignIn', '/list-space');
       navigate('/sign-in?intent=seller&redirect=/list-space');
     }
+  };
+
+  // ✅ Carousel responsive configuration - Shows 4.5 items on desktop
+  const carouselResponsive = {
+    superLargeDesktop: {
+      breakpoint: { max: 4000, min: 1920 },
+      items: 4.5,
+      slidesToSlide: 4,
+      partialVisibilityGutter: 40 // This controls how much of the partial item shows
+    },
+    desktop: {
+      breakpoint: { max: 1920, min: 1024 },
+      items: 4.5,
+      slidesToSlide: 4,
+      partialVisibilityGutter: 30
+    },
+    tablet: {
+      breakpoint: { max: 1024, min: 768 },
+      items: 2.5,
+      slidesToSlide: 2,
+      partialVisibilityGutter: 20
+    },
+    mobile: {
+      breakpoint: { max: 768, min: 0 },
+      items: 1.2,
+      slidesToSlide: 1,
+      partialVisibilityGutter: 20
+    }
+  };
+
+  // ✅ Custom arrow components for better styling
+  const CustomLeftArrow = ({ onClick }: { onClick: () => void }) => {
+    return (
+      <button
+        onClick={onClick}
+        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white hover:bg-slate-50 rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-200 group border border-slate-200"
+        aria-label="Previous"
+      >
+        <ChevronLeft className="h-6 w-6 text-slate-700 group-hover:text-slate-900" />
+      </button>
+    );
+  };
+
+  const CustomRightArrow = ({ onClick }: { onClick: () => void }) => {
+    return (
+      <button
+        onClick={onClick}
+        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white hover:bg-slate-50 rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-200 group border border-slate-200"
+        aria-label="Next"
+      >
+        <ChevronRight className="h-6 w-6 text-slate-700 group-hover:text-slate-900" />
+      </button>
+    );
   };
 
   // Mock data for featured sections - replace with real data from your API
@@ -126,12 +190,63 @@ export default function Home() {
       availability: "Available Now",
       size: "55 inch",
       audience: "Traveler"
+    },
+    {
+      id: 6,
+      title: "Stadium LED Screen",
+      location: "Boston, MA",
+      price: 3500,
+      period: "month",
+      rating: 4.8,
+      reviews: 178,
+      image: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=300&fit=crop",
+      impressions: "30K",
+      impressionsPeriod: "event",
+      type: "Stadium Display",
+      featured: true,
+      availability: "Available Now",
+      size: "20x10 ft",
+      audience: "Sports Fans"
+    },
+    {
+      id: 7,
+      title: "City Center Plaza",
+      location: "San Francisco, CA",
+      price: 2200,
+      period: "month",
+      rating: 4.7,
+      reviews: 92,
+      image: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop",
+      impressions: "15K",
+      impressionsPeriod: "day",
+      type: "Plaza Display",
+      featured: false,
+      availability: "Available Now",
+      size: "12x8 ft",
+      audience: "Urban"
+    },
+    {
+      id: 8,
+      title: "Beach Boulevard Banner",
+      location: "San Diego, CA",
+      price: 1600,
+      period: "month",
+      rating: 4.6,
+      reviews: 73,
+      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop",
+      impressions: "7K",
+      impressionsPeriod: "day",
+      type: "Beach Banner",
+      featured: false,
+      availability: "Available Now",
+      size: "8x4 ft",
+      audience: "Tourist"
     }
   ];
 
   const budgetFriendlySpaces = [
     {
-      id: 6,
+      id: 9,
       title: "Local Coffee Shop Window",
       location: "Portland, OR",
       price: 450,
@@ -147,7 +262,7 @@ export default function Home() {
       audience: "Local"
     },
     {
-      id: 7,
+      id: 10,
       title: "Bus Stop Shelter Ad",
       location: "Austin, TX",
       price: 680,
@@ -163,7 +278,7 @@ export default function Home() {
       audience: "Commuter"
     },
     {
-      id: 8,
+      id: 11,
       title: "Community Center Board",
       location: "Nashville, TN",
       price: 320,
@@ -179,7 +294,7 @@ export default function Home() {
       audience: "Community"
     },
     {
-      id: 9,
+      id: 12,
       title: "Local Gym Display",
       location: "Seattle, WA",
       price: 590,
@@ -195,7 +310,7 @@ export default function Home() {
       audience: "Fitness"
     },
     {
-      id: 10,
+      id: 13,
       title: "Street Pole Banner",
       location: "Phoenix, AZ",
       price: 750,
@@ -209,6 +324,54 @@ export default function Home() {
       availability: "Available Now",
       size: "30x60 in",
       audience: "Pedestrian"
+    },
+    {
+      id: 14,
+      title: "Library Bulletin Board",
+      location: "Denver, CO",
+      price: 280,
+      period: "month",
+      rating: 4.5,
+      reviews: 19,
+      image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&h=300&fit=crop",
+      impressions: "400",
+      impressionsPeriod: "day",
+      type: "Bulletin Board",
+      availability: "Available Now",
+      size: "36x24 in",
+      audience: "Students"
+    },
+    {
+      id: 15,
+      title: "Restaurant Table Tent",
+      location: "Columbus, OH",
+      price: 380,
+      period: "month",
+      rating: 4.4,
+      reviews: 28,
+      image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop",
+      impressions: "600",
+      impressionsPeriod: "day",
+      type: "Table Display",
+      availability: "Available Now",
+      size: "4x6 in",
+      audience: "Diners"
+    },
+    {
+      id: 16,
+      title: "Park Kiosk Display",
+      location: "Charlotte, NC",
+      price: 520,
+      period: "month",
+      rating: 4.6,
+      reviews: 31,
+      image: "https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?w=400&h=300&fit=crop",
+      impressions: "850",
+      impressionsPeriod: "day",
+      type: "Kiosk",
+      availability: "Available Now",
+      size: "48x72 in",
+      audience: "Families"
     }
   ];
 
@@ -217,120 +380,304 @@ export default function Home() {
     parseInt(b.impressions.replace(/[^0-9]/g, '')) - parseInt(a.impressions.replace(/[^0-9]/g, ''))
   );
 
-  const SpaceCard = ({ space, className = "" }) => (
-    <Card className={`group cursor-pointer transition-all duration-300 border-0 shadow-sm hover:shadow-lg bg-white rounded-2xl overflow-hidden ${className}`}>
-      <div className="relative">
-        <img 
-          src={space.image}
-          alt={space.title}
-          className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
+  // ✅ GLASSMORPHISM SPACECARD - Matching Browse page styling
+  const SpaceCard = ({ space, className = "" }: { space: any, className?: string }) => {
+    // Verification logging for glassmorphism
+    useEffect(() => {
+      console.log('🎨 HOME SPACECARD GLASSMORPHISM: Enhanced styling applied', {
+        spaceName: space.title,
+        glassmorphismFeatures: [
+          'Semi-transparent gradient background',
+          'Enhanced backdrop blur (20px)',
+          'Saturation boost (180%)',
+          'Multi-layered shadow system',
+          'Glass reflection overlays',
+          'Transparent border effects',
+          'Premium hover elevations'
+        ],
+        timestamp: new Date().toISOString()
+      });
+    }, [space]);
+
+    return (
+      <div
+        className={`group cursor-pointer transition-all duration-500 rounded-2xl relative h-full ${className}`}
+        style={{
+          // ✅ GLASSMORPHISM: Main container with premium glass effect
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.25) 100%)', 
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          border: '1px solid rgba(255, 255, 255, 0.18)',
+          boxShadow: `0 8px 32px rgba(0, 0, 0, 0.12),
+                     0 4px 16px rgba(0, 0, 0, 0.08),
+                     inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                     inset 0 -1px 0 rgba(255, 255, 255, 0.05)`,
+        }}
+        onMouseEnter={(e) => {
+          // ✅ GLASSMORPHISM: Enhanced hover effect
+          e.currentTarget.style.transform = 'translateY(-8px)';
+          e.currentTarget.style.boxShadow = `
+            0 16px 48px rgba(0, 0, 0, 0.18),
+            0 8px 24px rgba(0, 0, 0, 0.12),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3),
+            inset 0 -1px 0 rgba(255, 255, 255, 0.1)
+          `;
+          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.45) 50%, rgba(255, 255, 255, 0.35) 100%)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0px)';
+          e.currentTarget.style.boxShadow = `
+            0 8px 32px rgba(0, 0, 0, 0.12),
+            0 4px 16px rgba(0, 0, 0, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2),
+            inset 0 -1px 0 rgba(255, 255, 255, 0.05)
+          `;
+          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.35) 50%, rgba(255, 255, 255, 0.25) 100%)';
+        }}
+      >
+        {/* ✅ GLASSMORPHISM: Glass reflection effect overlay */}
+        <div 
+          className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-t-2xl"
+          style={{
+            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%)'
+          }}
         />
         
-        {/* Top badges and actions */}
-        <div className="absolute top-3 left-3 flex gap-2">
-          {space.featured && (
-            <Badge className="bg-blue-600 text-white px-3 py-1 text-xs font-medium border-0 rounded-lg shadow-sm">
-              Featured
-            </Badge>
-          )}
-        </div>
-        
-        <div className="absolute top-3 right-3">
-          <button className="p-2 bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-all duration-200 shadow-sm hover:shadow-md">
-            <Heart className="h-4 w-4 text-slate-600 hover:text-red-500 transition-colors" />
-          </button>
-        </div>
+        {/* ✅ GLASSMORPHISM: Glass highlight edge */}
+        <div 
+          className="absolute top-0 left-0 right-0 h-px rounded-t-2xl"
+          style={{
+            background: 'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 20%, rgba(255, 255, 255, 0.3) 80%, transparent 100%)'
+          }}
+        />
 
-        {/* Availability status */}
-        <div className="absolute bottom-3 left-3">
-          <Badge className="bg-green-500 text-white px-3 py-1 text-xs font-medium border-0 rounded-lg flex items-center gap-1">
-            <div className="w-2 h-2 bg-white rounded-full"></div>
-            {space.availability}
-          </Badge>
+        <div className="p-0 relative z-10 h-full flex flex-col">
+          {/* Enhanced Image Section with subtle glassmorphism overlays */}
+          <div className="relative h-48 p-3">
+            <div className="relative h-full w-full rounded-lg overflow-hidden">
+              <img 
+                src={space.image}
+                alt={space.title}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                onError={(e: any) => {
+                  e.target.src = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400';
+                }}
+              />
+              
+              {/* ✅ GLASSMORPHISM: Enhanced overlay elements with glass effect */}
+              <div className="absolute top-3 left-3">
+                <span 
+                  className="text-white flex items-center gap-1 text-xs font-medium shadow-lg px-3 py-1 rounded-full relative overflow-hidden"
+                  style={{ 
+                    background: 'linear-gradient(135deg, rgba(70, 104, 171, 0.9) 0%, rgba(70, 104, 171, 0.95) 100%)',
+                    backdropFilter: 'blur(10px) saturate(150%)',
+                    WebkitBackdropFilter: 'blur(10px) saturate(150%)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    boxShadow: '0 4px 16px rgba(70, 104, 171, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                  }}
+                >
+                  {/* Glass reflection on badge */}
+                  <div 
+                    className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%)'
+                    }}
+                  />
+                  <span className="relative z-10">{space.type}</span>
+                </span>
+              </div>
+
+              {/* Heart button */}
+              <div className="absolute top-3 right-3">
+                <button 
+                  className="p-2 rounded-full transition-all duration-200 relative overflow-hidden"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
+                    backdropFilter: 'blur(10px) saturate(150%)',
+                    WebkitBackdropFilter: 'blur(10px) saturate(150%)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  <Heart className="h-4 w-4 text-slate-600 hover:text-red-500 transition-colors relative z-10" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* ✅ GLASSMORPHISM: Enhanced Content Section with subtle glass background */}
+          <div 
+            className="p-4 space-y-2 relative overflow-hidden rounded-b-2xl flex-1 flex flex-col"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.4) 100%)',
+              backdropFilter: 'blur(15px) saturate(150%)',
+              WebkitBackdropFilter: 'blur(15px) saturate(150%)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderTop: 'none',
+              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+            }}
+          >
+            {/* Content glass reflection */}
+            <div 
+              className="absolute top-0 left-0 right-0 h-1/3 pointer-events-none"
+              style={{
+                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%)'
+              }}
+            />
+
+            {/* Title and rating */}
+            <div className="flex items-start justify-between relative z-10">
+              <div className="flex-1 min-w-0">
+                <h3 
+                  className="font-bold text-base text-slate-800 group-hover:transition-colors duration-300 truncate"
+                  style={{
+                    color: 'inherit',
+                    textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#4668AB'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
+                >
+                  {space.title}
+                </h3>
+                <p className="text-xs text-slate-600 font-medium truncate" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)'}}>
+                  {space.type}
+                </p>
+              </div>
+              {space.rating && (
+                <div className="flex items-center text-amber-500 ml-2">
+                  <Star className="w-3 h-3 mr-1 fill-current drop-shadow-sm" />
+                  <span className="text-xs font-medium" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)'}}>{space.rating}</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Location */}
+            <p className="text-xs text-slate-500 flex items-center truncate relative z-10" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)'}}>
+              <MapPin className="w-3 h-3 mr-1 flex-shrink-0 drop-shadow-sm" />
+              {space.location}
+            </p>
+
+            {/* Spacer to push action area to bottom */}
+            <div className="flex-1" />
+
+            {/* ✅ GLASSMORPHISM: Enhanced Action Area */}
+            <div className="relative z-10 space-y-2">
+              {/* Price and Viewers Row */}
+              <div className="flex items-center justify-between">
+                <span 
+                  className="text-white font-bold shadow-lg px-3 py-1 rounded-full text-xs relative overflow-hidden"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(30, 41, 59, 1) 100%)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: '0 4px 16px rgba(30, 41, 59, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                  }}
+                >
+                  {/* Glass reflection on price badge */}
+                  <div 
+                    className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%)'
+                    }}
+                  />
+                  <span className="relative z-10">${space.price.toLocaleString()}/{space.period}</span>
+                </span>
+                
+                <div className="flex items-center text-slate-600">
+                  <Eye className="w-3 h-3 mr-1 drop-shadow-sm" />
+                  <span className="text-xs font-medium" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>
+                    {space.impressions}/{space.impressionsPeriod}
+                  </span>
+                </div>
+              </div>
+
+              {/* Buttons Row */}
+              <div className="flex items-center gap-2">
+                <Button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('/browse');
+                  }}
+                  size="sm"
+                  className="text-white text-xs px-3 py-1 shadow-lg border-0 transition-all duration-300 relative overflow-hidden flex-1"
+                  style={{ 
+                    background: 'linear-gradient(135deg, #5A7BC2 0%, #4668AB 50%, #3A5490 100%)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    boxShadow: '0 4px 16px rgba(70, 104, 171, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                    flexBasis: '70%'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #6B8BD1 0%, #5A7BC2 50%, #4668AB 100%)';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(70, 104, 171, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #5A7BC2 0%, #4668AB 50%, #3A5490 100%)';
+                    e.currentTarget.style.transform = 'translateY(0px)';
+                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(70, 104, 171, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+                  }}
+                >
+                  {/* Glass reflection on button */}
+                  <div 
+                    className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%)'
+                    }}
+                  />
+                  <span className="relative z-10">View Details</span>
+                </Button>
+
+                {/* ✅ GLASSMORPHISM: Enhanced Cart Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('Add to cart:', space);
+                  }}
+                  className="p-2 rounded-lg transition-all duration-300 relative overflow-hidden"
+                  style={{ 
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
+                    backdropFilter: 'blur(10px) saturate(150%)',
+                    WebkitBackdropFilter: 'blur(10px) saturate(150%)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                    flexBasis: '30%',
+                    minWidth: 'fit-content'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.25)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                  }}
+                >
+                  {/* Glass reflection on button */}
+                  <div 
+                    className="absolute top-0 left-0 right-0 h-1/2 pointer-events-none rounded-lg"
+                    style={{
+                      background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%)'
+                    }}
+                  />
+                  <Plus className="w-4 h-4 text-slate-600 relative z-10" />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+    );
+  };
 
-      <CardContent className="p-4 space-y-3">
-        {/* Title and rating */}
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-slate-900 text-base leading-tight flex-1 line-clamp-2">
-            {space.title}
-          </h3>
-          <div className="flex items-center text-sm font-medium text-slate-700 flex-shrink-0 ml-2">
-            <Star className="h-4 w-4 text-amber-400 fill-current mr-1" />
-            {space.rating}
-          </div>
-        </div>
-
-        {/* Location */}
-        <div className="flex items-center text-sm text-slate-600">
-          <MapPin className="h-4 w-4 mr-2 flex-shrink-0 text-slate-400" />
-          <span className="truncate">{space.location}</span>
-        </div>
-
-        {/* Stats row */}
-        <div className="grid grid-cols-3 gap-4 py-2">
-          <div className="flex items-center text-xs">
-            <Users className="h-4 w-4 mr-1 text-blue-500" />
-            <div>
-              <div className="font-semibold text-slate-900">{space.impressions}</div>
-              <div className="text-slate-500">/{space.impressionsPeriod}</div>
-            </div>
-          </div>
-          
-          <div className="flex items-center text-xs">
-            <Users className="h-4 w-4 mr-1 text-green-500" />
-            <div>
-              <div className="font-medium text-slate-700 capitalize">{space.audience}</div>
-              <div className="text-slate-500">audience</div>
-            </div>
-          </div>
-          
-          <div className="flex items-center text-xs">
-            <BarChart3 className="h-4 w-4 mr-1 text-purple-500" />
-            <div>
-              <div className="font-medium text-slate-700">{space.size}</div>
-              <div className="text-slate-500">size</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Price and action */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-          <div className="flex items-baseline gap-1">
-            <span className="text-xl font-bold text-slate-900">${space.price.toLocaleString()}</span>
-            <span className="text-sm text-slate-500">/{space.period}</span>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <div className="flex items-center text-xs text-green-600 font-medium">
-              <BarChart3 className="h-3 w-3 mr-1" />
-              +28% visibility
-            </div>
-          </div>
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex gap-2 pt-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex-1 border-slate-200 hover:border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg"
-          >
-            View Details
-          </Button>
-          <Button 
-            size="sm" 
-            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all duration-200 px-4 rounded-lg"
-          >
-            <ShoppingCart className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  const SectionHeader = ({ title, subtitle }) => (
+  const SectionHeader = ({ title, subtitle }: { title: string, subtitle?: string }) => (
     <div className="mb-8">
       <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-2">{title}</h2>
       {subtitle && <p className="text-lg text-slate-600">{subtitle}</p>}
@@ -343,10 +690,9 @@ export default function Home() {
       <section 
         className="relative overflow-hidden bg-cover bg-center bg-no-repeat"
         style={{ 
-          height: '60vh',
+          height: '70vh',
           minHeight: '500px',
           maxHeight: '700px',
-          // Replace with your dynamic background image/video
           backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url("https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=1920&h=1080&fit=crop")'
         }}
       >
@@ -411,7 +757,7 @@ export default function Home() {
               <div className="w-full max-w-sm">
                 <SpaceCard 
                   space={featuredSpaces[0]} 
-                  className="bg-white/95 backdrop-blur-sm shadow-2xl" 
+                  className="shadow-2xl" 
                 />
               </div>
             </div>
@@ -419,75 +765,177 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ✅ AIRBNB-STYLE SECTIONS */}
+      {/* ✅ CAROUSEL SECTIONS WITH 4.5 CARD DISPLAY */}
       <div className="mx-auto px-6 sm:px-8 lg:px-12 xl:px-16 2xl:px-24 py-16 space-y-16">
         
-        {/* Featured Spaces Section */}
-        <section>
+        {/* Featured Spaces Section with Carousel */}
+        <section className="relative">
           <SectionHeader 
             title="Featured Spaces" 
             subtitle="Hand-picked premium advertising opportunities"
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {featuredSpaces.map((space) => (
-              <SpaceCard key={space.id} space={space} />
-            ))}
+          <div className="carousel-container">
+            <Carousel
+              responsive={carouselResponsive}
+              partialVisible={true}
+              swipeable={true}
+              draggable={true}
+              showDots={false}
+              infinite={false}
+              keyBoardControl={true}
+              customTransition="transform 300ms ease-in-out"
+              transitionDuration={300}
+              containerClass="carousel-container"
+              removeArrowOnDeviceType={[]}
+              itemClass="pr-6"
+              customLeftArrow={<CustomLeftArrow onClick={() => {}} />}
+              customRightArrow={<CustomRightArrow onClick={() => {}} />}
+            >
+              {featuredSpaces.map((space) => (
+                <div key={space.id} className="h-full pb-2">
+                  <SpaceCard space={space} />
+                </div>
+              ))}
+            </Carousel>
           </div>
         </section>
 
-        {/* Budget-friendly Section */}
-        <section>
+        {/* Budget-friendly Section with Carousel */}
+        <section className="relative">
           <SectionHeader 
             title="Budget-friendly" 
             subtitle="Great advertising opportunities that won't break the bank"
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {budgetFriendlySpaces.map((space) => (
-              <SpaceCard key={space.id} space={space} />
-            ))}
+          <div className="carousel-container">
+            <Carousel
+              responsive={carouselResponsive}
+              partialVisible={true}
+              swipeable={true}
+              draggable={true}
+              showDots={false}
+              infinite={false}
+              keyBoardControl={true}
+              customTransition="transform 300ms ease-in-out"
+              transitionDuration={300}
+              containerClass="carousel-container"
+              removeArrowOnDeviceType={[]}
+              itemClass="px-3"
+              customLeftArrow={<CustomLeftArrow onClick={() => {}} />}
+              customRightArrow={<CustomRightArrow onClick={() => {}} />}
+            >
+              {budgetFriendlySpaces.map((space) => (
+                <div key={space.id} className="h-full pb-2">
+                  <SpaceCard space={space} />
+                </div>
+              ))}
+            </Carousel>
           </div>
         </section>
 
-        {/* Top Rated Section */}
-        <section>
+        {/* Top Rated Section with Carousel */}
+        <section className="relative">
           <SectionHeader 
             title="Top Rated" 
             subtitle="Highest rated spaces by our community"
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {topRatedSpaces.map((space) => (
-              <SpaceCard key={space.id} space={space} />
-            ))}
+          <div className="carousel-container">
+            <Carousel
+              responsive={carouselResponsive}
+              partialVisible={true}
+              swipeable={true}
+              draggable={true}
+              showDots={false}
+              infinite={false}
+              keyBoardControl={true}
+              customTransition="transform 300ms ease-in-out"
+              transitionDuration={300}
+              containerClass="carousel-container"
+              removeArrowOnDeviceType={[]}
+              itemClass="px-3"
+              customLeftArrow={<CustomLeftArrow onClick={() => {}} />}
+              customRightArrow={<CustomRightArrow onClick={() => {}} />}
+            >
+              {topRatedSpaces.map((space) => (
+                <div key={space.id} className="h-full pb-2">
+                  <SpaceCard space={space} />
+                </div>
+              ))}
+            </Carousel>
           </div>
         </section>
 
-        {/* Best Exposure Section */}
-        <section>
+        {/* Best Exposure Section with Carousel */}
+        <section className="relative">
           <SectionHeader 
             title="Best Exposure" 
             subtitle="Maximum visibility for your advertising campaigns"
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {bestExposureSpaces.map((space) => (
-              <SpaceCard key={space.id} space={space} />
-            ))}
+          <div className="carousel-container">
+            <Carousel
+              responsive={carouselResponsive}
+              partialVisible={true}
+              swipeable={true}
+              draggable={true}
+              showDots={false}
+              infinite={false}
+              keyBoardControl={true}
+              customTransition="transform 300ms ease-in-out"
+              transitionDuration={300}
+              containerClass="carousel-container"
+              removeArrowOnDeviceType={[]}
+              itemClass="px-3"
+              customLeftArrow={<CustomLeftArrow onClick={() => {}} />}
+              customRightArrow={<CustomRightArrow onClick={() => {}} />}
+            >
+              {bestExposureSpaces.map((space) => (
+                <div key={space.id} className="h-full pb-2">
+                  <SpaceCard space={space} />
+                </div>
+              ))}
+            </Carousel>
           </div>
         </section>
 
       </div>
 
+      {/* ✅ Custom CSS for carousel container */}
+      <style jsx>{`
+        .carousel-container {
+          position: relative;
+          padding: 0;
+        }
+        
+        @media (max-width: 768px) {
+          .carousel-container {
+            padding: 0 20px;
+          }
+        }
+
+        /* Ensure equal height cards in carousel */
+        .react-multi-carousel-item {
+          display: flex;
+          height: 100%;
+        }
+
+        .react-multi-carousel-item > div {
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+        }
+
+        /* Hide default carousel buttons since we're using custom ones */
+        .react-multiple-carousel__arrow {
+          display: none;
+        }
+
+        /* Smooth scroll behavior */
+        .react-multi-carousel-track {
+          transition: transform 300ms ease-in-out;
+        }
+      `}</style>
+
       {/* Footer */}
-      <footer className="bg-slate-900 text-white py-12 mt-16">
-        <div className="mx-auto px-6 sm:px-8 lg:px-12 xl:px-16 2xl:px-24">
-          <div className="text-center">
-            <div className="text-2xl font-bold mb-4">Elaview</div>
-            <p className="text-slate-400 mb-6">The premium B2B advertising marketplace</p>
-            <div className="text-sm text-slate-500">
-              © 2024 Elaview. All rights reserved.
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer/>
     </div>
   );
 }

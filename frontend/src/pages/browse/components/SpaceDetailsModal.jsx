@@ -448,10 +448,7 @@ export default function SpaceDetailsModal({
             <div className="flex-1 overflow-y-auto p-6">
               {/* Features and Calendar Section */}
               <div className="mb-6">
-                <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                  <Calendar className="w-4 h-4" style={{ color: '#4668AB' }} />
-                  Campaign Details
-                </h3>
+                
 
                 {/* Features and Calendar Container */}
                 <div className="flex gap-4">

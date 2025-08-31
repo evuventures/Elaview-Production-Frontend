@@ -1,10 +1,11 @@
-// Space Owner Dashboard - REAL DATA VERSION WITH FIXED PRICING
+// Space Owner Dashboard - REAL DATA VERSION WITH FIXED PRICING AND USER FILTERING
 // ✅ REAL DATA: Fetches actual data from your backend API
 // ✅ SPACES FIRST: Spaces tab is now default and first in order
 // ✅ ERROR HANDLING: Proper error states and fallbacks
 // ✅ LOADING STATES: Real loading indicators
 // ✅ AUTO REFRESH: Refreshes data when returning from space creation
 // ✅ FIXED PRICING: Shows correct rate period (per day/week/month)
+// ✅ USER FILTERING: Only shows current user's spaces and bookings
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -284,102 +285,44 @@ export default function SpaceOwnerDashboardMVP() {
     }
   }, [searchParams, navigate]);
 
-  // ✅ REAL DATA: Fetch dashboard stats
-  const fetchDashboardStats = async () => {
-    try {
-      console.log('📊 Fetching space owner dashboard stats...');
-      const response = await apiClient.getSpaceOwnerDashboard();
-      
-      if (response.success && response.data) {
-        const { stats: apiStats } = response.data;
-        
-        setStats({
-          totalRevenue: apiStats.totalRevenue || 0,
-          activeListings: apiStats.activeListings || 0,
-          pendingInstalls: apiStats.pendingInstalls || 0,
-          completedBookings: apiStats.completedBookings || 0,
-          totalBookings: apiStats.totalBookings || 0
-        });
-        
-        console.log('✅ Dashboard stats loaded:', apiStats);
-      } else {
-        console.error('❌ Failed to fetch dashboard stats:', response.error);
-      }
-    } catch (error) {
-      console.error('❌ Dashboard stats error:', error);
-    }
+  // ✅ UTILITY: Format timestamp
+  const formatTimestamp = (timestamp: string | undefined): string => {
+    if (!timestamp) return 'Recently';
+    
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffHours < 1) return 'Just now';
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return date.toLocaleDateString();
   };
 
-  // ✅ REAL DATA: Fetch spaces with enhanced debugging for ratePeriod
-  const fetchSpaces = async () => {
-    try {
-      console.log('🏢 Fetching spaces...');
-      
-      // Try spaces endpoint first
-      let response = await apiClient.getSpaces({ limit: 10 });
-      
-      // If spaces endpoint fails, try properties endpoint as fallback
-      if (!response.success) {
-        console.log('🔄 Falling back to properties endpoint...');
-        response = await apiClient.getProperties({ limit: 10 });
-      }
-      
-      if (response.success && response.data) {
-        // ✅ FIXED PRICING: Debug space data to check ratePeriod field
-        console.log('🔍 DEBUG: Sample space data for pricing:', response.data[0]);
-        
-        // ✅ FIXED PRICING: Transform spaces data to ensure ratePeriod is available
-        const transformedSpaces = response.data.map(space => {
-          // Check for ratePeriod in multiple possible locations
-          const ratePeriod = space.ratePeriod || 
-                            space.rateType || 
-                            space.pricing?.ratePeriod ||
-                            space.pricing?.rateType ||
-                            'MONTHLY'; // Default fallback
-          
-          console.log(`🔍 Space "${space.name}" rate period:`, ratePeriod);
-          
-          return {
-            ...space,
-            ratePeriod: ratePeriod // Ensure ratePeriod is set
-          };
-        });
-        
-        setSpaces(transformedSpaces);
-        console.log('✅ Spaces loaded:', transformedSpaces.length, 'spaces');
-        
-        // ✅ FIXED PRICING: Log pricing info for debugging
-        transformedSpaces.forEach(space => {
-          console.log(`💰 Space "${space.name}": $${space.baseRate} ${getRatePeriodLabel(space.ratePeriod)}`);
-        });
-        
-      } else {
-        console.error('❌ Failed to fetch spaces:', response.error);
-        setSpaces([]);
-      }
-    } catch (error) {
-      console.error('❌ Spaces fetch error:', error);
-      setSpaces([]);
+  // ✅ UTILITY: Get booker name
+  const getBookerName = (booking: Booking): string => {
+    if (booking.advertiserName) return booking.advertiserName;
+    if (booking.booker?.businessName) return booking.booker.businessName;
+    if (booking.users?.businessName) return booking.users.businessName;
+    if (booking.booker?.firstName && booking.booker?.lastName) {
+      return `${booking.booker.firstName} ${booking.booker.lastName}`;
     }
+    if (booking.users?.firstName && booking.users?.lastName) {
+      return `${booking.users.firstName} ${booking.users.lastName}`;
+    }
+    return 'Advertiser';
   };
 
-  // ✅ REAL DATA: Fetch bookings
-  const fetchBookings = async () => {
-    try {
-      console.log('📅 Fetching bookings...');
-      const response = await apiClient.getBookings({ limit: 10 });
-      
-      if (response.success && response.data) {
-        setBookings(response.data);
-        console.log('✅ Bookings loaded:', response.data.length, 'bookings');
-      } else {
-        console.error('❌ Failed to fetch bookings:', response.error);
-        setBookings([]);
-      }
-    } catch (error) {
-      console.error('❌ Bookings fetch error:', error);
-      setBookings([]);
-    }
+  // ✅ UTILITY: Get space name
+  const getSpaceName = (booking: Booking): string => {
+    if (booking.spaceName) return booking.spaceName;
+    if (booking.space?.name) return booking.space.name;
+    if (booking.space?.title) return booking.space.title;
+    if (booking.property?.title) return booking.property.title;
+    return 'Advertising Space';
   };
 
   // ✅ REAL DATA: Fetch recent activity (messages/notifications)
@@ -425,47 +368,7 @@ export default function SpaceOwnerDashboardMVP() {
     }
   };
 
-  // ✅ UTILITY: Format timestamp
-  const formatTimestamp = (timestamp: string | undefined): string => {
-    if (!timestamp) return 'Recently';
-    
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    
-    if (diffHours < 1) return 'Just now';
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    
-    return date.toLocaleDateString();
-  };
-
-  // ✅ UTILITY: Get booker name
-  const getBookerName = (booking: Booking): string => {
-    if (booking.advertiserName) return booking.advertiserName;
-    if (booking.booker?.businessName) return booking.booker.businessName;
-    if (booking.users?.businessName) return booking.users.businessName;
-    if (booking.booker?.firstName && booking.booker?.lastName) {
-      return `${booking.booker.firstName} ${booking.booker.lastName}`;
-    }
-    if (booking.users?.firstName && booking.users?.lastName) {
-      return `${booking.users.firstName} ${booking.users.lastName}`;
-    }
-    return 'Advertiser';
-  };
-
-  // ✅ UTILITY: Get space name
-  const getSpaceName = (booking: Booking): string => {
-    if (booking.spaceName) return booking.spaceName;
-    if (booking.space?.name) return booking.space.name;
-    if (booking.space?.title) return booking.space.title;
-    if (booking.property?.title) return booking.property.title;
-    return 'Advertising Space';
-  };
-
-  // ✅ REAL DATA: Fetch all data
+  // ✅ FIXED: Fetch all data - now properly filtered by user
   const fetchAllData = async (force = false) => {
     if (force) {
       setIsRefreshing(true);
@@ -478,14 +381,38 @@ export default function SpaceOwnerDashboardMVP() {
     try {
       console.log('🔄 Fetching all space owner dashboard data...');
       
-      // Fetch all data in parallel for better performance
-      await Promise.all([
-        fetchDashboardStats(),
-        fetchSpaces(),
-        fetchBookings()
-      ]);
+      // ✅ FIXED: Use dashboard endpoint for ALL data to ensure user filtering
+      const dashboardResponse = await apiClient.getSpaceOwnerDashboard();
       
-      // Fetch activity after bookings are loaded (for fallback)
+      if (dashboardResponse.success && dashboardResponse.data) {
+        // Set stats
+        const { stats: apiStats } = dashboardResponse.data;
+        setStats({
+          totalRevenue: apiStats.totalRevenue || 0,
+          activeListings: apiStats.activeListings || 0,
+          pendingInstalls: apiStats.pendingInstalls || 0,
+          completedBookings: apiStats.completedBookings || 0,
+          totalBookings: apiStats.totalBookings || 0
+        });
+        
+        // Set spaces (already filtered by user)
+        const userSpaces = dashboardResponse.data.spaces || dashboardResponse.data.listings || [];
+        setSpaces(userSpaces.map(space => ({
+          ...space,
+          ratePeriod: space.ratePeriod || space.rateType || 'MONTHLY'
+        })));
+        
+        // Set bookings (already filtered by user)
+        setBookings(dashboardResponse.data.bookings || []);
+        
+        console.log('✅ Dashboard data loaded:', {
+          spaces: userSpaces.length,
+          bookings: (dashboardResponse.data.bookings || []).length,
+          stats: apiStats
+        });
+      }
+      
+      // Fetch activity separately
       await fetchRecentActivity();
       
       setLastUpdated(new Date().toISOString());
@@ -648,7 +575,7 @@ export default function SpaceOwnerDashboardMVP() {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <h3 className="text-lg font-bold text-gray-900 mr-4" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>
-                Your Ad Spaces
+                Your Ad Spaces ({spaces.length})
               </h3>
               {isRefreshing && (
                 <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
@@ -836,7 +763,7 @@ export default function SpaceOwnerDashboardMVP() {
         >
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-bold text-gray-900" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'}}>
-              Active & Pending Bookings
+              Active & Pending Bookings ({bookings.length})
             </h3>
             <span className="text-sm text-gray-600" style={{textShadow: '0 1px 2px rgba(255, 255, 255, 0.6)'}}>
               {formatCurrency(totalPendingRevenue)} pending revenue
@@ -1345,111 +1272,111 @@ export default function SpaceOwnerDashboardMVP() {
             <div className="mt-4">
               <div className="border-b border-gray-200">
                 <nav className="flex space-x-8">
-                  <button
-                    onClick={() => setActiveTab('spaces')}
-                    className={`py-3 px-2 text-sm font-semibold border-b-2 transition-all duration-200 ${
-                      activeTab === 'spaces'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    Spaces ({spaces.length})
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('bookings')}
-                    className={`py-3 px-2 text-sm font-semibold border-b-2 transition-all duration-200 ${
-                      activeTab === 'bookings'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    Bookings ({bookings.length})
-                  </button>
-                </nav>
-              </div>
-            </div>
-          </div>
+                <button
+                   onClick={() => setActiveTab('spaces')}
+                   className={`py-3 px-2 text-sm font-semibold border-b-2 transition-all duration-200 ${
+                     activeTab === 'spaces'
+                       ? 'border-blue-500 text-blue-600'
+                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                   }`}
+                 >
+                   Spaces ({spaces.length})
+                 </button>
+                 <button
+                   onClick={() => setActiveTab('bookings')}
+                   className={`py-3 px-2 text-sm font-semibold border-b-2 transition-all duration-200 ${
+                     activeTab === 'bookings'
+                       ? 'border-blue-500 text-blue-600'
+                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                   }`}
+                 >
+                   Bookings ({bookings.length})
+                 </button>
+               </nav>
+             </div>
+           </div>
+         </div>
 
-          {/* ✅ TAB CONTENT - SPACES FIRST */}
-          <div className="flex-1 p-6 overflow-y-auto">
-            {activeTab === 'spaces' ? <EnhancedSpacesTable /> : <EnhancedBookingsTable />}
-          </div>
-        </div>
-      </div>
+         {/* ✅ TAB CONTENT - SPACES FIRST */}
+         <div className="flex-1 p-6 overflow-y-auto">
+           {activeTab === 'spaces' ? <EnhancedSpacesTable /> : <EnhancedBookingsTable />}
+         </div>
+       </div>
+     </div>
 
-      {/* ✅ DELETE CONFIRMATION MODAL */}
-      {showDeleteConfirm && (
-        <div 
-          className="fixed inset-0 flex items-center justify-center z-50"
-          style={{ 
-            background: 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(4px)'
-          }}
-        >
-          <div 
-            className="bg-white rounded-xl p-6 max-w-md mx-4 shadow-xl border"
-            style={{
-              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.2)'
-            }}
-          >
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
-                <AlertCircle className="w-6 h-6 text-red-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Delete Space
-                </h3>
-                <p className="text-sm text-gray-600">
-                  This action cannot be undone
-                </p>
-              </div>
-            </div>
+     {/* ✅ DELETE CONFIRMATION MODAL */}
+     {showDeleteConfirm && (
+       <div 
+         className="fixed inset-0 flex items-center justify-center z-50"
+         style={{ 
+           background: 'rgba(0, 0, 0, 0.5)',
+           backdropFilter: 'blur(4px)'
+         }}
+       >
+         <div 
+           className="bg-white rounded-xl p-6 max-w-md mx-4 shadow-xl border"
+           style={{
+             background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 100%)',
+             backdropFilter: 'blur(20px)',
+             border: '1px solid rgba(255, 255, 255, 0.2)'
+           }}
+         >
+           <div className="flex items-center mb-4">
+             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+               <AlertCircle className="w-6 h-6 text-red-600" />
+             </div>
+             <div>
+               <h3 className="text-lg font-semibold text-gray-900">
+                 Delete Space
+               </h3>
+               <p className="text-sm text-gray-600">
+                 This action cannot be undone
+               </p>
+             </div>
+           </div>
 
-            <div className="mb-6">
-              <p className="text-gray-700 text-sm">
-                Are you sure you want to delete this space? This will permanently remove:
-              </p>
-              <ul className="mt-2 text-sm text-gray-600 list-disc list-inside space-y-1">
-                <li>The space listing</li>
-                <li>All associated images</li>
-                <li>Space availability data</li>
-              </ul>
-              <p className="mt-3 text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
-                ⚠️ Active bookings for this space will not be affected but new bookings will be disabled.
-              </p>
-            </div>
+           <div className="mb-6">
+             <p className="text-gray-700 text-sm">
+               Are you sure you want to delete this space? This will permanently remove:
+             </p>
+             <ul className="mt-2 text-sm text-gray-600 list-disc list-inside space-y-1">
+               <li>The space listing</li>
+               <li>All associated images</li>
+               <li>Space availability data</li>
+             </ul>
+             <p className="mt-3 text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+               ⚠️ Active bookings for this space will not be affected but new bookings will be disabled.
+             </p>
+           </div>
 
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={cancelDelete}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDeleteSpace(showDeleteConfirm)}
-                disabled={deletingSpaceId === showDeleteConfirm}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              >
-                {deletingSpaceId === showDeleteConfirm ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete Space
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+           <div className="flex gap-3 justify-end">
+             <button
+               onClick={cancelDelete}
+               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+             >
+               Cancel
+             </button>
+             <button
+               onClick={() => handleDeleteSpace(showDeleteConfirm)}
+               disabled={deletingSpaceId === showDeleteConfirm}
+               className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+             >
+               {deletingSpaceId === showDeleteConfirm ? (
+                 <>
+                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                   Deleting...
+                 </>
+               ) : (
+                 <>
+                   <Trash2 className="w-4 h-4 mr-2" />
+                   Delete Space
+                 </>
+               )}
+             </button>
+           </div>
+         </div>
+       </div>
+     )}
+   </div>
+ );
 }

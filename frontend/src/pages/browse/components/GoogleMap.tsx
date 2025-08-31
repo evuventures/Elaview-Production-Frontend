@@ -1,15 +1,49 @@
 // src/components/browse/maps/GoogleMap.tsx
-// ✅ CLEAN: Simplified GoogleMap with Elaview design system - Deep Teal
-// ✅ MOBILE: Disabled default Google Maps controls on mobile
+// Cleaned version with all debugging logs removed
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { X, MapPin } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
-// ✅ TypeScript Interfaces
+// TypeScript Interfaces
 interface LatLng {
   lat: number;
   lng: number;
+}
+
+interface MapBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
+interface PixelPosition {
+  x: number;
+  y: number;
+}
+
+interface DropdownDimensions {
+  width: number;
+  height: number;
+}
+
+interface MapViewportBounds {
+  width: number;
+  height: number;
+}
+
+interface OptimalPosition {
+  x: number;
+  y: number;
+  placement: 'top' | 'top-end' | 'bottom' | 'bottom-end';
+  arrowDirection: 'up' | 'up-right' | 'down' | 'down-right';
+}
+
+interface PositioningConfig {
+  markerOffset: number;
+  boundaryPadding: number;
+  arrowSize: number;
 }
 
 interface Property {
@@ -39,7 +73,6 @@ interface Property {
   spaces?: Space[];
 }
 
-// MIGRATION: Renamed AdvertisingArea to Space
 interface Space {
   id: string;
   name: string;
@@ -77,13 +110,98 @@ interface GoogleMapProps {
   marker?: LatLng | null;
   showPropertyMarkers?: boolean;
   spaces?: Space[];
-  advertisingAreas?: Space[]; // DEPRECATED: Use spaces instead
+  advertisingAreas?: Space[];
   onSpaceClick?: (space: Space) => void;
-  onAreaClick?: (area: Space) => void; // DEPRECATED: Use onSpaceClick
+  onAreaClick?: (area: Space) => void;
   showAreaMarkers?: boolean;
+  onBoundsChange?: (bounds: MapBounds, zoom: number) => void;
 }
 
-// ✅ CLEAN: Simplified Space Dropdown
+// Smart positioning utilities
+const POSITIONING_CONFIG: PositioningConfig = {
+  markerOffset: 15,
+  boundaryPadding: 12,
+  arrowSize: 10
+};
+
+/**
+ * Calculates optimal dropdown position based on marker location in viewport
+ */
+const calculateOptimalDropdownPosition = (
+  markerPixelPos: PixelPosition,
+  mapBounds: MapViewportBounds,
+  dropdownDimensions: DropdownDimensions
+): OptimalPosition => {
+  const { x: markerX, y: markerY } = markerPixelPos;
+  const { width: mapWidth, height: mapHeight } = mapBounds;
+  const { width: dropdownWidth, height: dropdownHeight } = dropdownDimensions;
+  const { markerOffset, boundaryPadding } = POSITIONING_CONFIG;
+  
+  // Determine which quadrant the marker is in
+  const isTopHalf = markerY < mapHeight / 2;
+  const isLeftHalf = markerX < mapWidth / 2;
+  
+  let position: OptimalPosition;
+  
+  if (isTopHalf && isLeftHalf) {
+    position = {
+      x: markerX,
+      y: markerY + markerOffset,
+      placement: 'bottom',
+      arrowDirection: 'up'
+    };
+  } else if (isTopHalf && !isLeftHalf) {
+    position = {
+      x: markerX - dropdownWidth,
+      y: markerY + markerOffset,
+      placement: 'bottom-end',
+      arrowDirection: 'up-right'
+    };
+  } else if (!isTopHalf && isLeftHalf) {
+    position = {
+      x: markerX,
+      y: markerY - dropdownHeight - markerOffset,
+      placement: 'top',
+      arrowDirection: 'down'
+    };
+  } else {
+    position = {
+      x: markerX - dropdownWidth,
+      y: markerY - dropdownHeight - markerOffset,
+      placement: 'top-end',
+      arrowDirection: 'down-right'
+    };
+  }
+  
+  // Apply boundary collision detection and correction
+  position.x = Math.max(
+    boundaryPadding, 
+    Math.min(mapWidth - dropdownWidth - boundaryPadding, position.x)
+  );
+  position.y = Math.max(
+    boundaryPadding, 
+    Math.min(mapHeight - dropdownHeight - boundaryPadding, position.y)
+  );
+  
+  return position;
+};
+
+/**
+ * Debounced position calculator
+ */
+let positionCalculationTimeout: NodeJS.Timeout | null = null;
+
+const debouncedPositionCalculation = (
+  callback: () => void,
+  delay: number = 16
+): void => {
+  if (positionCalculationTimeout) {
+    clearTimeout(positionCalculationTimeout);
+  }
+  positionCalculationTimeout = setTimeout(callback, delay);
+};
+
+// Space Dropdown Component
 interface SpaceDropdownProps {
   spaces: Space[];
   position: { lat: number; lng: number };
@@ -100,43 +218,52 @@ const SpaceDropdown: React.FC<SpaceDropdownProps> = ({
   map 
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [pixelPosition, setPixelPosition] = useState<{ x: number; y: number } | null>(null);
+  const [pixelPosition, setPixelPosition] = useState<OptimalPosition | null>(null);
+  const [imageError, setImageError] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const DROPDOWN_DIMENSIONS: DropdownDimensions = {
+    width: 320,
+    height: 240
+  };
 
-  // ✅ SIMPLIFIED: Basic positioning
+  // Smart positioning with quadrant-based algorithm  
   useEffect(() => {
     const updatePosition = () => {
-      const mapDiv = map.getDiv();
-      if (!mapDiv) return;
+      debouncedPositionCalculation(() => {
+        const mapDiv = map.getDiv();
+        if (!mapDiv) return;
 
-      const overlay = new window.google.maps.OverlayView();
-      overlay.onAdd = function() {};
-      overlay.onRemove = function() {};
-      overlay.draw = function() {
-        const projection = this.getProjection();
-        if (projection) {
-          const pixelPos = projection.fromLatLngToDivPixel(
-            new window.google.maps.LatLng(position.lat, position.lng)
-          );
-          
-          if (pixelPos) {
-            const mapRect = mapDiv.getBoundingClientRect();
-            const dropdownWidth = 280;
-            const dropdownHeight = 200;
+        const overlay = new window.google.maps.OverlayView();
+        overlay.onAdd = function() {};
+        overlay.onRemove = function() {};
+        overlay.draw = function() {
+          const projection = this.getProjection();
+          if (projection) {
+            const pixelPos = projection.fromLatLngToDivPixel(
+              new window.google.maps.LatLng(position.lat, position.lng)
+            );
             
-            // Simple centering with boundary checks
-            let x = pixelPos.x;
-            let y = pixelPos.y - dropdownHeight - 10; // Position above marker
-            
-            // Keep within bounds
-            x = Math.max(dropdownWidth/2, Math.min(mapRect.width - dropdownWidth/2, x));
-            y = Math.max(10, Math.min(mapRect.height - dropdownHeight - 10, y));
-            
-            setPixelPosition({ x, y });
+            if (pixelPos) {
+              const mapRect = mapDiv.getBoundingClientRect();
+              const mapBounds: MapViewportBounds = {
+                width: mapRect.width,
+                height: mapRect.height
+              };
+              
+              const optimalPosition = calculateOptimalDropdownPosition(
+                { x: pixelPos.x, y: pixelPos.y },
+                mapBounds,
+                DROPDOWN_DIMENSIONS
+              );
+              
+              setPixelPosition(optimalPosition);
+            }
           }
-        }
-        overlay.setMap(null);
-      };
-      overlay.setMap(map);
+          overlay.setMap(null);
+        };
+        overlay.setMap(map);
+      });
     };
 
     updatePosition();
@@ -148,8 +275,16 @@ const SpaceDropdown: React.FC<SpaceDropdownProps> = ({
 
     return () => {
       listeners.forEach(listener => listener?.remove?.());
+      if (positionCalculationTimeout) {
+        clearTimeout(positionCalculationTimeout);
+      }
     };
   }, [position, map]);
+
+  // Reset image error when space changes
+  useEffect(() => {
+    setImageError(false);
+  }, [currentIndex, spaces]);
 
   const currentSpace = spaces[currentIndex];
 
@@ -166,64 +301,147 @@ const SpaceDropdown: React.FC<SpaceDropdownProps> = ({
     return space.name || space.title || 'Advertising Space';
   };
 
+  // Image retrieval based on Prisma schema
+  const getSpaceImage = (space: Space) => {
+    // Check space.images field (String? from Prisma schema)
+    if (space.images && typeof space.images === 'string' && space.images.trim()) {
+      return space.images;
+    }
+    
+    // Check if images might be stored as JSON array
+    if (space.images && Array.isArray(space.images) && space.images.length > 0) {
+      return space.images[0];
+    }
+    
+    // Check property relation images through property.images (Json? from schema)
+    if (space.property && space.property.images) {
+      if (Array.isArray(space.property.images) && space.property.images.length > 0) {
+        return space.property.images[0];
+      }
+      
+      if (typeof space.property.images === 'string') {
+        try {
+          const parsed = JSON.parse(space.property.images);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed[0];
+          }
+        } catch (e) {
+          // JSON parse failed
+        }
+      }
+    }
+    
+    // Check property.primary_image (String? from schema)
+    if (space.property && space.property.primary_image && space.property.primary_image.trim()) {
+      return space.property.primary_image;
+    }
+    
+    // Check property.photos (Json? from schema) 
+    if (space.property && space.property.photos) {
+      if (Array.isArray(space.property.photos) && space.property.photos.length > 0) {
+        return space.property.photos[0];
+      }
+      
+      if (typeof space.property.photos === 'string') {
+        try {
+          const parsed = JSON.parse(space.property.photos);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed[0];
+          }
+        } catch (e) {
+          // JSON parse failed
+        }
+      }
+    }
+    
+    return null;
+  };
+
+  const navigateToSpace = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      setCurrentIndex(currentIndex === 0 ? spaces.length - 1 : currentIndex - 1);
+    } else {
+      setCurrentIndex(currentIndex === spaces.length - 1 ? 0 : currentIndex + 1);
+    }
+  };
+
   if (!pixelPosition || !currentSpace) return null;
+
+  const spaceImage = getSpaceImage(currentSpace);
 
   return (
     <div
-      className="absolute z-50 card card-comfortable shadow-soft-lg max-w-xs"
+      ref={dropdownRef}
+      className="absolute z-50 bg-white rounded-lg shadow-lg border border-slate-200 overflow-hidden"
       style={{
         left: `${pixelPosition.x}px`,
         top: `${pixelPosition.y}px`,
-        transform: 'translateX(-50%)',
-        width: '280px'
+        width: `${DROPDOWN_DIMENSIONS.width}px`,
+        height: `${DROPDOWN_DIMENSIONS.height}px`
       }}
     >
-      {/* ✅ Clean header */}
-      <div className="flex items-center justify-between mb-3">
-        <span className="caption text-slate-500">
-          {spaces.length} space{spaces.length !== 1 ? 's' : ''} available
-        </span>
-        <button
-          onClick={onClose}
-          className="p-1 hover:bg-slate-100 rounded-md transition-colors"
-        >
-          <X className="w-4 h-4 text-slate-400" />
-        </button>
-      </div>
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        className="absolute top-3 right-3 z-10 p-1.5 bg-white/90 hover:bg-white rounded-full shadow-sm transition-colors"
+      >
+        <X className="w-4 h-4 text-slate-600" />
+      </button>
 
-      {/* ✅ Simplified space info */}
-      <div className="space-y-3">
-        <div>
-          <h3 className="property-title text-sm mb-1">
-            {getSpaceName(currentSpace)}
-          </h3>
-          <p className="caption text-slate-500 flex items-center gap-1">
-            <MapPin className="w-3 h-3" />
-            {currentSpace.propertyName}
-          </p>
-        </div>
+      {/* Image section */}
+      <div className="relative h-40 bg-slate-100">
+        {spaceImage && !imageError ? (
+          <img
+            src={spaceImage}
+            alt={getSpaceName(currentSpace)}
+            className="w-full h-full object-cover"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full bg-slate-100">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-slate-200 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                <MapPin className="w-6 h-6 text-slate-400" />
+              </div>
+              <p className="text-sm text-slate-500">No image available</p>
+            </div>
+          </div>
+        )}
 
-        <div className="flex items-center justify-between">
-          <span className="property-price bg-teal-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-            {getSpacePrice(currentSpace)}
-          </span>
-          <Button 
-            onClick={() => onSpaceClick(currentSpace)}
-            className="btn-primary btn-small"
-          >
-            View Details
-          </Button>
-        </div>
-
-        {/* ✅ Simple navigation if multiple spaces */}
+        {/* Navigation arrows - only show if multiple spaces */}
         {spaces.length > 1 && (
-          <div className="flex items-center justify-center gap-2 pt-2 border-t border-slate-200">
+          <>
+            <button
+              onClick={() => navigateToSpace('prev')}
+              className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-white/90 hover:bg-white rounded-full shadow-sm transition-all duration-200 hover:scale-105"
+            >
+              <svg className="w-4 h-4 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            
+            <button
+              onClick={() => navigateToSpace('next')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-white/90 hover:bg-white rounded-full shadow-sm transition-all duration-200 hover:scale-105"
+            >
+              <svg className="w-4 h-4 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </>
+        )}
+
+        {/* Space indicator dots - only show if multiple spaces */}
+        {spaces.length > 1 && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
             {spaces.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentIndex(index)}
                 className={`w-2 h-2 rounded-full transition-colors ${
-                  index === currentIndex ? 'bg-teal-500' : 'bg-slate-300'
+                  index === currentIndex 
+                    ? 'bg-white shadow-sm' 
+                    : 'bg-white/60 hover:bg-white/80'
                 }`}
               />
             ))}
@@ -231,19 +449,85 @@ const SpaceDropdown: React.FC<SpaceDropdownProps> = ({
         )}
       </div>
 
-      {/* ✅ Clean arrow */}
+      {/* Content section */}
+      <div className="p-4">
+        <div className="space-y-3">
+          {/* Space name */}
+          <h3 className="font-semibold text-slate-900 text-base leading-tight">
+            {getSpaceName(currentSpace)}
+          </h3>
+
+          {/* Price and button row */}
+          <div className="flex items-center justify-between">
+            <span className="bg-teal-500 text-white px-3 py-1.5 rounded-full text-sm font-semibold">
+              {getSpacePrice(currentSpace)}
+            </span>
+            <button 
+              onClick={() => onSpaceClick(currentSpace)}
+              className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
+            >
+              View Details
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Smart directional arrow */}
       <div 
-        className="absolute top-full left-1/2 transform -translate-x-1/2"
-        style={{
-          width: 0,
-          height: 0,
-          borderLeft: '8px solid transparent',
-          borderRight: '8px solid transparent',
-          borderTop: '8px solid white',
-        }}
+        className={`absolute ${getArrowPositionClasses(pixelPosition.arrowDirection)}`}
+        style={getArrowStyles(pixelPosition.arrowDirection)}
       />
     </div>
   );
+};
+
+// Helper functions for smart arrow positioning
+const getArrowPositionClasses = (direction: OptimalPosition['arrowDirection']): string => {
+  switch (direction) {
+    case 'up':
+      return 'top-0 left-6 transform -translate-y-full';
+    case 'up-right':  
+      return 'top-0 right-6 transform -translate-y-full';
+    case 'down':
+      return 'bottom-0 left-6 transform translate-y-full';
+    case 'down-right':
+      return 'bottom-0 right-6 transform translate-y-full';
+    default:
+      return 'top-0 left-6 transform -translate-y-full';
+  }
+};
+
+const getArrowStyles = (direction: OptimalPosition['arrowDirection']): React.CSSProperties => {
+  const arrowSize = POSITIONING_CONFIG.arrowSize;
+  
+  const baseStyles: React.CSSProperties = {
+    width: 0,
+    height: 0,
+    borderStyle: 'solid'
+  };
+  
+  switch (direction) {
+    case 'up':
+    case 'up-right':
+      return {
+        ...baseStyles,
+        borderLeft: `${arrowSize}px solid transparent`,
+        borderRight: `${arrowSize}px solid transparent`,
+        borderBottom: `${arrowSize}px solid white`,
+        filter: 'drop-shadow(0 -2px 4px rgba(0, 0, 0, 0.1))'
+      };
+    case 'down':
+    case 'down-right':
+      return {
+        ...baseStyles,
+        borderLeft: `${arrowSize}px solid transparent`,
+        borderRight: `${arrowSize}px solid transparent`, 
+        borderTop: `${arrowSize}px solid white`,
+        filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))'
+      };
+    default:
+      return baseStyles;
+  }
 };
 
 // Global type declarations
@@ -264,10 +548,11 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   marker,
   showPropertyMarkers = true,
   spaces = [],
-  advertisingAreas = [], // DEPRECATED: Use spaces instead
+  advertisingAreas = [],
   onSpaceClick,
-  onAreaClick, // DEPRECATED: Use onSpaceClick instead
+  onAreaClick,
   showAreaMarkers = true,
+  onBoundsChange
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -275,16 +560,21 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   const clickMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
   
-  // ✅ NEW: Mobile detection state
+  // Mobile detection state
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   
-  // ✅ Simplified dropdown state
+  // Dropdown state
   const [activeDropdown, setActiveDropdown] = useState<{
     spaces: Space[];
     position: LatLng;
   } | null>(null);
 
-  // ✅ NEW: Mobile detection useEffect
+  // Bounds tracking refs
+  const boundsListenerRef = useRef<google.maps.MapsEventListener | null>(null);
+  const zoomListenerRef = useRef<google.maps.MapsEventListener | null>(null);
+  const boundsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Mobile detection
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -294,7 +584,35 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // ✅ Clean up function
+  // Debounced bounds change handler
+  const handleBoundsChanged = useCallback(() => {
+    if (!mapInstanceRef.current || !onBoundsChange) return;
+
+    if (boundsTimeoutRef.current) {
+      clearTimeout(boundsTimeoutRef.current);
+    }
+
+    boundsTimeoutRef.current = setTimeout(() => {
+      const map = mapInstanceRef.current;
+      if (!map) return;
+
+      const bounds = map.getBounds();
+      const currentZoom = map.getZoom();
+      
+      if (bounds && currentZoom) {
+        const boundsObj: MapBounds = {
+          north: bounds.getNorthEast().lat(),
+          south: bounds.getSouthWest().lat(),
+          east: bounds.getNorthEast().lng(),
+          west: bounds.getSouthWest().lng()
+        };
+
+        onBoundsChange(boundsObj, currentZoom);
+      }
+    }, 300);
+  }, [onBoundsChange]);
+
+  // Clean up function
   const cleanupMarkers = (markerArray: google.maps.marker.AdvancedMarkerElement[]) => {
     markerArray.forEach(marker => {
       if (marker && marker.map) {
@@ -304,18 +622,35 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
     return [];
   };
 
-  // ✅ Clean up on unmount
+  // Clean up bounds listeners
+  const cleanupBoundsListeners = useCallback(() => {
+    if (boundsListenerRef.current) {
+      boundsListenerRef.current.remove();
+      boundsListenerRef.current = null;
+    }
+    if (zoomListenerRef.current) {
+      zoomListenerRef.current.remove();
+      zoomListenerRef.current = null;
+    }
+    if (boundsTimeoutRef.current) {
+      clearTimeout(boundsTimeoutRef.current);
+      boundsTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Clean up on unmount
   useEffect(() => {
     return () => {
       propertyMarkersRef.current = cleanupMarkers(propertyMarkersRef.current);
       if (clickMarkerRef.current && clickMarkerRef.current.map) {
         clickMarkerRef.current.map = null;
       }
+      cleanupBoundsListeners();
       mapInstanceRef.current = null;
     };
-  }, []);
+  }, [cleanupBoundsListeners]);
 
-  // ✅ Initialize map
+  // Initialize map
   useEffect(() => {
     const initMap = async () => {
       try {
@@ -360,19 +695,18 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
 
         const { Map } = await window.google.maps.importLibrary("maps");
         
-        // ✅ FIXED: Conditional UI controls based on mobile state
         const map = new Map(mapRef.current, {
           center,
           zoom,
           mapId: import.meta.env.VITE_GOOGLE_MAPS_MAP_ID || 'DEMO_MAP_ID',
           gestureHandling: 'greedy',
-          disableDefaultUI: isMobile,           // ✅ Disable all UI on mobile
-          zoomControl: !isMobile,               // ✅ Hide zoom +/- on mobile
-          mapTypeControl: false,                // Always off
-          scaleControl: false,                  // Always off
-          streetViewControl: false,             // Always off
-          rotateControl: false,                 // Always off
-          fullscreenControl: !isMobile,         // ✅ Hide fullscreen on mobile
+          disableDefaultUI: isMobile,
+          zoomControl: !isMobile,
+          mapTypeControl: false,
+          scaleControl: false,
+          streetViewControl: false,
+          rotateControl: false,
+          fullscreenControl: !isMobile,
           clickableIcons: false,
           backgroundColor: '#f8fafc',
           styles: [
@@ -398,6 +732,17 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
             onClick(event);
           }
         });
+
+        // Setup bounds change listeners
+        if (onBoundsChange) {
+          boundsListenerRef.current = map.addListener('bounds_changed', handleBoundsChanged);
+          zoomListenerRef.current = map.addListener('zoom_changed', handleBoundsChanged);
+          
+          // Trigger initial bounds callback
+          setTimeout(() => {
+            handleBoundsChanged();
+          }, 1000);
+        }
         
         setIsMapReady(true);
 
@@ -407,9 +752,9 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
     };
 
     initMap();
-  }, [isMobile]); // ✅ NEW: Re-create map when mobile state changes
+  }, [isMobile, onBoundsChange, handleBoundsChanged]);
 
-  // ✅ Update map center and zoom when props change
+  // Update map center and zoom when props change
   useEffect(() => {
     if (mapInstanceRef.current && isMapReady) {
       mapInstanceRef.current.panTo(center);
@@ -419,7 +764,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
     }
   }, [center.lat, center.lng, zoom, isMapReady]);
 
-  // ✅ CLEAN: Simplified property markers
+  // Create property markers
   useEffect(() => {
     const createPropertyMarkers = async () => {
       if (!mapInstanceRef.current || !isMapReady || !showPropertyMarkers) {
@@ -449,7 +794,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
 
           const spaceCount = property.spaces?.length || 0;
           
-          // ✅ CLEAN: Simple marker design with Deep Teal
+          // Simple marker design
           const markerElement = document.createElement('div');
           markerElement.className = 'flex items-center justify-center w-8 h-8 bg-teal-500 text-white rounded-full border-2 border-white shadow-soft cursor-pointer hover:bg-teal-600 transition-all duration-200 hover:scale-110';
           markerElement.style.fontSize = '12px';
@@ -464,42 +809,35 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
             gmpClickable: true,
           });
 
-          // ✅ Show dropdown on property marker click
-          // ✅ FIXED: Mobile-aware property marker click handler
-marker.addListener('click', (e: any) => {
-  e.stop();
-  
-  // ✅ Check if currently mobile (real-time detection)
-  const isCurrentlyMobile = window.innerWidth < 768;
-  
-  if (isCurrentlyMobile) {
-    // ✅ Mobile: Always use bottom sheet via onPropertyClick
-    console.log('📱 Mobile property marker clicked - opening bottom sheet');
-    onPropertyClick(property);
-  } else {
-    // ✅ Desktop: Use dropdown as before
-    console.log('🖥️ Desktop property marker clicked - showing dropdown');
-    
-    // MIGRATION: Use spaces or fallback to advertisingAreas for backward compatibility
-    const allSpaces = spaces.length > 0 ? spaces : advertisingAreas;
-    const propertySpaces = allSpaces.filter(space => 
-      space.propertyId === property.id || 
-      space.property?.id === property.id ||
-      (space.propertyCoords && 
-       Math.abs(space.propertyCoords.lat - position!.lat) < 0.001 &&
-       Math.abs(space.propertyCoords.lng - position!.lng) < 0.001)
-    );
+          // Mobile-aware property marker click handler
+          marker.addListener('click', (e: any) => {
+            e.stop();
+            
+            const isCurrentlyMobile = window.innerWidth < 768;
+            
+            if (isCurrentlyMobile) {
+              onPropertyClick(property);
+            } else {
+              // Use spaces or fallback to advertisingAreas
+              const allSpaces = spaces.length > 0 ? spaces : advertisingAreas;
+              const propertySpaces = allSpaces.filter(space => 
+                space.propertyId === property.id || 
+                space.property?.id === property.id ||
+                (space.propertyCoords && 
+                 Math.abs(space.propertyCoords.lat - position!.lat) < 0.001 &&
+                 Math.abs(space.propertyCoords.lng - position!.lng) < 0.001)
+              );
 
-    if (propertySpaces.length > 0) {
-      setActiveDropdown({
-        spaces: propertySpaces,
-        position: position!
-      });
-    } else {
-      onPropertyClick(property);
-    }
-  }
-});
+              if (propertySpaces.length > 0) {
+                setActiveDropdown({
+                  spaces: propertySpaces,
+                  position: position!
+                });
+              } else {
+                onPropertyClick(property);
+              }
+            }
+          });
 
           newMarkers.push(marker);
         }
@@ -514,7 +852,7 @@ marker.addListener('click', (e: any) => {
     createPropertyMarkers();
   }, [properties, spaces, advertisingAreas, isMapReady, onPropertyClick, showPropertyMarkers]);
 
-  // ✅ Create click marker when marker prop changes
+  // Create click marker when marker prop changes
   useEffect(() => {
     const createClickMarker = async () => {
       if (!mapInstanceRef.current || !isMapReady || !marker) return;
@@ -527,7 +865,7 @@ marker.addListener('click', (e: any) => {
         }
 
         const pin = new PinElement({
-          background: '#0f766e', // Deep Teal color
+          background: '#0f766e',
           borderColor: '#0d9488',
           glyphColor: '#ffffff',
           scale: 1.0,
@@ -557,14 +895,13 @@ marker.addListener('click', (e: any) => {
         style={{ minHeight: '300px' }}
       />
       
-      {/* ✅ CLEAN: Simplified space dropdown */}
+      {/* Space dropdown */}
       {activeDropdown && mapInstanceRef.current && (onSpaceClick || onAreaClick) && (
         <SpaceDropdown
           spaces={activeDropdown.spaces}
           position={activeDropdown.position}
           onSpaceClick={(space) => {
             setActiveDropdown(null);
-            // MIGRATION: Use onSpaceClick if available, fallback to onAreaClick for backward compatibility
             if (onSpaceClick) {
               onSpaceClick(space);
             } else if (onAreaClick) {
@@ -576,7 +913,7 @@ marker.addListener('click', (e: any) => {
         />
       )}
       
-      {/* ✅ CLEAN: Simple loading state */}
+      {/* Loading state */}
       {!isMapReady && (
         <div className="absolute inset-0 bg-slate-50 rounded-2xl flex items-center justify-center">
           <div className="text-center">
