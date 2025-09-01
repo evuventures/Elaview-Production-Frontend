@@ -1,5 +1,5 @@
 // src/pages/campaigns/CreateCampaignWizard.jsx
-// ✅ FIXED: Redirects to /advertise (Advertiser Dashboard) after campaign creation
+// ✅ UPDATED: Enhanced redirect logic for campaign selection return flow
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -201,12 +201,12 @@ export default function CreateCampaignWizard() {
     try {
       console.log('🚀 Creating campaign...');
 
-      // ✅ ADD THIS DEBUG LOGGING
-    console.log('🔍 DEBUG - Current Clerk User Info:');
-    console.log('  User ID:', window.Clerk?.user?.id);
-    console.log('  Session ID:', window.Clerk?.session?.id);
-    console.log('  User object:', window.Clerk?.user);
-    console.log('  Auth token preview:', (await window.Clerk?.session?.getToken())?.substring(0, 50) + '...');
+      // ✅ ADD DEBUG LOGGING
+      console.log('🔍 DEBUG - Current Clerk User Info:');
+      console.log('  User ID:', window.Clerk?.user?.id);
+      console.log('  Session ID:', window.Clerk?.session?.id);
+      console.log('  User object:', window.Clerk?.user);
+      console.log('  Auth token preview:', (await window.Clerk?.session?.getToken())?.substring(0, 50) + '...');
       
       const campaignPayload = {
         name: campaignData.name,
@@ -250,20 +250,41 @@ export default function CreateCampaignWizard() {
 
       console.log('✅ Campaign created successfully:', result.data);
       
-      // Check for return navigation parameters
+      // ✅ ENHANCED REDIRECT LOGIC: Handle different return flows
       const urlParams = new URLSearchParams(window.location.search);
       const returnTo = urlParams.get('returnTo');
       const spaceId = urlParams.get('spaceId');
+      const fromCampaignSelection = urlParams.get('fromCampaignSelection');
       
+      // ✅ NEW: Handle return to campaign selection with new campaign
+      if (fromCampaignSelection === 'true') {
+        console.log('🎯 Returning to campaign selection with new campaign');
+        
+        // Store the new campaign data so campaign selection can auto-select it
+        sessionStorage.setItem('newlyCreatedCampaign', JSON.stringify({
+          id: result.data.id,
+          name: result.data.name || result.data.title,
+          brand_name: result.data.brand_name,
+          objective: result.data.primary_objective,
+          autoSelect: true // Flag to auto-select this campaign
+        }));
+        
+        // Navigate back to campaign selection
+        navigate('/CampaignSelection?newCampaign=true');
+        return;
+      }
+
+      // ✅ EXISTING: Handle return to space details (booking flow)
       if (returnTo === 'space' && spaceId) {
-        // Store the new campaign data and redirect back to space details
+        console.log('🎯 Returning to space details for booking flow');
         sessionStorage.setItem('newCampaign', JSON.stringify(result.data));
         navigate(`/browse?spaceId=${spaceId}&campaignCreated=true`);
-      } else {
-        // ✅ FIXED: Redirect to /advertise (Advertiser Dashboard) instead of /dashboard
-        console.log('🎯 Redirecting to Advertiser Dashboard at /advertise');
-        navigate('/advertise?tab=campaigns&created=true');
+        return;
       }
+
+      // ✅ EXISTING: Default redirect to advertiser dashboard
+      console.log('🎯 Redirecting to Advertiser Dashboard at /advertise');
+      navigate('/advertise?tab=campaigns&created=true');
 
     } catch (error) {
       console.error('❌ Submit error:', error);
