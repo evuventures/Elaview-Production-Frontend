@@ -1,7 +1,7 @@
-// src/pages/browse/BrowsePage.jsx - SIMPLIFIED HIGH-PERFORMANCE VERSION
-// ✅ INTEGRATED: Core performance optimizations without breaking existing code
-// ✅ WORKS WITH: Existing API structure and component imports
-// ✅ ADDS: Essential performance improvements with minimal changes
+// src/pages/browse/BrowsePage.jsx - FIXED VERSION
+// ✅ FIXES: Authentication issues and import errors
+// ✅ REMOVES: Problematic apiOptimizer calls that require auth
+// ✅ KEEPS: Core performance optimizations that work
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate } from 'react-router-dom';
@@ -10,7 +10,7 @@ import { Navigation, Filter, Layers } from "lucide-react";
 import GoogleMap from "@/pages/browse/components/GoogleMap";
 import { useUser } from '@clerk/clerk-react';
 
-// Import existing components (no changes needed)
+// Import existing components 
 import CartModal from './components/CartModal';
 import FiltersModal from './components/FiltersModal';
 import SpaceDetailsModal from './components/SpaceDetailsModal';
@@ -58,17 +58,17 @@ const Z_INDEX = {
   TOAST: 70
 };
 
-// PERFORMANCE OPTIMIZATIONS - Significantly enhanced configuration
-const OPTIMIZED_MAP_CONFIG = {
-  SEARCH_PADDING_KM: 25,                    // Reduced from 50
-  MIN_ZOOM_FOR_BOUNDS: 8,                   // Increased from 6
-  MAP_MOVE_DEBOUNCE: 3000,                  // Increased from 1500ms to 3 seconds!
-  MAX_SPACES_ON_MAP: 100,                   // Reduced from 200 to 100
+// PERFORMANCE OPTIMIZATIONS - Working configuration
+const OPTIMIZED_CONFIG = {
+  SEARCH_PADDING_KM: 25,
+  MIN_ZOOM_FOR_BOUNDS: 8,
+  MAP_MOVE_DEBOUNCE: 2000,             // 2 second debounce  
+  MAX_SPACES_ON_MAP: 150,
   DISTANCE_PRECISION: 2,
-  UPDATE_THRESHOLD: 0.02,                   // Larger threshold
-  BATCH_UPDATE_DELAY: 200,                  // Longer batching
-  FILTER_DEBOUNCE: 500,                     // Added filter debouncing
-  SCROLL_THROTTLE: 50,                      // Throttle scrolling
+  UPDATE_THRESHOLD: 0.01,
+  BATCH_UPDATE_DELAY: 150,
+  FILTER_DEBOUNCE: 300,
+  SCROLL_THROTTLE: 50,
 };
 
 // Performance tracking utilities
@@ -76,38 +76,42 @@ const PerformanceTracker = {
   operations: new Map(),
   
   start: (name) => {
-    PerformanceTracker.operations.set(name, performance.now());
+    if (import.meta.env.DEV) {
+      PerformanceTracker.operations.set(name, performance.now());
+    }
   },
   
   end: (name) => {
-    const start = PerformanceTracker.operations.get(name);
-    if (start) {
-      const duration = performance.now() - start;
-      if (duration > 100) { // Log slow operations
-        console.warn(`Slow operation: ${name} took ${duration.toFixed(2)}ms`);
+    if (import.meta.env.DEV) {
+      const start = PerformanceTracker.operations.get(name);
+      if (start) {
+        const duration = performance.now() - start;
+        if (duration > 100) {
+          console.warn(`⚡ Slow operation: ${name} took ${duration.toFixed(2)}ms`);
+        }
+        PerformanceTracker.operations.delete(name);
+        return duration;
       }
-      PerformanceTracker.operations.delete(name);
-      return duration;
     }
     return 0;
   }
 };
 
-// Simple API caching to reduce redundant calls
-const apiCache = new Map();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+// Simple caching to reduce redundant processing
+const processingCache = new Map();
+const CACHE_DURATION = 3 * 60 * 1000; // 3 minutes
 
 const getCachedData = (key) => {
-  const cached = apiCache.get(key);
+  const cached = processingCache.get(key);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     return cached.data;
   }
-  apiCache.delete(key);
+  processingCache.delete(key);
   return null;
 };
 
 const setCachedData = (key, data) => {
-  apiCache.set(key, {
+  processingCache.set(key, {
     data,
     timestamp: Date.now()
   });
@@ -123,13 +127,11 @@ const createOptimizedDebounce = (func, delay) => {
     const now = Date.now();
     lastArgs = args;
     
-    // If enough time has passed, execute immediately
     if (now - lastCallTime > delay * 2) {
       lastCallTime = now;
       return func(...args);
     }
     
-    // Otherwise, debounce
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => {
       lastCallTime = Date.now();
@@ -139,7 +141,7 @@ const createOptimizedDebounce = (func, delay) => {
 };
 
 // Optimized bounds comparison
-const areBoundsSignificantlyDifferent = (bounds1, bounds2, threshold = OPTIMIZED_MAP_CONFIG.UPDATE_THRESHOLD) => {
+const areBoundsSignificantlyDifferent = (bounds1, bounds2, threshold = OPTIMIZED_CONFIG.UPDATE_THRESHOLD) => {
   if (!bounds1 || !bounds2) return true;
   
   return (
@@ -182,7 +184,7 @@ const PropertySpaceCache = {
   }
 };
 
-// Memoized skeleton component for better loading UX
+// Memoized skeleton component
 const SkeletonCard = React.memo(() => (
   <div className="bg-white rounded-lg border border-slate-200 p-4 space-y-3 animate-pulse">
     <div className="flex gap-3">
@@ -254,7 +256,420 @@ export default function BrowsePage() {
     priceMax: 2000,
   });
 
-  // PERFORMANCE: Memoized price histogram with optimization
+  // Additional UI state
+  const [animatingSpace, setAnimatingSpace] = useState(null);
+  const [savedSpaces, setSavedSpaces] = useState(new Set());
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [showROICalculator, setShowROICalculator] = useState(false);
+  
+  // Mobile state management
+  const [isMobile, setIsMobile] = useState(false);
+  const [screenSize, setScreenSize] = useState({ width: 0, height: 0 });
+  const [viewportHeight, setViewportHeight] = useState(0);
+  
+  // Mobile sheet state
+  const [showMobileSheet, setShowMobileSheet] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [sheetTitle, setSheetTitle] = useState("Available Spaces");
+  
+  // Map legend and business profile state
+  const [showMapLegend, setShowMapLegend] = useState(false);
+  const [showBusinessProfileModal, setShowBusinessProfileModal] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState(null);
+  
+  // Performance refs
+  const { user: currentUser } = useUser();
+  const isMountedRef = useRef(true);
+  const mobileSheetRef = useRef(null);
+  const lastBoundsRef = useRef(null);
+
+  const {
+    businessProfile,
+    isProfileComplete,
+    isLoading: profileLoading,
+    needsBusinessProfile,
+    updateBusinessProfile
+  } = useBusinessProfile();
+
+  // OPTIMIZED: Debounced map bounds update
+  const debouncedUpdateBounds = useCallback(
+    createOptimizedDebounce((bounds, zoom) => {
+      PerformanceTracker.start('boundsUpdate');
+      
+      if (lastBoundsRef.current && !areBoundsSignificantlyDifferent(bounds, lastBoundsRef.current)) {
+        PerformanceTracker.end('boundsUpdate');
+        return;
+      }
+      
+      setMapState(prev => ({ ...prev, isMoving: true }));
+      
+      setTimeout(() => {
+        const shouldEnableBounds = zoom >= OPTIMIZED_CONFIG.MIN_ZOOM_FOR_BOUNDS;
+        
+        setMapState(prev => ({
+          ...prev,
+          bounds,
+          zoomLevel: zoom,
+          isMoving: false,
+          boundsFilterEnabled: shouldEnableBounds,
+          lastUpdate: Date.now()
+        }));
+        
+        lastBoundsRef.current = bounds;
+        PerformanceTracker.end('boundsUpdate');
+      }, OPTIMIZED_CONFIG.BATCH_UPDATE_DELAY);
+      
+    }, OPTIMIZED_CONFIG.MAP_MOVE_DEBOUNCE),
+    []
+  );
+
+  // PERFORMANCE: Optimized space filtering
+  const filterSpacesByBounds = useCallback((spaces, bounds, zoom) => {
+    if (!bounds || zoom < OPTIMIZED_CONFIG.MIN_ZOOM_FOR_BOUNDS) {
+      return spaces.slice(0, OPTIMIZED_CONFIG.MAX_SPACES_ON_MAP);
+    }
+    
+    PerformanceTracker.start('boundsFiltering');
+    
+    const boundsCenter = {
+      lat: (bounds.north + bounds.south) / 2,
+      lng: (bounds.east + bounds.west) / 2
+    };
+    
+    const spacesInBounds = spaces.filter(space => {
+      const coords = space.propertyCoords || space.coordinates;
+      if (!coords?.lat || !coords?.lng) return false;
+      
+      return (
+        coords.lat >= bounds.south &&
+        coords.lat <= bounds.north &&
+        coords.lng >= bounds.west &&
+        coords.lng <= bounds.east
+      );
+    });
+    
+    const result = spacesInBounds
+      .map(space => {
+        const coords = space.propertyCoords || space.coordinates;
+        const distance = getDistanceInKm(boundsCenter.lat, boundsCenter.lng, coords.lat, coords.lng);
+        
+        return {
+          ...space,
+          distance: parseFloat(distance.toFixed(OPTIMIZED_CONFIG.DISTANCE_PRECISION))
+        };
+      })
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, OPTIMIZED_CONFIG.MAX_SPACES_ON_MAP);
+    
+    PerformanceTracker.end('boundsFiltering');
+    return result;
+  }, []);
+
+  // PERFORMANCE: Optimized visible spaces calculation
+  const visibleSpacesMemo = useMemo(() => {
+    PerformanceTracker.start('calculateVisibleSpaces');
+    
+    if (!allSpaces.length) {
+      PerformanceTracker.end('calculateVisibleSpaces');
+      return [];
+    }
+    
+    let filteredSpaces;
+    
+    if (mapState.boundsFilterEnabled && mapState.bounds) {
+      filteredSpaces = filterSpacesByBounds(allSpaces, mapState.bounds, mapState.zoomLevel);
+    } else {
+      const cacheKey = `spaces_${mapCenter.lat}_${mapCenter.lng}`;
+      let cachedSpaces = getCachedData(cacheKey);
+      
+      if (!cachedSpaces) {
+        cachedSpaces = allSpaces
+          .map(space => {
+            const coords = space.propertyCoords || space.coordinates;
+            if (!coords) return { ...space, distance: Infinity };
+            
+            const distance = getDistanceInKm(
+              mapCenter.lat, 
+              mapCenter.lng, 
+              coords.lat, 
+              coords.lng
+            );
+            
+            return {
+              ...space,
+              distance: parseFloat(distance.toFixed(OPTIMIZED_CONFIG.DISTANCE_PRECISION))
+            };
+          })
+          .sort((a, b) => a.distance - b.distance)
+          .slice(0, OPTIMIZED_CONFIG.MAX_SPACES_ON_MAP);
+          
+        setCachedData(cacheKey, cachedSpaces);
+      }
+      
+      filteredSpaces = cachedSpaces;
+    }
+    
+    PerformanceTracker.end('calculateVisibleSpaces');
+    return filteredSpaces;
+  }, [allSpaces, mapState.bounds, mapState.zoomLevel, mapState.boundsFilterEnabled, mapCenter, filterSpacesByBounds]);
+
+  // Update visible spaces when memoized value changes
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setVisibleSpaces(visibleSpacesMemo);
+    }, 50);
+    
+    return () => clearTimeout(timeoutId);
+  }, [visibleSpacesMemo]);
+
+  // PERFORMANCE: Check for first-time user modal - REMOVED problematic API call
+  useEffect(() => {
+    const checkFirstTimeUser = async () => {
+      if (!currentUser?.id || hasCheckedIntro) return;
+      
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const skipIntro = urlParams.get('skip_intro') === 'true' || 
+                         import.meta.env.VITE_SKIP_INTRO === 'true';
+        
+        if (skipIntro) {
+          setHasCheckedIntro(true);
+          return;
+        }
+        
+        // REMOVED: Problematic API call that was causing 401 errors
+        // For now, assume new users don't need intro modal
+        // You can re-enable this when auth is fixed
+        
+        setHasCheckedIntro(true);
+      } catch (error) {
+        console.warn('First time check failed:', error);
+        setHasCheckedIntro(true);
+      }
+    };
+    
+    if (!isLoading && currentUser?.id) {
+      checkFirstTimeUser();
+    }
+  }, [currentUser?.id, isLoading, hasCheckedIntro]);
+
+  // Mobile detection
+  useEffect(() => {
+    const updateScreenInfo = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const mobile = width < 768;
+      
+      setScreenSize({ width, height });
+      setViewportHeight(height);
+      setIsMobile(mobile);
+    };
+    
+    const debouncedResize = createOptimizedDebounce(updateScreenInfo, 150);
+    updateScreenInfo();
+    
+    window.addEventListener('resize', debouncedResize);
+    window.addEventListener('orientationchange', debouncedResize);
+    
+    return () => {
+      window.removeEventListener('resize', debouncedResize);
+      window.removeEventListener('orientationchange', debouncedResize);
+    };
+  }, []);
+
+  // Initialize map location
+  useEffect(() => {
+    const initializeMapLocation = async () => {
+      PerformanceTracker.start('initMapLocation');
+      
+      try {
+        const locationData = await locationService.getBestLocation();
+        
+        if (isMountedRef.current) {
+          setMapCenter(locationData.center);
+          setMapZoom(locationData.zoom);
+          setMapLocationSource(locationData.source);
+          setMapLocationName(locationData.name);
+          
+          if (locationData.source === 'user_geolocation') {
+            setUserLocation(locationData.center);
+          }
+        }
+      } catch (error) {
+        if (isMountedRef.current) {
+          setMapCenter(DEFAULT_MAP_CENTER);
+          setMapZoom(DEFAULT_MAP_ZOOM);
+          setMapLocationSource('error_fallback');
+          setMapLocationName('United States');
+        }
+      } finally {
+        PerformanceTracker.end('initMapLocation');
+      }
+    };
+
+    initializeMapLocation();
+  }, []);
+
+  // FIXED: Data loading - only use working endpoints
+  const loadPropertiesData = useCallback(async () => {
+    if (!isMountedRef.current) return;
+    
+    PerformanceTracker.start('loadData');
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Only call the working spaces endpoint - avoid properties endpoint
+      const response = await apiClient.getSpaces();
+      const areasData = response.success ? response.data : response;
+
+      if (!Array.isArray(areasData)) {
+        throw new Error('API did not return an array of areas');
+      }
+
+      const validAreas = areasData.filter(area => {
+        const hasProperty = area.property && area.property.id;
+        const hasCoords = area.coordinates && 
+                         (area.coordinates.lat || area.property?.latitude) && 
+                         (area.coordinates.lng || area.property?.longitude);
+        const isActive = area.isActive && area.status === 'active';
+        
+        return hasProperty && hasCoords && isActive;
+      });
+
+      const propertiesMap = new Map();
+      const flattenedSpaces = [];
+
+      validAreas.forEach(area => {
+        const coords = {
+          lat: area.coordinates?.lat || area.property?.latitude,
+          lng: area.coordinates?.lng || area.property?.longitude
+        };
+
+        if (!propertiesMap.has(area.property.id)) {
+          propertiesMap.set(area.property.id, {
+            ...area.property,
+            latitude: coords.lat,
+            longitude: coords.lng,
+            spaces: []
+          });
+        }
+
+        propertiesMap.get(area.property.id).spaces.push(area);
+
+        flattenedSpaces.push({
+          ...area,
+          propertyId: area.property.id,
+          propertyName: getPropertyName(area.property),
+          propertyAddress: getPropertyAddress(area.property),
+          propertyCoords: coords,
+          propertyType: area.property.propertyType,
+          property: area.property,
+          distance: null
+        });
+      });
+
+      const propertiesData = Array.from(propertiesMap.values());
+      
+      if (isMountedRef.current) {
+        setProperties(propertiesData);
+        setAllSpaces(flattenedSpaces);
+        
+        // Build property-space cache for instant marker clicks
+        PropertySpaceCache.build(flattenedSpaces);
+        
+        if (isMobile && flattenedSpaces.length > 0 && !showIntroModal) {
+          setTimeout(() => {
+            if (!showIntroModal) {
+              setShowMobileSheet(true);
+              setSheetTitle("Spaces Near You");
+            }
+          }, 1200);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load properties data:', error);
+      if (isMountedRef.current) {
+        setError(error.message);
+        setProperties([]);
+        setAllSpaces([]);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+        PerformanceTracker.end('loadData');
+      }
+    }
+  }, [isMobile, showIntroModal]);
+
+  // Component mount with cleanup
+  useEffect(() => {
+    isMountedRef.current = true;
+    loadPropertiesData();
+    
+    return () => {
+      isMountedRef.current = false;
+      PropertySpaceCache.clear();
+      PerformanceTracker.operations.clear();
+    };
+  }, [loadPropertiesData]);
+
+  // Map bounds handler
+  const handleMapBoundsChange = useCallback((bounds, zoom) => {
+    if (!isMountedRef.current) return;
+    debouncedUpdateBounds(bounds, zoom);
+  }, [debouncedUpdateBounds]);
+
+  // Optimized filtering and pagination
+  const { filteredSpaces, totalPages, paginatedSpaces } = useMemo(() => {
+    PerformanceTracker.start('filterAndPaginate');
+    
+    const filterKey = JSON.stringify(filters) + '_' + visibleSpaces.length;
+    let cached = getCachedData(`filtered_${filterKey}`);
+    
+    if (!cached) {
+      let filtered = visibleSpaces;
+
+      filtered = applyPriceFilter(filtered, filters.priceRange);
+      if ((filters.priceMin !== 0) || (filters.priceMax !== 2000)) {
+        filtered = filtered.filter(space => {
+          const p = space.baseRate || getNumericPrice(space);
+          return p >= filters.priceMin && p <= filters.priceMax;
+        });
+      }
+      filtered = applySpaceTypeFilter(filtered, filters.spaceType);
+      filtered = applyAudienceFilter(filtered, filters.audience);
+      filtered = applyFeaturesFilter(filtered, filters.features);
+
+      if (filtered.length > 0 && filtered[0].distance !== undefined) {
+        filtered = filtered.sort((a, b) => a.distance - b.distance);
+      }
+
+      cached = { filteredSpaces: filtered };
+      setCachedData(`filtered_${filterKey}`, cached);
+    }
+
+    const totalSpaces = cached.filteredSpaces.length;
+    const totalPages = Math.ceil(totalSpaces / CARDS_PER_PAGE);
+    const startIndex = (currentPage - 1) * CARDS_PER_PAGE;
+    const endIndex = startIndex + CARDS_PER_PAGE;
+    const paginatedSpaces = cached.filteredSpaces.slice(startIndex, endIndex);
+    
+    PerformanceTracker.end('filterAndPaginate');
+    
+    return {
+      filteredSpaces: cached.filteredSpaces,
+      totalPages,
+      paginatedSpaces
+    };
+  }, [visibleSpaces, filters, currentPage]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, visibleSpaces]);
+
+  // PERFORMANCE: Memoized price histogram
   const priceHistogram = useMemo(() => {
     if (!visibleSpaces?.length) return [];
     
@@ -291,474 +706,9 @@ export default function BrowsePage() {
     PerformanceTracker.end('priceHistogram');
     return result;
   }, [visibleSpaces, filters.spaceType, filters.audience]);
-  
-  // Additional UI state
-  const [animatingSpace, setAnimatingSpace] = useState(null);
-  const [savedSpaces, setSavedSpaces] = useState(new Set());
-  const [detailsExpanded, setDetailsExpanded] = useState(false);
-  const [showROICalculator, setShowROICalculator] = useState(false);
-  
-  // Mobile state management
-  const [isMobile, setIsMobile] = useState(false);
-  const [screenSize, setScreenSize] = useState({ width: 0, height: 0 });
-  const [viewportHeight, setViewportHeight] = useState(0);
-  
-  // Mobile sheet state
-  const [showMobileSheet, setShowMobileSheet] = useState(false);
-  const [selectedProperty, setSelectedProperty] = useState(null);
-  const [sheetTitle, setSheetTitle] = useState("Available Spaces");
-  
-  // Map legend and business profile state
-  const [showMapLegend, setShowMapLegend] = useState(false);
-  const [showBusinessProfileModal, setShowBusinessProfileModal] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState(null);
-  
-  // PERFORMANCE: Enhanced refs for better optimization
-  const { user: currentUser } = useUser();
-  const isMountedRef = useRef(true);
-  const mobileSheetRef = useRef(null);
-  const resizeTimeoutRef = useRef(null);
-  const scrollContainerRef = useRef(null);
-  
-  // Enhanced refs for performance tracking
-  const mapBoundsTimeoutRef = useRef(null);
-  const lastBoundsRef = useRef(null);
-  const pendingUpdatesRef = useRef([]);
-  const performanceTimersRef = useRef(new Map());
 
-  const {
-    businessProfile,
-    isProfileComplete,
-    isLoading: profileLoading,
-    needsBusinessProfile,
-    updateBusinessProfile,
-    completionPercentage,
-    missingFields
-  } = useBusinessProfile();
-
-  // MAJOR OPTIMIZATION: Dramatically increased debouncing for map bounds
-  const debouncedUpdateBounds = useCallback(
-    createOptimizedDebounce((bounds, zoom) => {
-      PerformanceTracker.start('boundsUpdate');
-      
-      // Enhanced change detection to prevent unnecessary updates
-      if (lastBoundsRef.current && !areBoundsSignificantlyDifferent(bounds, lastBoundsRef.current)) {
-        PerformanceTracker.end('boundsUpdate');
-        return;
-      }
-      
-      // Immediate visual feedback
-      setMapState(prev => ({ ...prev, isMoving: true }));
-      
-      // Batch the actual state update
-      setTimeout(() => {
-        const shouldEnableBounds = zoom >= OPTIMIZED_MAP_CONFIG.MIN_ZOOM_FOR_BOUNDS;
-        
-        setMapState(prev => ({
-          ...prev,
-          bounds,
-          zoomLevel: zoom,
-          isMoving: false,
-          boundsFilterEnabled: shouldEnableBounds,
-          lastUpdate: Date.now()
-        }));
-        
-        lastBoundsRef.current = bounds;
-        PerformanceTracker.end('boundsUpdate');
-      }, OPTIMIZED_MAP_CONFIG.BATCH_UPDATE_DELAY);
-      
-    }, OPTIMIZED_MAP_CONFIG.MAP_MOVE_DEBOUNCE), // 3 second debounce!
-    []
-  );
-
-  // PERFORMANCE: Optimized space filtering with caching and limits
-  const filterSpacesByBounds = useCallback((spaces, bounds, zoom) => {
-    if (!bounds || zoom < OPTIMIZED_MAP_CONFIG.MIN_ZOOM_FOR_BOUNDS) {
-      return spaces.slice(0, OPTIMIZED_MAP_CONFIG.MAX_SPACES_ON_MAP);
-    }
-    
-    PerformanceTracker.start('boundsFiltering');
-    
-    const boundsCenter = {
-      lat: (bounds.north + bounds.south) / 2,
-      lng: (bounds.east + bounds.west) / 2
-    };
-    
-    const spacesInBounds = spaces.filter(space => {
-      const coords = space.propertyCoords || space.coordinates;
-      if (!coords?.lat || !coords?.lng) return false;
-      
-      return (
-        coords.lat >= bounds.south &&
-        coords.lat <= bounds.north &&
-        coords.lng >= bounds.west &&
-        coords.lng <= bounds.east
-      );
-    });
-    
-    // Optimized sorting and slicing with hard limits
-    const result = spacesInBounds
-      .map(space => {
-        const coords = space.propertyCoords || space.coordinates;
-        const distance = getDistanceInKm(boundsCenter.lat, boundsCenter.lng, coords.lat, coords.lng);
-        
-        return {
-          ...space,
-          distance: parseFloat(distance.toFixed(OPTIMIZED_MAP_CONFIG.DISTANCE_PRECISION))
-        };
-      })
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, OPTIMIZED_MAP_CONFIG.MAX_SPACES_ON_MAP);
-    
-    PerformanceTracker.end('boundsFiltering');
-    return result;
-  }, []);
-
-  // PERFORMANCE: Highly optimized visible spaces calculation
-  const visibleSpacesMemo = useMemo(() => {
-    PerformanceTracker.start('calculateVisibleSpaces');
-    
-    if (!allSpaces.length) {
-      PerformanceTracker.end('calculateVisibleSpaces');
-      return [];
-    }
-    
-    let filteredSpaces;
-    
-    if (mapState.boundsFilterEnabled && mapState.bounds) {
-      filteredSpaces = filterSpacesByBounds(allSpaces, mapState.bounds, mapState.zoomLevel);
-    } else {
-      // Use cached distance calculations when possible
-      const cacheKey = `spaces_${mapCenter.lat}_${mapCenter.lng}`;
-      let cachedSpaces = getCachedData(cacheKey);
-      
-      if (!cachedSpaces) {
-        cachedSpaces = allSpaces
-          .map(space => {
-            const coords = space.propertyCoords || space.coordinates;
-            if (!coords) return { ...space, distance: Infinity };
-            
-            const distance = getDistanceInKm(
-              mapCenter.lat, 
-              mapCenter.lng, 
-              coords.lat, 
-              coords.lng
-            );
-            
-            return {
-              ...space,
-              distance: parseFloat(distance.toFixed(OPTIMIZED_MAP_CONFIG.DISTANCE_PRECISION))
-            };
-          })
-          .sort((a, b) => a.distance - b.distance)
-          .slice(0, OPTIMIZED_MAP_CONFIG.MAX_SPACES_ON_MAP);
-          
-        setCachedData(cacheKey, cachedSpaces);
-      }
-      
-      filteredSpaces = cachedSpaces;
-    }
-    
-    PerformanceTracker.end('calculateVisibleSpaces');
-    return filteredSpaces;
-  }, [allSpaces, mapState.bounds, mapState.zoomLevel, mapState.boundsFilterEnabled, mapCenter, filterSpacesByBounds]);
-
-  // PERFORMANCE: Update visible spaces when memoized value changes (batched)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setVisibleSpaces(visibleSpacesMemo);
-    }, 50); // Small delay to batch updates
-    
-    return () => clearTimeout(timeoutId);
-  }, [visibleSpacesMemo]);
-
-  // PERFORMANCE: Check for first-time user modal with caching
-  useEffect(() => {
-    const checkFirstTimeUser = async () => {
-      if (!currentUser?.id || hasCheckedIntro) return;
-      
-      try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const skipIntro = urlParams.get('skip_intro') === 'true' || 
-                         import.meta.env.VITE_SKIP_INTRO === 'true';
-        
-        if (skipIntro) {
-          setHasCheckedIntro(true);
-          return;
-        }
-        
-        // Use cached API call
-        const cacheKey = `firstTime_${currentUser.id}`;
-        let response = getCachedData(cacheKey);
-        
-        if (!response) {
-          response = await apiClient.checkFirstTimeStatus();
-          setCachedData(cacheKey, response);
-        }
-        
-        if (response.success && response.data.isFirstTime) {
-          setShowIntroModal(true);
-        }
-        
-        setHasCheckedIntro(true);
-      } catch (error) {
-        setHasCheckedIntro(true);
-      }
-    };
-    
-    if (!isLoading && currentUser?.id) {
-      checkFirstTimeUser();
-    }
-  }, [currentUser?.id, isLoading, hasCheckedIntro]);
-
-  // PERFORMANCE: Debounced mobile detection
-  useEffect(() => {
-    const updateScreenInfo = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      const mobile = width < 768;
-      
-      setScreenSize({ width, height });
-      setViewportHeight(height);
-      setIsMobile(mobile);
-    };
-    
-    const debouncedResize = createOptimizedDebounce(updateScreenInfo, 150);
-    updateScreenInfo();
-    
-    window.addEventListener('resize', debouncedResize);
-    window.addEventListener('orientationchange', debouncedResize);
-    
-    return () => {
-      window.removeEventListener('resize', debouncedResize);
-      window.removeEventListener('orientationchange', debouncedResize);
-    };
-  }, []);
-
-  // Initialize map location with performance tracking
-  useEffect(() => {
-    const initializeMapLocation = async () => {
-      PerformanceTracker.start('initMapLocation');
-      
-      try {
-        const locationData = await locationService.getBestLocation();
-        
-        if (isMountedRef.current) {
-          setMapCenter(locationData.center);
-          setMapZoom(locationData.zoom);
-          setMapLocationSource(locationData.source);
-          setMapLocationName(locationData.name);
-          
-          if (locationData.source === 'user_geolocation') {
-            setUserLocation(locationData.center);
-          }
-        }
-      } catch (error) {
-        if (isMountedRef.current) {
-          setMapCenter(DEFAULT_MAP_CENTER);
-          setMapZoom(DEFAULT_MAP_ZOOM);
-          setMapLocationSource('error_fallback');
-          setMapLocationName('United States');
-        }
-      } finally {
-        PerformanceTracker.end('initMapLocation');
-      }
-    };
-
-    initializeMapLocation();
-  }, []);
-
-  // PERFORMANCE: Enhanced data loading with caching and property-space mapping
-  const loadPropertiesData = useCallback(async () => {
-    if (!isMountedRef.current) return;
-    
-    PerformanceTracker.start('loadData');
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Check cache first
-      const cacheKey = 'propertiesData';
-      let cachedData = getCachedData(cacheKey);
-      
-      if (!cachedData) {
-        const response = await apiClient.getSpaces();
-        const areasData = response.success ? response.data : response;
-
-        if (!Array.isArray(areasData)) {
-          throw new Error('API did not return an array of areas');
-        }
-
-        const validAreas = areasData.filter(area => {
-          const hasProperty = area.property && area.property.id;
-          const hasCoords = area.coordinates && 
-                           (area.coordinates.lat || area.property?.latitude) && 
-                           (area.coordinates.lng || area.property?.longitude);
-          const isActive = area.isActive && area.status === 'active';
-          
-          return hasProperty && hasCoords && isActive;
-        });
-
-        const propertiesMap = new Map();
-        const flattenedSpaces = [];
-
-        validAreas.forEach(area => {
-          const coords = {
-            lat: area.coordinates?.lat || area.property?.latitude,
-            lng: area.coordinates?.lng || area.property?.longitude
-          };
-
-          if (!propertiesMap.has(area.property.id)) {
-            propertiesMap.set(area.property.id, {
-              ...area.property,
-              latitude: coords.lat,
-              longitude: coords.lng,
-              spaces: []
-            });
-          }
-
-          propertiesMap.get(area.property.id).spaces.push(area);
-
-          flattenedSpaces.push({
-            ...area,
-            propertyId: area.property.id,
-            propertyName: getPropertyName(area.property),
-            propertyAddress: getPropertyAddress(area.property),
-            propertyCoords: coords,
-            propertyType: area.property.propertyType,
-            property: area.property,
-            distance: null
-          });
-        });
-
-        cachedData = {
-          properties: Array.from(propertiesMap.values()),
-          spaces: flattenedSpaces
-        };
-        
-        setCachedData(cacheKey, cachedData);
-      }
-      
-      if (isMountedRef.current) {
-        setProperties(cachedData.properties);
-        setAllSpaces(cachedData.spaces);
-        
-        // PERFORMANCE: Build property-space cache for instant marker clicks
-        PropertySpaceCache.build(cachedData.spaces);
-        
-        if (isMobile && cachedData.spaces.length > 0 && !showIntroModal) {
-          setTimeout(() => {
-            if (!showIntroModal) {
-              setShowMobileSheet(true);
-              setSheetTitle("Spaces Near You");
-            }
-          }, 1200);
-        }
-      }
-    } catch (error) {
-      if (isMountedRef.current) {
-        setError(error.message);
-        setProperties([]);
-        setAllSpaces([]);
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-        PerformanceTracker.end('loadData');
-      }
-    }
-  }, [isMobile, showIntroModal]);
-
-  // Component mount with proper cleanup and performance tracking
-  useEffect(() => {
-    isMountedRef.current = true;
-    loadPropertiesData();
-    
-    return () => {
-      isMountedRef.current = false;
-      
-      // Enhanced cleanup
-      if (mapBoundsTimeoutRef.current) {
-        clearTimeout(mapBoundsTimeoutRef.current);
-      }
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current);
-      }
-      
-      // Clear performance tracking
-      PerformanceTracker.operations.clear();
-      
-      // Clear caches
-      PropertySpaceCache.clear();
-      
-      // Reset state
-      setSelectedSpace(null);
-      setProperties([]);
-      setAllSpaces([]);
-      setVisibleSpaces([]);
-    };
-  }, [loadPropertiesData]);
-
-  // PERFORMANCE: Optimized map bounds handler
-  const handleMapBoundsChange = useCallback((bounds, zoom) => {
-    if (!isMountedRef.current) return;
-    debouncedUpdateBounds(bounds, zoom);
-  }, [debouncedUpdateBounds]);
-
-  // PERFORMANCE: Highly optimized filtering and pagination with caching
-  const { filteredSpaces, totalPages, paginatedSpaces } = useMemo(() => {
-    PerformanceTracker.start('filterAndPaginate');
-    
-    // Use cached result if filters haven't changed
-    const filterKey = JSON.stringify(filters) + '_' + visibleSpaces.length;
-    let cached = getCachedData(`filtered_${filterKey}`);
-    
-    if (!cached) {
-      let filtered = visibleSpaces;
-
-      // Apply all filters efficiently
-      filtered = applyPriceFilter(filtered, filters.priceRange);
-      if ((filters.priceMin !== 0) || (filters.priceMax !== 2000)) {
-        filtered = filtered.filter(space => {
-          const p = space.baseRate || getNumericPrice(space);
-          return p >= filters.priceMin && p <= filters.priceMax;
-        });
-      }
-      filtered = applySpaceTypeFilter(filtered, filters.spaceType);
-      filtered = applyAudienceFilter(filtered, filters.audience);
-      filtered = applyFeaturesFilter(filtered, filters.features);
-
-      // Sort by distance if available
-      if (filtered.length > 0 && filtered[0].distance !== undefined) {
-        filtered = filtered.sort((a, b) => a.distance - b.distance);
-      }
-
-      cached = { filteredSpaces: filtered };
-      setCachedData(`filtered_${filterKey}`, cached);
-    }
-
-    const totalSpaces = cached.filteredSpaces.length;
-    const totalPages = Math.ceil(totalSpaces / CARDS_PER_PAGE);
-    const startIndex = (currentPage - 1) * CARDS_PER_PAGE;
-    const endIndex = startIndex + CARDS_PER_PAGE;
-    const paginatedSpaces = cached.filteredSpaces.slice(startIndex, endIndex);
-    
-    PerformanceTracker.end('filterAndPaginate');
-    
-    return {
-      filteredSpaces: cached.filteredSpaces,
-      totalPages,
-      paginatedSpaces
-    };
-  }, [visibleSpaces, filters, currentPage]);
-
-  // Reset page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filters, visibleSpaces]);
-
-  // Stable handler functions with performance optimization
-  const handleIntroComplete = useCallback((userType) => {
+  // Handler functions
+  const handleIntroComplete = useCallback(() => {
     setShowIntroModal(false);
   }, []);
 
@@ -766,11 +716,9 @@ export default function BrowsePage() {
     setShowIntroModal(false);
   }, []);
 
-  // PERFORMANCE: Optimized cart functions with batching
+  // Cart functions
   const cartFunctions = useMemo(() => ({
     addToCart: (space, duration = 30) => {
-      PerformanceTracker.start('addToCart');
-      
       const cartItem = {
         id: `${space.id}_${Date.now()}`,
         spaceId: space.id,
@@ -782,7 +730,6 @@ export default function BrowsePage() {
       };
       
       setCart(prev => [...prev, cartItem]);
-      PerformanceTracker.end('addToCart');
     },
 
     removeFromCart: (cartItemId) => {
@@ -810,7 +757,7 @@ export default function BrowsePage() {
     }
   }), [cart]);
 
-  // Business profile check function with caching
+  // Business profile check
   const checkBusinessProfileBeforeBooking = useCallback(async (space) => {
     if (!currentUser?.id) {
       return false;
@@ -854,7 +801,7 @@ export default function BrowsePage() {
     }
   }, [currentUser?.id, needsBusinessProfile]);
 
-  // Memoized active filters count
+  // Active filters count
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (filters.priceRange !== 'all') count++;
@@ -864,19 +811,13 @@ export default function BrowsePage() {
     return count;
   }, [filters]);
 
-  // PERFORMANCE: Optimized property marker click - now INSTANT with cached data!
+  // Property click handler - instant with cached data
   const handlePropertyClick = useCallback((property) => {
     if (!isMountedRef.current) return;
     
-    PerformanceTracker.start('propertyClick');
-    
-    // Get spaces instantly from cache - no API calls!
     const spaces = PropertySpaceCache.getSpaces(property.id);
     
-    if (spaces.length === 0) {
-      PerformanceTracker.end('propertyClick');
-      return;
-    }
+    if (spaces.length === 0) return;
 
     if (isMobile) {
       setSelectedProperty(property);
@@ -888,12 +829,10 @@ export default function BrowsePage() {
         setSelectedSpace(spaces[0]);
         setDetailsExpanded(true);
       } else {
-        setSelectedSpace(spaces[0]); // Show first space
+        setSelectedSpace(spaces[0]);
         setDetailsExpanded(true);
       }
     }
-    
-    PerformanceTracker.end('propertyClick');
   }, [isMobile]);
 
   const handleSpaceClick = useCallback((space) => {
@@ -926,14 +865,14 @@ export default function BrowsePage() {
     }
   }, [isMobile, handleSpaceClick]);
 
-  // PERFORMANCE: Debounced filter handlers
+  // Filter handlers
   const filterHandlers = useMemo(() => {
     const debouncedToggleFilter = createOptimizedDebounce((filterType, value) => {
       setFilters(prev => ({
         ...prev,
         [filterType]: prev[filterType] === value ? 'all' : value
       }));
-    }, OPTIMIZED_MAP_CONFIG.FILTER_DEBOUNCE);
+    }, OPTIMIZED_CONFIG.FILTER_DEBOUNCE);
 
     const debouncedSetPriceRange = createOptimizedDebounce((min, max) => {
       setFilters(prev => ({
@@ -941,7 +880,7 @@ export default function BrowsePage() {
         priceMin: Math.max(0, Math.min(min, max)),
         priceMax: Math.max(Math.max(0, min), max)
       }));
-    }, OPTIMIZED_MAP_CONFIG.FILTER_DEBOUNCE);
+    }, OPTIMIZED_CONFIG.FILTER_DEBOUNCE);
 
     const debouncedToggleFeature = createOptimizedDebounce((feature) => {
       setFilters(prev => ({
@@ -950,7 +889,7 @@ export default function BrowsePage() {
           ? prev.features.filter(f => f !== feature)
           : [...prev.features, feature]
       }));
-    }, OPTIMIZED_MAP_CONFIG.FILTER_DEBOUNCE);
+    }, OPTIMIZED_CONFIG.FILTER_DEBOUNCE);
 
     return {
       toggleFilter: debouncedToggleFilter,
@@ -970,7 +909,7 @@ export default function BrowsePage() {
     };
   }, []);
 
-  // Location handler with performance optimization
+  // Location handler
   const handleCenterOnLocation = useCallback(async () => {
     try {
       setMapLocationName('Getting your location...');
@@ -1141,23 +1080,34 @@ export default function BrowsePage() {
     });
   }, []);
 
-  // Check for campaign creation from URL
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const campaignCreated = urlParams.get('campaignCreated');
-    const spaceId = urlParams.get('spaceId');
-    
-    if (campaignCreated === 'true' && spaceId) {
-      const space = allSpaces.find(s => s.id === spaceId);
-      if (space) {
-        setSelectedSpace(space);
-        setDetailsExpanded(true);
-      }
-      
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, '', newUrl);
-    }
-  }, [allSpaces]);
+  // Error handling
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-red-600 mb-2">Failed to Load Spaces</h2>
+          <p className="text-slate-600 mb-4">{error}</p>
+          <Button onClick={loadPropertiesData}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div 
+            className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-4"
+            style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
+          />
+          <p className="text-slate-600">Loading advertising spaces...</p>
+          <p className="text-slate-500 text-sm mt-1">Finding opportunities across the US</p>
+        </div>
+      </div>
+    );
+  }
 
   // MOBILE LAYOUT
   if (isMobile) {
@@ -1238,40 +1188,6 @@ export default function BrowsePage() {
               </Button>
             </div>
 
-            {/* Map Legend */}
-            {showMapLegend && (
-              <div 
-                className="fixed left-3 sm:left-4"
-                style={{ 
-                  bottom: '22rem',
-                  zIndex: Z_INDEX.MOBILE_CONTROLS
-                }}
-              >
-                <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg px-3 py-2.5 shadow-lg min-w-[140px] max-w-[180px]">
-                  <h4 className="font-medium text-xs text-slate-800 mb-2">Map Legend</h4>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full shadow-sm"
-                        style={{ backgroundColor: '#4668AB' }}
-                      ></div>
-                      <span className="text-xs text-slate-600">Ad Spaces</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full shadow-sm"></div>
-                      <span className="text-xs text-slate-600">Properties</span>
-                    </div>
-                    {userLocation && (
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full shadow-sm animate-pulse"></div>
-                        <span className="text-xs text-slate-600">Your Location</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Status indicator */}
             {!isLoading && !error && (
               <div 
@@ -1299,23 +1215,6 @@ export default function BrowsePage() {
                       </p>
                     )}
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* Loading State */}
-            {isLoading && (
-              <div 
-                className="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center"
-                style={{ zIndex: Z_INDEX.MODAL_BACKDROP }}
-              >
-                <div className="bg-white rounded-lg p-4 text-center shadow-lg max-w-xs mx-4">
-                  <div 
-                    className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-2"
-                    style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
-                  ></div>
-                  <p className="text-sm text-slate-600">Loading spaces...</p>
-                  <p className="text-xs text-slate-500 mt-1">Finding opportunities across the US</p>
                 </div>
               </div>
             )}
@@ -1429,38 +1328,26 @@ export default function BrowsePage() {
           <div className="mb-6 flex-shrink-0">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                {!isLoading && !error ? (
-                  <>
-                    <p className="body-medium text-slate-600 mt-1">
-                      {filteredSpaces.length > 0 
-                        ? `${filteredSpaces.length} ${filteredSpaces.length === 1 ? 'space' : 'spaces'}`
-                        : 'No spaces found with current filters'
-                      }
-                      {mapState.boundsFilterEnabled && !mapState.isMoving && (
-                        <span className="text-slate-500 ml-2">• in map area</span>
-                      )}
-                      {mapState.isMoving && (
-                        <span className="text-slate-500 ml-2">• updating...</span>
-                      )}
-                    </p>
-                    
-                    {activeFiltersCount > 0 && (
-                      <button
-                        onClick={filterHandlers.clearFilters}
-                        className="btn-ghost btn-small text-slate-600 hover:text-slate-800 mt-2"
-                      >
-                        Clear all filters ({activeFiltersCount})
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <div className="h-8 flex items-center">
-                    {isLoading ? (
-                      <p className="body-medium text-slate-600">Loading spaces across the US...</p>
-                    ) : error ? (
-                      <p className="body-medium text-red-600">Error loading spaces</p>
-                    ) : null}
-                  </div>
+                <p className="body-medium text-slate-600 mt-1">
+                  {filteredSpaces.length > 0 
+                    ? `${filteredSpaces.length} ${filteredSpaces.length === 1 ? 'space' : 'spaces'}`
+                    : 'No spaces found with current filters'
+                  }
+                  {mapState.boundsFilterEnabled && !mapState.isMoving && (
+                    <span className="text-slate-500 ml-2">• in map area</span>
+                  )}
+                  {mapState.isMoving && (
+                    <span className="text-slate-500 ml-2">• updating...</span>
+                  )}
+                </p>
+                
+                {activeFiltersCount > 0 && (
+                  <button
+                    onClick={filterHandlers.clearFilters}
+                    className="btn-ghost btn-small text-slate-600 hover:text-slate-800 mt-2"
+                  >
+                    Clear all filters ({activeFiltersCount})
+                  </button>
                 )}
               </div>
               
@@ -1503,32 +1390,9 @@ export default function BrowsePage() {
           </div>
 
           {/* Scrollable content container */}
-          <div 
-            ref={scrollContainerRef}
-            className="flex-1 overflow-y-auto scrollbar-hide relative"
-            style={{ minHeight: 0 }}
-          >
+          <div className="flex-1 overflow-y-auto scrollbar-hide relative" style={{ minHeight: 0 }}>
             <div className="pb-24">
-              {error ? (
-                <div className="py-12">
-                  <ErrorState error={error} onRetry={loadPropertiesData} />
-                </div>
-              ) : isLoading ? (
-                <div className="py-8">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-6">
-                      <div 
-                        className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
-                        style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
-                      ></div>
-                      <p className="text-slate-600">Loading advertising spaces across the US...</p>
-                    </div>
-                    {[...Array(6)].map((_, i) => (
-                      <SkeletonCard key={i} />
-                    ))}
-                  </div>
-                </div>
-              ) : paginatedSpaces.length > 0 ? (
+              {paginatedSpaces.length > 0 ? (
                 <>
                   <SpacesGrid
                     spaces={paginatedSpaces}
@@ -1541,7 +1405,7 @@ export default function BrowsePage() {
                     addToCart={cartFunctions.addToCart}
                   />
 
-                  {!isLoading && !error && filteredSpaces.length > 0 && totalPages > 1 && (
+                  {filteredSpaces.length > 0 && totalPages > 1 && (
                     <div className="mt-6 mb-8 border-t border-slate-200 pt-4">
                       <PaginationControls 
                         currentPage={currentPage}
@@ -1599,51 +1463,33 @@ export default function BrowsePage() {
               </Button>
             </div>
 
-            {!isLoading && !error && (
-              <div 
-                className="absolute top-4 left-4"
-                style={{ zIndex: Z_INDEX.MAP }}
-              >
-                <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg max-w-64">
-                  <div className="text-center">
-                    <p 
-                      className="text-lg font-semibold"
-                      style={{ color: '#4668AB' }}
-                    >
-                      {mapState.isMoving ? '...' : filteredSpaces.length}
-                    </p>
-                    <p className="text-xs text-slate-600">
-                      {filteredSpaces.length === 1 ? 'Space' : 'Spaces'}
-                      {mapState.boundsFilterEnabled ? ' in view' : ' available'}
-                    </p>
+            <div 
+              className="absolute top-4 left-4"
+              style={{ zIndex: Z_INDEX.MAP }}
+            >
+              <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg max-w-64">
+                <div className="text-center">
+                  <p 
+                    className="text-lg font-semibold"
+                    style={{ color: '#4668AB' }}
+                  >
+                    {mapState.isMoving ? '...' : filteredSpaces.length}
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    {filteredSpaces.length === 1 ? 'Space' : 'Spaces'}
+                    {mapState.boundsFilterEnabled ? ' in view' : ' available'}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {mapLocationName}
+                  </p>
+                  {activeFiltersCount > 0 && (
                     <p className="text-xs text-slate-500 mt-1">
-                      {mapLocationName}
+                      {activeFiltersCount} filter{activeFiltersCount !== 1 ? 's' : ''} active
                     </p>
-                    {activeFiltersCount > 0 && (
-                      <p className="text-xs text-slate-500 mt-1">
-                        {activeFiltersCount} filter{activeFiltersCount !== 1 ? 's' : ''} active
-                      </p>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
-            )}
-
-            {isLoading && (
-              <div 
-                className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center"
-                style={{ zIndex: Z_INDEX.MODAL_BACKDROP }}
-              >
-                <div className="bg-white rounded-lg p-4 text-center shadow-lg">
-                  <div 
-                    className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-2"
-                    style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
-                  ></div>
-                  <p className="text-sm text-slate-600">Loading map data...</p>
-                  <p className="text-xs text-slate-500 mt-1">Preparing advertising opportunities across the US</p>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

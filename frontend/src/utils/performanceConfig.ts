@@ -1,5 +1,6 @@
 // src/utils/performanceConfig.ts
 // Optimized performance configuration for maximum efficiency
+import React from 'react';
 
 export const PERFORMANCE_CONFIG = {
   // API & Data Management
@@ -208,13 +209,13 @@ export const usePerformanceOptimization = () => {
   }, []);
 
   const debouncedFn = React.useCallback(
-    (fn: Function, delay: number = PERFORMANCE_CONFIG.UI.FILTER_DEBOUNCE) =>
+    (fn: (...args: any[]) => any, delay: number = PERFORMANCE_CONFIG.UI.FILTER_DEBOUNCE) =>
       PerformanceUtils.debounce(fn, delay),
     []
   );
 
   const throttledFn = React.useCallback(
-    (fn: Function, delay: number = PERFORMANCE_CONFIG.UI.SCROLL_THROTTLE) =>
+    (fn: (...args: any[]) => any, delay: number = PERFORMANCE_CONFIG.UI.SCROLL_THROTTLE) =>
       PerformanceUtils.throttle(fn, delay),
     []
   );

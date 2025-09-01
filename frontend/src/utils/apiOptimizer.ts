@@ -1,6 +1,6 @@
 // src/utils/apiOptimizer.ts
 // High-performance API caching and request optimization system
-
+import React from 'react';
 interface CachedData {
   data: any;
   timestamp: number;
