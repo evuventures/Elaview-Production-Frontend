@@ -1,13 +1,14 @@
 // src/pages/browse/components/SpaceCard.jsx
 // ✅ FIXED: Proper image handling based on actual Prisma schema structure
 // ✅ ENHANCED: Comprehensive error handling and logging for debugging
+// ✅ NEW: Cart icon and toggle functionality
 
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  Heart, Plus, CheckCircle, Star, MapPin, Users, TrendingUp, Eye 
+  Heart, ShoppingCart, CheckCircle, Star, MapPin, Users, TrendingUp, Eye 
 } from "lucide-react";
 import { 
   getAreaName, 
@@ -25,7 +26,8 @@ export default function SpaceCard({
   savedSpaces, 
   toggleSavedSpace, 
   isInCart, 
-  addToCart 
+  addToCart,
+  removeFromCart // NEW: Add removeFromCart prop
 }) {
   const trust = getTrustIndicators(space.property);
   const insights = getBusinessInsights(space.property);
@@ -67,6 +69,29 @@ export default function SpaceCard({
       propertyKeys: space.property ? Object.keys(space.property) : null
     });
   }, [space]);
+
+  // NEW: Cart toggle handler with proper logging
+  const handleCartToggle = (e) => {
+    e.stopPropagation();
+    
+    const isCurrentlyInCart = isInCart(space.id);
+    
+    console.log('🛒 CART TOGGLE:', {
+      spaceId: space.id,
+      spaceName: getAreaName(space),
+      currentlyInCart: isCurrentlyInCart,
+      action: isCurrentlyInCart ? 'REMOVE' : 'ADD',
+      timestamp: new Date().toISOString()
+    });
+
+    if (isCurrentlyInCart) {
+      removeFromCart(space.id);
+      console.log('✅ CART: Removed space from cart:', space.id);
+    } else {
+      addToCart(space);
+      console.log('✅ CART: Added space to cart:', space.id);
+    }
+  };
 
   // FIXED: Completely rewritten image retrieval based on actual Prisma schema
   const getSpaceImage = (space) => {
@@ -171,6 +196,9 @@ export default function SpaceCard({
   
   // DEBUG: Log final image result
   console.log('🎯 SPACE CARD FINAL - Image result for space:', space.id, '-> URL:', spaceImage);
+
+  // NEW: Check if space is in cart
+  const inCart = isInCart(space.id);
 
   return (
     <motion.div
@@ -427,29 +455,47 @@ export default function SpaceCard({
                   <span className="relative z-10">Details</span>
                 </Button>
 
-                {/* GLASSMORPHISM: Enhanced Cart Button moved to bottom */}
+                {/* NEW: Enhanced Cart Toggle Button with proper cart icon */}
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!isInCart(space.id)) {
-                      addToCart(space);
-                    }
-                  }}
-                  className="p-2 rounded-lg transition-all duration-300 relative overflow-hidden"
+                  onClick={handleCartToggle}
+                  className="p-2 rounded-lg transition-all duration-300 relative overflow-hidden group/cart flex items-center justify-center"
                   style={{ 
-                    background: isInCart(space.id) 
-                      ? 'linear-gradient(135deg, rgba(240, 253, 244, 0.9) 0%, rgba(240, 253, 244, 0.95) 100%)'
+                    background: inCart 
+                      ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.9) 0%, rgba(34, 197, 94, 0.95) 100%)'
                       : 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)',
                     backdropFilter: 'blur(10px) saturate(150%)',
                     WebkitBackdropFilter: 'blur(10px) saturate(150%)',
-                    border: `1px solid ${isInCart(space.id) ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255, 255, 255, 0.3)'}`,
-                    boxShadow: isInCart(space.id) 
-                      ? '0 4px 16px rgba(34, 197, 94, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                    border: `1px solid ${inCart ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255, 255, 255, 0.3)'}`,
+                    boxShadow: inCart 
+                      ? '0 4px 16px rgba(34, 197, 94, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
                       : '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
                     flexBasis: '30%',
-                    minWidth: 'fit-content'
+                    minWidth: '40px',
+                    height: '36px'
                   }}
-                  disabled={isInCart(space.id)}
+                  onMouseEnter={(e) => {
+                    if (inCart) {
+                      e.target.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(239, 68, 68, 0.95) 100%)';
+                      e.target.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+                      e.target.style.boxShadow = '0 4px 16px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                    } else {
+                      e.target.style.background = 'linear-gradient(135deg, rgba(70, 104, 171, 0.9) 0%, rgba(70, 104, 171, 0.95) 100%)';
+                      e.target.style.border = '1px solid rgba(70, 104, 171, 0.3)';
+                      e.target.style.boxShadow = '0 4px 16px rgba(70, 104, 171, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                    }
+                    e.target.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = inCart 
+                      ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.9) 0%, rgba(34, 197, 94, 0.95) 100%)'
+                      : 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)';
+                    e.target.style.border = `1px solid ${inCart ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255, 255, 255, 0.3)'}`;
+                    e.target.style.boxShadow = inCart 
+                      ? '0 4px 16px rgba(34, 197, 94, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                      : '0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                    e.target.style.transform = 'translateY(0px)';
+                  }}
+                  title={inCart ? "Remove from cart" : "Add to cart"}
                 >
                   {/* Glass reflection on button */}
                   <div 
@@ -458,10 +504,16 @@ export default function SpaceCard({
                       background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%)'
                     }}
                   />
-                  {isInCart(space.id) ? (
-                    <CheckCircle className="w-4 h-4 text-green-600 relative z-10" />
+                  
+                  {/* Icon with proper color based on state */}
+                  {inCart ? (
+                    <CheckCircle 
+                      className="w-4 h-4 text-white relative z-10 group-hover/cart:text-white transition-colors duration-200" 
+                    />
                   ) : (
-                    <Plus className="w-4 h-4 text-slate-600 relative z-10" />
+                    <ShoppingCart 
+                      className="w-4 h-4 text-slate-600 relative z-10 group-hover/cart:text-white transition-colors duration-200" 
+                    />
                   )}
                 </button>
               </div>
@@ -469,8 +521,6 @@ export default function SpaceCard({
           </div>
         </CardContent>
       </Card>
-
-      
     </motion.div>
   );
 }
