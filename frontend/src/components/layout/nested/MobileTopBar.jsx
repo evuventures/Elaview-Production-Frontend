@@ -5,10 +5,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import { 
-  Bell, UserCircle, ChevronDown, Settings, LogOut, 
-  Shield, HelpCircle, Building2, MapPin
+ Bell, UserCircle, ChevronDown, Settings, LogOut, 
+ Shield, HelpCircle, Building2, MapPin
 } from 'lucide-react';
-import { InlineLoader } from '@/components/ui/LoadingAnimation';
+import { InlineLoader } from '@/components/ui/loading';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
@@ -16,516 +16,516 @@ import apiClient from '@/api/apiClient';
 import elaviewLogo from '../../../public/elaview-logo.png';
 
 const MobileTopBar = ({ 
-  currentUser,
-  viewMode = 'buyer', // Default to advertiser/buyer view
-  onViewModeChange, // Function to change view mode
-  isAdmin = false // Admin flag
+ currentUser,
+ viewMode = 'buyer', // Default to advertiser/buyer view
+ onViewModeChange, // Function to change view mode
+ isAdmin = false // Admin flag
 }) => {
-  const navigate = useNavigate();
-  const { isSignedIn, signOut } = useAuth();
-  const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [notificationCount, setNotificationCount] = useState(0);
-  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
-  const [isRateLimited, setIsRateLimited] = useState(false);
-  const [lastFetchTime, setLastFetchTime] = useState(null);
-  const notificationMenuRef = useRef(null);
-  const profileMenuRef = useRef(null);
+ const navigate = useNavigate();
+ const { isSignedIn, signOut } = useAuth();
+ const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
+ const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+ const [notifications, setNotifications] = useState([]);
+ const [notificationCount, setNotificationCount] = useState(0);
+ const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+ const [isRateLimited, setIsRateLimited] = useState(false);
+ const [lastFetchTime, setLastFetchTime] = useState(null);
+ const notificationMenuRef = useRef(null);
+ const profileMenuRef = useRef(null);
 
-  // ✅ COLOR SCHEME: Verification on mount
-  useEffect(() => {
-    console.log('🎨 MOBILE TOP BAR: Updated color scheme verification', {
-      primaryBlue: '#4668AB',
-      whiteBackground: '#FFFFFF',
-      offWhiteCards: '#F9FAFB',
-      lightGrayBorders: '#E5E7EB',
-      timestamp: new Date().toISOString()
-    });
-  }, []);
+ // ✅ COLOR SCHEME: Verification on mount
+ useEffect(() => {
+ console.log('🎨 MOBILE TOP BAR: Updated color scheme verification', {
+ primaryBlue: '#4668AB',
+ whiteBackground: '#FFFFFF',
+ offWhiteCards: '#F9FAFB',
+ lightGrayBorders: '#E5E7EB',
+ timestamp: new Date().toISOString()
+ });
+ }, []);
 
-  // ✅ OPTIMIZED: Fetch notifications with rate limit protection
-  const fetchNotifications = async (force = false) => {
-    if (!isSignedIn || isRateLimited) return;
-    
-    // ✅ OPTIMIZED: Throttle requests - max every 2 minutes unless forced
-    const now = Date.now();
-    if (!force && lastFetchTime && (now - lastFetchTime) < 120000) {
-      console.log('⏳ Mobile notification fetch throttled (< 2 minutes since last fetch)');
-      return;
-    }
-    
-    try {
-      setIsLoadingNotifications(true);
-      const response = await apiClient.getUnreadNotifications();
-      
-      if (response.success) {
-        setNotifications(response.notifications || []);
-        setNotificationCount(response.count || 0);
-        setLastFetchTime(now);
-        setIsRateLimited(false); // Reset rate limit on success
-        console.log('✅ Mobile notifications fetched:', response.count);
-      }
-    } catch (error) {
-      console.error('❌ Failed to fetch notifications:', error);
-      
-      // ✅ OPTIMIZED: Handle rate limiting specifically
-      if (error.message.includes('429')) {
-        console.warn('🚫 Mobile notifications rate limited - pausing for 5 minutes');
-        setIsRateLimited(true);
-        
-        // Reset rate limit flag after 5 minutes
-        setTimeout(() => {
-          setIsRateLimited(false);
-          console.log('✅ Mobile rate limit reset');
-        }, 300000); // 5 minutes
-      }
-    } finally {
-      setIsLoadingNotifications(false);
-    }
-  };
+ // ✅ OPTIMIZED: Fetch notifications with rate limit protection
+ const fetchNotifications = async (force = false) => {
+ if (!isSignedIn || isRateLimited) return;
+ 
+ // ✅ OPTIMIZED: Throttle requests - max every 2 minutes unless forced
+ const now = Date.now();
+ if (!force && lastFetchTime && (now - lastFetchTime) < 120000) {
+ console.log('⏳ Mobile notification fetch throttled (< 2 minutes since last fetch)');
+ return;
+ }
+ 
+ try {
+ setIsLoadingNotifications(true);
+ const response = await apiClient.getUnreadNotifications();
+ 
+ if (response.success) {
+ setNotifications(response.notifications || []);
+ setNotificationCount(response.count || 0);
+ setLastFetchTime(now);
+ setIsRateLimited(false); // Reset rate limit on success
+ console.log('✅ Mobile notifications fetched:', response.count);
+ }
+ } catch (error) {
+ console.error('❌ Failed to fetch notifications:', error);
+ 
+ // ✅ OPTIMIZED: Handle rate limiting specifically
+ if (error.message.includes('429')) {
+ console.warn('🚫 Mobile notifications rate limited - pausing for 5 minutes');
+ setIsRateLimited(true);
+ 
+ // Reset rate limit flag after 5 minutes
+ setTimeout(() => {
+ setIsRateLimited(false);
+ console.log('✅ Mobile rate limit reset');
+ }, 300000); // 5 minutes
+ }
+ } finally {
+ setIsLoadingNotifications(false);
+ }
+ };
 
-  // Handle notification click
-  const handleNotificationClick = async (notification) => {
-    try {
-      const result = await apiClient.handleNotificationClick(notification);
-      
-      if (result.success) {
-        // Update local state immediately
-        setNotifications(prev => prev.filter(n => n.id !== notification.id));
-        setNotificationCount(prev => Math.max(0, prev - 1));
-        setNotificationMenuOpen(false);
-        navigate(result.actionUrl);
-      }
-    } catch (error) {
-      console.error('❌ Failed to handle notification click:', error);
-      
-      // Still close menu and navigate even if marking as read fails
-      setNotificationMenuOpen(false);
-      navigate('/messages'); // Fallback navigation
-    }
-  };
+ // Handle notification click
+ const handleNotificationClick = async (notification) => {
+ try {
+ const result = await apiClient.handleNotificationClick(notification);
+ 
+ if (result.success) {
+ // Update local state immediately
+ setNotifications(prev => prev.filter(n => n.id !== notification.id));
+ setNotificationCount(prev => Math.max(0, prev - 1));
+ setNotificationMenuOpen(false);
+ navigate(result.actionUrl);
+ }
+ } catch (error) {
+ console.error('❌ Failed to handle notification click:', error);
+ 
+ // Still close menu and navigate even if marking as read fails
+ setNotificationMenuOpen(false);
+ navigate('/messages'); // Fallback navigation
+ }
+ };
 
-  // Handle mark all as read
-  const handleMarkAllAsRead = async () => {
-    try {
-      await apiClient.markAllNotificationsAsRead();
-      setNotifications([]);
-      setNotificationCount(0);
-      setNotificationMenuOpen(false);
-    } catch (error) {
-      console.error('❌ Failed to mark all as read:', error);
-      
-      // Update local state even if API call fails
-      setNotifications([]);
-      setNotificationCount(0);
-      setNotificationMenuOpen(false);
-    }
-  };
+ // Handle mark all as read
+ const handleMarkAllAsRead = async () => {
+ try {
+ await apiClient.markAllNotificationsAsRead();
+ setNotifications([]);
+ setNotificationCount(0);
+ setNotificationMenuOpen(false);
+ } catch (error) {
+ console.error('❌ Failed to mark all as read:', error);
+ 
+ // Update local state even if API call fails
+ setNotifications([]);
+ setNotificationCount(0);
+ setNotificationMenuOpen(false);
+ }
+ };
 
-  // ✅ FIXED: Handle view mode switching (removed blocking condition)
-  const handleViewSwitch = (newMode) => {
-    if (!onViewModeChange) return; // Only check if function exists
-    
-    console.log(`🔄 Mobile: Switching view from ${viewMode} to ${newMode}`);
-    onViewModeChange(newMode);
-    setProfileMenuOpen(false); // Close menu after switching
-  };
+ // ✅ FIXED: Handle view mode switching (removed blocking condition)
+ const handleViewSwitch = (newMode) => {
+ if (!onViewModeChange) return; // Only check if function exists
+ 
+ console.log(`🔄 Mobile: Switching view from ${viewMode} to ${newMode}`);
+ onViewModeChange(newMode);
+ setProfileMenuOpen(false); // Close menu after switching
+ };
 
-  // ✅ NEW: Handle sign out
-  const handleSignOut = async () => {
-    try {
-      console.log('🚪 Mobile: Signing out user...');
-      setProfileMenuOpen(false);
-      
-      // Sign out with Clerk and redirect to browse
-      await signOut({
-        redirectUrl: '/browse'
-      });
-    } catch (error) {
-      console.error('❌ Error signing out:', error);
-      // Fallback redirect if signOut fails
-      navigate('/browse');
-    }
-  };
+ // ✅ NEW: Handle sign out
+ const handleSignOut = async () => {
+ try {
+ console.log('🚪 Mobile: Signing out user...');
+ setProfileMenuOpen(false);
+ 
+ // Sign out with Clerk and redirect to browse
+ await signOut({
+ redirectUrl: '/browse'
+ });
+ } catch (error) {
+ console.error('❌ Error signing out:', error);
+ // Fallback redirect if signOut fails
+ navigate('/browse');
+ }
+ };
 
-  // ✅ NEW: Profile image with fallback
-  const getProfileImage = () => {
-    if (currentUser?.imageUrl) {
-      return (
-        <img 
-          src={currentUser.imageUrl} 
-          alt="Profile"
-          className="w-6 h-6 rounded-full object-cover"
-        />
-      );
-    }
-    
-    return (
-      <div 
-        className="w-6 h-6 rounded-full flex items-center justify-center"
-        style={{ background: 'linear-gradient(to right, #4668AB, #5B7BC7)' }}
-      >
-        <UserCircle className="w-4 h-4 text-white" />
-      </div>
-    );
-  };
+ // ✅ NEW: Profile image with fallback
+ const getProfileImage = () => {
+ if (currentUser?.imageUrl) {
+ return (
+ <img 
+ src={currentUser.imageUrl} 
+ alt="Profile"
+ className="w-6 h-6 rounded-full object-cover"
+ />
+ );
+ }
+ 
+ return (
+ <div 
+ className="w-6 h-6 rounded-full flex items-center justify-center"
+ style={{ background: 'linear-gradient(to right, #4668AB, #5B7BC7)' }}
+>
+ <UserCircle className="w-4 h-4 text-white" />
+ </div>
+ );
+ };
 
-  // Outside click detection for both menus
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target)) {
-        setNotificationMenuOpen(false);
-      }
-      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
-        setProfileMenuOpen(false);
-      }
-    };
+ // Outside click detection for both menus
+ useEffect(() => {
+ const handleClickOutside = (event) => {
+ if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target)) {
+ setNotificationMenuOpen(false);
+ }
+ if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+ setProfileMenuOpen(false);
+ }
+ };
 
-    if (notificationMenuOpen || profileMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('touchstart', handleClickOutside);
-    }
+ if (notificationMenuOpen || profileMenuOpen) {
+ document.addEventListener('mousedown', handleClickOutside);
+ document.addEventListener('touchstart', handleClickOutside);
+ }
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-    };
-  }, [notificationMenuOpen, profileMenuOpen]);
+ return () => {
+ document.removeEventListener('mousedown', handleClickOutside);
+ document.removeEventListener('touchstart', handleClickOutside);
+ };
+ }, [notificationMenuOpen, profileMenuOpen]);
 
-  // ✅ OPTIMIZED: Fetch notifications on mount with 3-minute intervals
-  useEffect(() => {
-    if (isSignedIn) {
-      // Initial fetch
-      fetchNotifications(true);
-      
-      // ✅ OPTIMIZED: Refresh every 3 minutes instead of 1 minute
-      const interval = setInterval(() => {
-        if (!isRateLimited) {
-          fetchNotifications();
-        }
-      }, 180000); // 3 minutes = 180,000ms
-      
-      return () => clearInterval(interval);
-    } else {
-      // Reset state when signed out
-      setNotifications([]);
-      setNotificationCount(0);
-      setIsRateLimited(false);
-      setLastFetchTime(null);
-    }
-  }, [isSignedIn]);
+ // ✅ OPTIMIZED: Fetch notifications on mount with 3-minute intervals
+ useEffect(() => {
+ if (isSignedIn) {
+ // Initial fetch
+ fetchNotifications(true);
+ 
+ // ✅ OPTIMIZED: Refresh every 3 minutes instead of 1 minute
+ const interval = setInterval(() => {
+ if (!isRateLimited) {
+ fetchNotifications();
+ }
+ }, 180000); // 3 minutes = 180,000ms
+ 
+ return () => clearInterval(interval);
+ } else {
+ // Reset state when signed out
+ setNotifications([]);
+ setNotificationCount(0);
+ setIsRateLimited(false);
+ setLastFetchTime(null);
+ }
+ }, [isSignedIn]);
 
-  // ✅ OPTIMIZED: Toggle with on-demand fetching
-  const toggleNotificationMenu = () => {
-    const wasOpen = notificationMenuOpen;
-    setNotificationMenuOpen(prev => !prev);
-    setProfileMenuOpen(false); // Close profile menu
-    
-    // Only fetch when opening and not rate limited
-    if (!wasOpen && !isRateLimited) {
-      fetchNotifications(true);
-    }
-  };
+ // ✅ OPTIMIZED: Toggle with on-demand fetching
+ const toggleNotificationMenu = () => {
+ const wasOpen = notificationMenuOpen;
+ setNotificationMenuOpen(prev => !prev);
+ setProfileMenuOpen(false); // Close profile menu
+ 
+ // Only fetch when opening and not rate limited
+ if (!wasOpen && !isRateLimited) {
+ fetchNotifications(true);
+ }
+ };
 
-  // ✅ NEW: Toggle profile menu
-  const toggleProfileMenu = () => {
-    setProfileMenuOpen(prev => !prev);
-    setNotificationMenuOpen(false); // Close notification menu
-  };
+ // ✅ NEW: Toggle profile menu
+ const toggleProfileMenu = () => {
+ setProfileMenuOpen(prev => !prev);
+ setNotificationMenuOpen(false); // Close notification menu
+ };
 
-  return (
-    <div 
-      className="md:hidden fixed top-0 left-0 right-0 border-b shadow-sm backdrop-blur-sm z-30"
-      style={{ backgroundColor: '#F8FAFF', borderColor: '#E5E7EB' }}
-    >
-      <div className="flex items-center justify-between h-16 px-4">
-        {/* Logo */}
-        <Link to={viewMode === 'seller' ? '/dashboard' : '/browse'} className="flex items-center gap-2 group">
-          <img 
-            src={elaviewLogo}
-            alt="Elaview Logo" 
-            className="w-24 h-24 object-contain"
-          />
-        </Link>
+ return (
+ <div 
+ className="md:hidden fixed top-0 left-0 right-0 border-b shadow-sm backdrop-blur-sm z-30"
+ style={{ backgroundColor: '#F8FAFF', borderColor: '#E5E7EB' }}
+>
+ <div className="flex items-center justify-between h-16 px-4">
+ {/* Logo */}
+ <Link to={viewMode === 'seller' ? '/dashboard' : '/browse'} className="flex items-center gap-2 group">
+ <img 
+ src={elaviewLogo}
+ alt="Elaview Logo" 
+ className="w-24 h-24 object-contain"
+ />
+ </Link>
 
-        {/* Right Section: Notifications + Profile */}
-        <div className="flex items-center gap-3">
-          {/* Notifications - Only show for authenticated users */}
-          {isSignedIn && (
-            <div className="relative" ref={notificationMenuRef}>
-              <button
-                onClick={toggleNotificationMenu}
-                disabled={isRateLimited}
-                className={`relative p-2 rounded-lg text-slate-500 hover:bg-slate-50 transition-all duration-200 ${
-                  isRateLimited ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-                style={{ 
-                  color: notificationMenuOpen ? '#4668AB' : undefined,
-                  backgroundColor: notificationMenuOpen ? '#F9FAFB' : undefined
-                }}
-              >
-                <Bell className="w-5 h-5" />
-                {notificationCount > 0 && (
-                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
-                    {notificationCount > 9 ? '9+' : notificationCount}
-                  </div>
-                )}
-                {/* Rate limit indicator */}
-                {isRateLimited && (
-                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-orange-500 rounded-full"></div>
-                )}
-              </button>
+ {/* Right Section: Notifications + Profile */}
+ <div className="flex items-center gap-3">
+ {/* Notifications - Only show for authenticated users */}
+ {isSignedIn && (
+ <div className="relative" ref={notificationMenuRef}>
+ <button
+ onClick={toggleNotificationMenu}
+ disabled={isRateLimited}
+ className={`relative p-2 rounded-lg text-slate-500 hover:bg-slate-50 transition-all duration-200 ${
+ isRateLimited ? 'opacity-50 cursor-not-allowed' : ''
+ }`}
+ style={{ 
+ color: notificationMenuOpen ? '#4668AB' : undefined,
+ backgroundColor: notificationMenuOpen ? '#F9FAFB' : undefined
+ }}
+>
+ <Bell className="w-5 h-5" />
+ {notificationCount> 0 && (
+ <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+ {notificationCount> 9 ? '9+' : notificationCount}
+ </div>
+ )}
+ {/* Rate limit indicator */}
+ {isRateLimited && (
+ <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-orange-500 rounded-full"></div>
+ )}
+ </button>
 
-              {/* Mobile Notification Dropdown */}
-              <AnimatePresence>
-                {notificationMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-[999998]" onClick={() => setNotificationMenuOpen(false)} />
-                    <motion.div
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute right-0 top-12 w-80 max-w-[calc(100vw-2rem)] bg-white border rounded-xl shadow-2xl overflow-hidden z-[999999]"
-                      style={{ 
-                        maxHeight: '40vh',
-                        borderColor: '#E5E7EB'
-                      }}
-                    >
-                      {/* Header */}
-                      <div 
-                        className="p-4 border-b"
-                        style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-semibold text-slate-900">Notifications</h3>
-                          {notificationCount > 0 && (
-                            <button
-                              onClick={handleMarkAllAsRead}
-                              className="text-xs font-medium hover:underline"
-                              style={{ color: '#4668AB' }}
-                            >
-                              Mark all read
-                            </button>
-                          )}
-                        </div>
-                        {notificationCount > 0 && (
-                          <p className="text-xs text-slate-600 mt-1">
-                            {notificationCount} unread notification{notificationCount !== 1 ? 's' : ''}
-                          </p>
-                        )}
-                        {/* Rate limit warning */}
-                        {isRateLimited && (
-                          <p className="text-xs text-orange-600 mt-1 font-medium">
-                            ⏳ Updates paused due to rate limits
-                          </p>
-                        )}
-                      </div>
-                      
-                      {/* Notifications List */}
-                      <div className="max-h-60 overflow-y-auto">
-                        {isLoadingNotifications ? (
-                          <div className="p-6 text-center">
-                            <InlineLoader message="Loading notifications..." />
-                          </div>
-                        ) : notifications.length === 0 ? (
-                          <div className="p-6 text-center text-slate-500">
-                            <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                            <p className="font-medium">All caught up!</p>
-                            <p className="text-xs mt-1">No new notifications</p>
-                          </div>
-                        ) : (
-                          notifications.map(notification => (
-                            <div
-                              key={notification.id}
-                              onClick={() => handleNotificationClick(notification)}
-                              className="p-4 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors"
-                            >
-                              <div className="flex items-start gap-3">
-                                <div 
-                                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                                  style={{ backgroundColor: '#EFF6FF' }}
-                                >
-                                  <Bell className="w-4 h-4" style={{ color: '#4668AB' }} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-slate-900 line-clamp-2">
-                                    {notification.subject || notification.title || 'Notification'}
-                                  </p>
-                                  <p className="text-sm text-slate-600 line-clamp-2 mt-1">
-                                    {notification.content || notification.message || 'You have a new notification'}
-                                  </p>
-                                  <p className="text-xs text-slate-500 mt-2">
-                                    {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                      
-                      {/* Footer */}
-                      <div 
-                        className="p-3 border-t"
-                        style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}
-                      >
-                        <Link
-                          to="/messages"
-                          onClick={() => setNotificationMenuOpen(false)}
-                          className="block text-center text-sm font-medium hover:underline"
-                          style={{ color: '#4668AB' }}
-                        >
-                          View all messages
-                        </Link>
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
+ {/* Mobile Notification Dropdown */}
+ <AnimatePresence>
+ {notificationMenuOpen && (
+ <>
+ <div className="fixed inset-0 z-[999998]" onClick={() => setNotificationMenuOpen(false)} />
+ <motion.div
+ initial={{ opacity: 0, y: -10, scale: 0.95 }}
+ animate={{ opacity: 1, y: 0, scale: 1 }}
+ exit={{ opacity: 0, y: -10, scale: 0.95 }}
+ transition={{ duration: 0.2 }}
+ className="absolute right-0 top-12 w-80 max-w-[calc(100vw-2rem)] bg-white border rounded-xl shadow-2xl overflow-hidden z-[999999]"
+ style={{ 
+ maxHeight: '40vh',
+ borderColor: '#E5E7EB'
+ }}
+>
+ {/* Header */}
+ <div 
+ className="p-4 border-b"
+ style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}
+>
+ <div className="flex items-center justify-between">
+ <h3 className="font-semibold text-slate-900">Notifications</h3>
+ {notificationCount> 0 && (
+ <button
+ onClick={handleMarkAllAsRead}
+ className="text-xs font-medium hover:underline"
+ style={{ color: '#4668AB' }}
+>
+ Mark all read
+ </button>
+ )}
+ </div>
+ {notificationCount> 0 && (
+ <p className="text-xs text-slate-600 mt-1">
+ {notificationCount} unread notification{notificationCount !== 1 ? 's' : ''}
+ </p>
+ )}
+ {/* Rate limit warning */}
+ {isRateLimited && (
+ <p className="text-xs text-orange-600 mt-1 font-medium">
+ ⏳ Updates paused due to rate limits
+ </p>
+ )}
+ </div>
+ 
+ {/* Notifications List */}
+ <div className="max-h-60 overflow-y-auto">
+ {isLoadingNotifications ? (
+ <div className="p-6 text-center">
+ <InlineLoader />
+ </div>
+ ) : notifications.length === 0 ? (
+ <div className="p-6 text-center text-slate-500">
+ <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+ <p className="font-medium">All caught up!</p>
+ <p className="text-xs mt-1">No new notifications</p>
+ </div>
+ ) : (
+ notifications.map(notification => (
+ <div
+ key={notification.id}
+ onClick={() => handleNotificationClick(notification)}
+ className="p-4 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors"
+>
+ <div className="flex items-start gap-3">
+ <div 
+ className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+ style={{ backgroundColor: '#EFF6FF' }}
+>
+ <Bell className="w-4 h-4" style={{ color: '#4668AB' }} />
+ </div>
+ <div className="flex-1 min-w-0">
+ <p className="text-sm font-medium text-slate-900 line-clamp-2">
+ {notification.subject || notification.title || 'Notification'}
+ </p>
+ <p className="text-sm text-slate-600 line-clamp-2 mt-1">
+ {notification.content || notification.message || 'You have a new notification'}
+ </p>
+ <p className="text-xs text-slate-500 mt-2">
+ {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+ </p>
+ </div>
+ </div>
+ </div>
+ ))
+ )}
+ </div>
+ 
+ {/* Footer */}
+ <div 
+ className="p-3 border-t"
+ style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}
+>
+ <Link
+ to="/messages"
+ onClick={() => setNotificationMenuOpen(false)}
+ className="block text-center text-sm font-medium hover:underline"
+ style={{ color: '#4668AB' }}
+>
+ View all messages
+ </Link>
+ </div>
+ </motion.div>
+ </>
+ )}
+ </AnimatePresence>
+ </div>
+ )}
 
-          {/* ✅ NEW: Profile Menu */}
-          {isSignedIn && currentUser && (
-            <div className="relative" ref={profileMenuRef}>
-              <button
-                onClick={toggleProfileMenu}
-                className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 transition-all duration-200"
-                style={{ 
-                  backgroundColor: profileMenuOpen ? '#F9FAFB' : undefined
-                }}
-              >
-                {getProfileImage()}
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-all duration-200 ${profileMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
+ {/* ✅ NEW: Profile Menu */}
+ {isSignedIn && currentUser && (
+ <div className="relative" ref={profileMenuRef}>
+ <button
+ onClick={toggleProfileMenu}
+ className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 transition-all duration-200"
+ style={{ 
+ backgroundColor: profileMenuOpen ? '#F9FAFB' : undefined
+ }}
+>
+ {getProfileImage()}
+ <ChevronDown className={`w-4 h-4 text-slate-400 transition-all duration-200 ${profileMenuOpen ? 'rotate-180' : ''}`} />
+ </button>
 
-              {/* ✅ NEW: Simplified Profile Dropdown (Max 40% height) */}
-              <AnimatePresence>
-                {profileMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-[999998]" onClick={() => setProfileMenuOpen(false)} />
-                    <motion.div
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute right-0 top-12 w-64 max-w-[calc(100vw-1rem)] bg-white border rounded-xl shadow-2xl overflow-hidden z-[999999]"
-                      style={{ 
-                        maxHeight: '40vh',
-                        borderColor: '#E5E7EB'
-                      }}
-                    >
-                      {/* User Info Header */}
-                      <div 
-                        className="px-3 py-3 border-b"
-                        style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}
-                      >
-                        <div className="flex items-center gap-2">
-                          {getProfileImage()}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-sm text-slate-800 truncate">
-                              {currentUser.firstName} {currentUser.lastName}
-                            </p>
-                            <p className="text-xs text-slate-600 truncate">
-                              {currentUser.emailAddresses?.[0]?.emailAddress}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        {/* ✅ FIXED: Current View + Switch Button with corrected onClick */}
-                        <div className="mt-3 flex gap-2 items-center">
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
-                            viewMode === 'seller' 
-                              ? 'bg-emerald-50 text-emerald-700' 
-                              : 'text-white'
-                          }`}
-                          style={viewMode === 'buyer' ? { backgroundColor: '#4668AB' } : {}}>
-                            {viewMode === 'seller' ? (
-                              <><Building2 className="w-3 h-3" />Space Owner View</>
-                            ) : (
-                              <><MapPin className="w-3 h-3" />Advertiser View</>
-                            )}
-                          </span>
-                          <button
-                            onClick={() => {
-                              // ✅ FIXED: State-independent toggle logic
-                              const newMode = viewMode === 'seller' ? 'buyer' : 'seller';
-                              handleViewSwitch(newMode);
-                            }}
-                            className="text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-all duration-200"
-                          >
-                            Switch
-                          </button>
-                        </div>
-                      </div>
+ {/* ✅ NEW: Simplified Profile Dropdown (Max 40% height) */}
+ <AnimatePresence>
+ {profileMenuOpen && (
+ <>
+ <div className="fixed inset-0 z-[999998]" onClick={() => setProfileMenuOpen(false)} />
+ <motion.div
+ initial={{ opacity: 0, y: -10, scale: 0.95 }}
+ animate={{ opacity: 1, y: 0, scale: 1 }}
+ exit={{ opacity: 0, y: -10, scale: 0.95 }}
+ transition={{ duration: 0.2 }}
+ className="absolute right-0 top-12 w-64 max-w-[calc(100vw-1rem)] bg-white border rounded-xl shadow-2xl overflow-hidden z-[999999]"
+ style={{ 
+ maxHeight: '40vh',
+ borderColor: '#E5E7EB'
+ }}
+>
+ {/* User Info Header */}
+ <div 
+ className="px-3 py-3 border-b"
+ style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}
+>
+ <div className="flex items-center gap-2">
+ {getProfileImage()}
+ <div className="flex-1 min-w-0">
+ <p className="font-semibold text-sm text-slate-800 truncate">
+ {currentUser.firstName} {currentUser.lastName}
+ </p>
+ <p className="text-xs text-slate-600 truncate">
+ {currentUser.emailAddresses?.[0]?.emailAddress}
+ </p>
+ </div>
+ </div>
+ 
+ {/* ✅ FIXED: Current View + Switch Button with corrected onClick */}
+ <div className="mt-3 flex gap-2 items-center">
+ <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
+ viewMode === 'seller' 
+ ? 'bg-emerald-50 text-emerald-700' 
+ : 'text-white'
+ }`}
+ style={viewMode === 'buyer' ? { backgroundColor: '#4668AB' } : {}}>
+ {viewMode === 'seller' ? (
+ <><Building2 className="w-3 h-3" />Space Owner View</>
+ ) : (
+ <><MapPin className="w-3 h-3" />Advertiser View</>
+ )}
+ </span>
+ <button
+ onClick={() => {
+ // ✅ FIXED: State-independent toggle logic
+ const newMode = viewMode === 'seller' ? 'buyer' : 'seller';
+ handleViewSwitch(newMode);
+ }}
+ className="text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-all duration-200"
+>
+ Switch
+ </button>
+ </div>
+ </div>
 
-                      {/* ✅ NEW: Minimal Menu Items */}
-                      <div className="p-1 max-h-48 overflow-y-auto">
-                        {/* Admin Dashboard - Only if admin */}
-                        {isAdmin && (
-                          <>
-                            <Link
-                              to="/admin"
-                              onClick={() => setProfileMenuOpen(false)}
-                              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-purple-600 hover:bg-purple-50 transition-all"
-                            >
-                              <Shield className="w-4 h-4" />
-                              <span className="font-medium">Admin Dashboard</span>
-                            </Link>
-                            <div className="border-t my-1" style={{ borderColor: '#E5E7EB' }} />
-                          </>
-                        )}
-                        
-                        {/* Essential Menu Items */}
-                        <Link
-                          to="/profile"
-                          onClick={() => setProfileMenuOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-all"
-                        >
-                          <UserCircle className="w-4 h-4" />
-                          <span className="font-medium">Profile Settings</span>
-                        </Link>
-                        
-                        <Link
-                          to="/settings"
-                          onClick={() => setProfileMenuOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-all"
-                        >
-                          <Settings className="w-4 h-4" />
-                          <span className="font-medium">Preferences</span>
-                        </Link>
+ {/* ✅ NEW: Minimal Menu Items */}
+ <div className="p-1 max-h-48 overflow-y-auto">
+ {/* Admin Dashboard - Only if admin */}
+ {isAdmin && (
+ <>
+ <Link
+ to="/admin"
+ onClick={() => setProfileMenuOpen(false)}
+ className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-purple-600 hover:bg-purple-50 transition-all"
+>
+ <Shield className="w-4 h-4" />
+ <span className="font-medium">Admin Dashboard</span>
+ </Link>
+ <div className="border-t my-1" style={{ borderColor: '#E5E7EB' }} />
+ </>
+ )}
+ 
+ {/* Essential Menu Items */}
+ <Link
+ to="/profile"
+ onClick={() => setProfileMenuOpen(false)}
+ className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-all"
+>
+ <UserCircle className="w-4 h-4" />
+ <span className="font-medium">Profile Settings</span>
+ </Link>
+ 
+ <Link
+ to="/settings"
+ onClick={() => setProfileMenuOpen(false)}
+ className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-all"
+>
+ <Settings className="w-4 h-4" />
+ <span className="font-medium">Preferences</span>
+ </Link>
 
-                        <Link
-                          to="/help"
-                          onClick={() => setProfileMenuOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-all"
-                        >
-                          <HelpCircle className="w-4 h-4" />
-                          <span className="font-medium">Help & Support</span>
-                        </Link>
+ <Link
+ to="/help"
+ onClick={() => setProfileMenuOpen(false)}
+ className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-all"
+>
+ <HelpCircle className="w-4 h-4" />
+ <span className="font-medium">Help & Support</span>
+ </Link>
 
-                        <div className="border-t my-1" style={{ borderColor: '#E5E7EB' }} />
-                        
-                        <button 
-                          onClick={handleSignOut}
-                          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-all"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          <span className="font-medium">Sign Out</span>
-                        </button>
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+ <div className="border-t my-1" style={{ borderColor: '#E5E7EB' }} />
+ 
+ <button 
+ onClick={handleSignOut}
+ className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-all"
+>
+ <LogOut className="w-4 h-4" />
+ <span className="font-medium">Sign Out</span>
+ </button>
+ </div>
+ </motion.div>
+ </>
+ )}
+ </AnimatePresence>
+ </div>
+ )}
+ </div>
+ </div>
+ </div>
+ );
 };
 
 export default MobileTopBar;

@@ -10,16 +10,16 @@ import './index.css'
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 if (!PUBLISHABLE_KEY) {
-  throw new Error("Missing Publishable Key")
+ throw new Error("Missing Publishable Key")
 }
 
 const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      retry: 1,
-    },
-  },
+ defaultOptions: {
+ queries: {
+ staleTime: 5 * 60 * 1000, // 5 minutes
+ retry: 1,
+ },
+ },
 })
 
 // Add this at the top of main.jsx for debugging
@@ -33,17 +33,17 @@ testFavicon.onerror = () => console.error('❌ Favicon failed to load');
 testFavicon.src = '/elaview-favicon.png';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <ClerkProvider 
-      publishableKey={PUBLISHABLE_KEY}
-      signInUrl="/sign-in"
-      signUpUrl="/sign-up"
-    >
-      <QueryClientProvider client={queryClient}>
-        <VerificationProvider>
-          <App />
-        </VerificationProvider>
-      </QueryClientProvider>
-    </ClerkProvider>
-  </React.StrictMode>,
+ <React.StrictMode>
+ <ClerkProvider 
+ publishableKey={PUBLISHABLE_KEY}
+ signInUrl="/sign-in"
+ signUpUrl="/sign-up"
+>
+ <QueryClientProvider client={queryClient}>
+ <VerificationProvider>
+ <App />
+ </VerificationProvider>
+ </QueryClientProvider>
+ </ClerkProvider>
+ </React.StrictMode>,
 )

@@ -1,14 +1,15 @@
 // src/components/messages/LoadingState.tsx
-// ✅ UPDATED: Now uses VideoLoader component
+// ✅ UPDATED: Now uses consolidated loading component
+
 import React from 'react';
-import VideoLoader from '@/components/ui/VideoLoader';
+import { EnterpriseLoader } from '@/components/ui/loading';
 
 interface LoadingStateProps {
   message?: string;
 }
 
-export const LoadingState: React.FC<LoadingStateProps> = ({ 
-  message = 'Loading messages...' 
+export const LoadingState: React.FC<LoadingStateProps> = ({
+  message = 'Loading messages...'
 }) => {
   React.useEffect(() => {
     console.log('🔄 Messages LoadingState: Component mounted with message:', message);
@@ -20,12 +21,9 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   return (
     <div className="flex items-center justify-center h-32">
       <div className="text-center">
-        <VideoLoader 
-          size="sm"
-          theme="brand"
-          message={message}
-          showMessage={true}
-          centered={true}
+        <EnterpriseLoader 
+          size={20}
+          centered
           className="mx-auto mb-2"
         />
       </div>

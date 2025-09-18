@@ -6,38 +6,38 @@ import VideoLoader from '@/components/ui/VideoLoader';
 
 // FIND this section (around line 150):
 /*
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div 
-            className="w-16 h-16 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4"
-            style={{ borderColor: 'rgb(70, 104, 171)', borderTopColor: 'transparent' }}
-          ></div>
-          <p className="text-gray-600">Loading advertiser dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+ if (isLoading) {
+ return (
+ <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+ <div className="text-center">
+ <div 
+ className="w-16 h-16 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4"
+ style={{ borderColor: 'rgb(70, 104, 171)', borderTopColor: 'transparent' }}
+></div>
+ <p className="text-gray-600">Loading advertiser dashboard...</p>
+ </div>
+ </div>
+ );
+ }
 */
 
 // REPLACE with:
 if (isLoading) {
-  console.log('⏳ AdvertiserDashboard: Showing loading state');
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <VideoLoader 
-          size="xl"
-          theme="brand"
-          message="Loading advertiser dashboard..."
-          showMessage={true}
-          centered={true}
-          containerClassName="mb-4"
-        />
-      </div>
-    </div>
-  );
+ console.log('⏳ AdvertiserDashboard: Showing loading state');
+ return (
+ <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+ <div className="text-center">
+ <VideoLoader 
+ size={40}
+ 
+ 
+ 
+ centered={true}
+ containerClassName="mb-4"
+ />
+ </div>
+ </div>
+ );
 }
 
 // =================================================================
@@ -50,38 +50,38 @@ import VideoLoader from '@/components/ui/VideoLoader';
 
 // FIND this section (around line 120):
 /*
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div 
-            className="w-16 h-16 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4"
-            style={{ borderColor: 'rgb(70, 104, 171)', borderTopColor: 'transparent' }}
-          ></div>
-          <p className="text-gray-600">Loading owner dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+ if (isLoading) {
+ return (
+ <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+ <div className="text-center">
+ <div 
+ className="w-16 h-16 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4"
+ style={{ borderColor: 'rgb(70, 104, 171)', borderTopColor: 'transparent' }}
+></div>
+ <p className="text-gray-600">Loading owner dashboard...</p>
+ </div>
+ </div>
+ );
+ }
 */
 
 // REPLACE with:
 if (isLoading) {
-  console.log('⏳ OwnerDashboard: Showing loading state');
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <VideoLoader 
-          size="xl"
-          theme="brand"
-          message="Loading owner dashboard..."
-          showMessage={true}
-          centered={true}
-          containerClassName="mb-4"
-        />
-      </div>
-    </div>
-  );
+ console.log('⏳ OwnerDashboard: Showing loading state');
+ return (
+ <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+ <div className="text-center">
+ <VideoLoader 
+ size={40}
+ 
+ 
+ 
+ centered={true}
+ containerClassName="mb-4"
+ />
+ </div>
+ </div>
+ );
 }
 
 // =================================================================
@@ -94,18 +94,18 @@ import VideoLoader from '@/components/ui/VideoLoader';
 
 // FIND this section (look for animate-spin):
 /*
-  <div 
-    className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-2"
-    style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
-  />
+ <div 
+ className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-2"
+ style={{ borderColor: '#4668AB', borderTopColor: 'transparent' }}
+ />
 */
 
 // REPLACE with:
 <VideoLoader 
-  size="sm"
-  theme="brand"
-  centered={true}
-  className="mx-auto mb-2"
+ size={20}
+ 
+ centered={true}
+ className="mx-auto mb-2"
 />
 
 // =================================================================
@@ -118,15 +118,15 @@ import VideoLoader from '@/components/ui/VideoLoader';
 
 // FIND this section:
 /*
-  <div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+ <div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
 */
 
 // REPLACE with:
 <VideoLoader 
-  size="md"
-  theme="teal"
-  centered={true}
-  className="mx-auto mb-2"
+ size={24}
+ 
+ centered={true}
+ className="mx-auto mb-2"
 />
 
 // =================================================================
